@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "نودوست",
+    "slug": "nodoost",
+    "version": "1.0.0",
+    "scheme": "nodoost",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0F0A0C",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ir.nodoost.app"
+    },
+    "android": {
+      "package": "ir.nodoost.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F0A0C"
+      },
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "READ_MEDIA_IMAGES"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png",
+      "name": "نودوست",
+      "themeColor": "#0F0A0C",
+      "backgroundColor": "#0F0A0C"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-image-picker", { "photosPermission": "برای انتخاب عکس پروفایل، به گالری دسترسی لازم است." }],
+      ["expo-location", { "locationWhenInUsePermission": "برای پیدا کردن افرادِ نزدیک، به موقعیتِ شما دسترسی لازم است." }],
+      ["expo-splash-screen", { "backgroundColor": "#0F0A0C", "image": "./assets/splash-icon.png", "imageWidth": 200 }]
+    ],
+    "extra": {
+      "apiBaseUrl": "http://localhost:8080"
+    }
+  }
+}
