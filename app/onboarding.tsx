@@ -9,8 +9,8 @@ import { colors } from '@/theme/colors';
 import { fonts } from '@/theme/typography';
 
 const GENDERS = [
-  { key: 'female', label: 'زن' },
-  { key: 'male', label: 'مرد' },
+  { key: 'f', label: 'زن' },
+  { key: 'm', label: 'مرد' },
 ];
 
 export default function Onboarding() {

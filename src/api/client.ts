@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { getItem, setItem, deleteItem } from '@/lib/storage';
 
 const DEFAULT_BASE =
@@ -98,12 +99,19 @@ export async function api<T = unknown>(path: string, opts: Opts = {}): Promise<T
   return (await res.json().catch(() => null)) as T;
 }
 
-/** آپلودِ عکس (multipart) */
+/** آپلودِ عکس (multipart) — سازگار با نیتیو و وب */
 export async function uploadPhoto(uri: string): Promise<unknown> {
   const token = await getItem(ACCESS);
   const form = new FormData();
   const name = uri.split('/').pop() || 'photo.jpg';
-  form.append('photo', { uri, name, type: 'image/jpeg' } as unknown as Blob);
+  if (Platform.OS === 'web') {
+    // روی وب باید Blob واقعی ضمیمه شود؛ شیِ {uri,name,type} فقط روی نیتیو شناخته می‌شود
+    // و در غیرِ این صورت به «[object Object]» تبدیل و فیلدِ photo خالی می‌ماند.
+    const blob = await (await fetch(uri)).blob();
+    form.append('photo', blob, name);
+  } else {
+    form.append('photo', { uri, name, type: 'image/jpeg' } as unknown as Blob);
+  }
   const res = await fetch(baseUrl + '/api/me/photos', {
     method: 'POST',
     headers: token ? { Authorization: 'Bearer ' + token } : undefined,

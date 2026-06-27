@@ -20,7 +20,7 @@ export const Profile = {
   update: (patch: Partial<Me>) => api<Me>('/api/me', { method: 'PATCH', body: patch }),
   remove: () => api('/api/me', { method: 'DELETE' }),
   setLocation: (lat: number, lng: number) =>
-    api('/api/me/location', { method: 'POST', body: { lat, lng } }),
+    api('/api/me/location', { method: 'PUT', body: { lat, lng } }),
   photos: () => api<{ photos: Photo[] }>('/api/me/photos').then((d) => d?.photos ?? []),
   addPhoto: (uri: string) => uploadPhoto(uri),
   deletePhoto: (id: number) => api('/api/me/photos/' + id, { method: 'DELETE' }),

@@ -10,8 +10,8 @@ import { fonts } from '@/theme/typography';
 
 const GENDERS = [
   { key: '', label: 'فرقی نداره' },
-  { key: 'female', label: 'زن' },
-  { key: 'male', label: 'مرد' },
+  { key: 'f', label: 'زن' },
+  { key: 'm', label: 'مرد' },
 ];
 
 export default function RandomChat() {
