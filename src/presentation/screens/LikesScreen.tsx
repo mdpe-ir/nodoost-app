@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { ScreenContainer } from '@/presentation/components/ScreenContainer';
-import { Loading } from '@/presentation/components/Loading';
+import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
+import { GridSkeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Button } from '@/presentation/components/Button';
+import { Icon } from '@/presentation/components/Icon';
 import { useLikesViewModel } from '@/presentation/hooks/useLikesViewModel';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
@@ -13,7 +14,14 @@ import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
 export function LikesScreen() {
   const vm = useLikesViewModel();
 
-  if (vm.loading) return <Loading />;
+  if (vm.loading) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="پسندها" />
+        <GridSkeleton count={6} />
+      </ScreenContainer>
+    );
+  }
 
   const data = vm.data;
   const count = data?.count ?? 0;
@@ -21,10 +29,10 @@ export function LikesScreen() {
   if (vm.error || count === 0) {
     return (
       <ScreenContainer>
-        <Text style={styles.title}>پسندها</Text>
+        <ScreenHeader title="پسندها" />
         <View style={styles.center}>
           <EmptyState
-            icon="💛"
+            icon="heart-fill"
             title={vm.error ? 'اتصال برقرار نشد' : 'هنوز کسی پسندت نکرده'}
             hint={vm.error ? 'دوباره تلاش کن.' : 'کاوش کن و پروفایلت را کامل کن تا دیده شوی.'}
           />
@@ -40,7 +48,7 @@ export function LikesScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>پسندها</Text>
+      <ScreenHeader title="پسندها" />
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.count}>{faNum(count)} نفر تو را پسندیده‌اند</Text>
 
@@ -49,11 +57,7 @@ export function LikesScreen() {
             <Text style={styles.bannerText}>
               برای دیدنِ این‌که چه کسانی پسندت کرده‌اند، به سطحِ طلایی ارتقا بده.
             </Text>
-            <Button
-              label="ارتقای عضویت"
-              onPress={() => router.push('/profile')}
-              style={styles.bannerBtn}
-            />
+            <Button label="ارتقای عضویت" onPress={() => router.push('/profile')} style={styles.bannerBtn} />
           </View>
         ) : null}
 
@@ -62,8 +66,15 @@ export function LikesScreen() {
             const liker = revealed ? (t as { id: number; name?: string; photoUrl?: string; age?: number }) : null;
             return (
               <View key={t.id} style={styles.tile}>
-                <View style={!revealed && styles.locked}>
-                  <Avatar uri={liker?.photoUrl} name={revealed ? liker?.name : '؟'} size={96} />
+                <View>
+                  <View style={!revealed && styles.locked}>
+                    <Avatar uri={liker?.photoUrl} name={revealed ? liker?.name : '؟'} size={96} ring={revealed} />
+                  </View>
+                  {!revealed ? (
+                    <View style={styles.lockOverlay}>
+                      <Icon name="lock" size={22} tint="gold" />
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={styles.tileName} numberOfLines={1}>
                   {revealed ? liker?.name ?? 'بی‌نام' : 'پنهان'}
@@ -78,7 +89,6 @@ export function LikesScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontFamily: fonts.bold, fontSize: fontSizes.xl, color: colors.gold, textAlign: 'right', marginVertical: spacing.sm },
   center: { flex: 1, justifyContent: 'center' },
   count: { fontFamily: fonts.medium, fontSize: fontSizes.md, color: colors.ink2, textAlign: 'right', marginBottom: spacing.lg },
   banner: {
@@ -94,6 +104,7 @@ const styles = StyleSheet.create({
   bannerBtn: { height: 46 },
   grid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
   tile: { width: 96, alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  locked: { opacity: 0.5 },
+  locked: { opacity: 0.45 },
+  lockOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   tileName: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink2, maxWidth: 96 },
 });

@@ -1,14 +1,19 @@
-import React, { useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum } from '@/core/utils/faNum';
-import { colors, fonts } from '@/core/theme';
+import { colors, fonts, radius, shadow } from '@/core/theme';
 import { TierBadge } from './TierBadge';
+import { Scrim } from './Scrim';
 import type { Candidate } from '@/domain/entities';
 
 const { width } = Dimensions.get('window');
 const THRESHOLD = width * 0.26;
+
+export interface SwipeCardHandle {
+  swipe: (dir: 'like' | 'pass') => void;
+}
 
 interface Props {
   candidate: Candidate;
@@ -17,10 +22,23 @@ interface Props {
 
 /**
  * کارتِ سواایپ با Animated + PanResponderِ داخلیِ RN (بدونِ reanimated)
- * تا روی وب/PWA هم بدونِ دردسر کار کند.
+ * تا روی وب/PWA هم بی‌دردسر کار کند. دکمه‌های پسند/رد هم از طریقِ ref کارت را پرواز می‌دهند.
  */
-export function SwipeCard({ candidate, onSwipe }: Props) {
+export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard(
+  { candidate, onSwipe },
+  ref
+) {
   const pos = useRef(new Animated.ValueXY()).current;
+
+  const fling = (dir: 'like' | 'pass') => {
+    Animated.timing(pos, {
+      toValue: { x: dir === 'like' ? width * 1.4 : -width * 1.4, y: 0 },
+      duration: 220,
+      useNativeDriver: false,
+    }).start(() => onSwipe(dir));
+  };
+
+  useImperativeHandle(ref, () => ({ swipe: fling }), []);
 
   const responder = useRef(
     PanResponder.create({
@@ -74,18 +92,20 @@ export function SwipeCard({ candidate, onSwipe }: Props) {
       {...responder.panHandlers}
       style={[
         styles.card,
+        shadow.card,
         { transform: [{ translateX: pos.x }, { translateY: pos.y }, { rotate }] },
       ]}
     >
       {photo ? (
-        <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} contentFit="cover" transition={180} cachePolicy="memory-disk" />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.noPhoto]}>
           <Text style={styles.noPhotoText}>{(candidate.name || '؟').charAt(0)}</Text>
         </View>
       )}
-      <View style={styles.scrim} />
+      <Scrim height="62%" />
 
+      {/* تمبرِ پسند (راست) و رد (چپ) — هم‌جهت با حرکتِ فیزیکیِ انگشت */}
       <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeOpacity }]}>
         <Text style={[styles.stampText, { color: colors.gold2 }]}>پسند</Text>
       </Animated.View>
@@ -114,12 +134,16 @@ export function SwipeCard({ candidate, onSwipe }: Props) {
       </View>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 24,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -127,24 +151,21 @@ const styles = StyleSheet.create({
   },
   noPhoto: { backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   noPhotoText: { fontFamily: fonts.bold, fontSize: 72, color: colors.goldSoft },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15,10,12,0.35)',
-  },
   stamp: {
     position: 'absolute',
     top: 28,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 2,
+    backgroundColor: 'rgba(15,10,12,0.35)',
   },
-  likeStamp: { left: 22, borderColor: colors.gold2, transform: [{ rotate: '-12deg' }] },
-  passStamp: { right: 22, borderColor: colors.rose, transform: [{ rotate: '12deg' }] },
+  likeStamp: { right: 22, borderColor: colors.gold2, transform: [{ rotate: '-12deg' }] },
+  passStamp: { left: 22, borderColor: colors.rose, transform: [{ rotate: '12deg' }] },
   stampText: { fontFamily: fonts.bold, fontSize: 22 },
   info: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20 },
   nameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
-  name: { fontFamily: fonts.bold, fontSize: 24, color: colors.ink, textAlign: 'right' },
-  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.gold2, marginTop: 4, textAlign: 'right' },
-  bio: { fontFamily: fonts.regular, fontSize: 14, color: colors.ink2, marginTop: 6, textAlign: 'right', lineHeight: 21 },
+  name: { fontFamily: fonts.bold, fontSize: 26, color: '#fff', textAlign: 'right' },
+  meta: { fontFamily: fonts.regular, fontSize: 13, color: 'rgba(255,255,255,0.86)', marginTop: 4, textAlign: 'right' },
+  bio: { fontFamily: fonts.regular, fontSize: 14, color: 'rgba(255,255,255,0.92)', marginTop: 6, textAlign: 'right', lineHeight: 21 },
 });

@@ -3,40 +3,59 @@
     "name": "نودوست",
     "slug": "nodoost",
     "version": "1.0.0",
-    "scheme": "nodoost",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo/app-icon-1024.png",
+    "scheme": "nodoost",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0F0A0C",
-    "newArchEnabled": true,
-    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "ir.nodoost.app"
     },
     "android": {
       "package": "ir.nodoost.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0F0A0C"
+        "backgroundColor": "#0F0A0C",
+        "foregroundImage": "./assets/logo/logo-mark-gold.png"
       },
-      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "READ_MEDIA_IMAGES"]
+      "predictiveBackGestureEnabled": false
     },
     "web": {
-      "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/favicon.png",
-      "name": "نودوست",
-      "themeColor": "#0F0A0C",
-      "backgroundColor": "#0F0A0C"
+      "favicon": "./assets/logo/logo-mark-gold.png"
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      ["expo-image-picker", { "photosPermission": "برای انتخاب عکس پروفایل، به گالری دسترسی لازم است." }],
-      ["expo-location", { "locationWhenInUsePermission": "برای پیدا کردن افرادِ نزدیک، به موقعیتِ شما دسترسی لازم است." }],
-      ["expo-splash-screen", { "backgroundColor": "#0F0A0C", "image": "./assets/splash-icon.png", "imageWidth": 200 }]
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0F0A0C",
+          "image": "./assets/logo/logo-mark-gold.png",
+          "imageWidth": 120,
+          "android": {
+            "image": "./assets/logo/logo-mark-gold.png",
+            "imageWidth": 100
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "برای نمایشِ افرادِ نزدیک، به موقعیتِ مکانی نیاز داریم."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "برای انتخابِ عکسِ پروفایل، به گالریِ تصاویر دسترسی نیاز داریم."
+        }
+      ],
+      "expo-secure-store"
     ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
     "extra": {
       "apiBaseUrl": "http://localhost:8080"
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { Button } from '@/presentation/components/Button';
+import { Icon } from '@/presentation/components/Icon';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { colors, fonts, fontSizes, spacing } from '@/core/theme';
 
@@ -12,7 +13,9 @@ export function SuspendedScreen() {
   return (
     <ScreenContainer>
       <View style={styles.center}>
-        <Text style={styles.icon}>{banned ? '⛔' : '⏳'}</Text>
+        <View style={styles.badge}>
+          <Icon name={banned ? 'shield' : 'clock'} size={34} tint="gold" />
+        </View>
         <Text style={styles.title}>{banned ? 'حسابِ تو مسدود شده' : 'در حالِ بازبینی'}</Text>
         <Text style={styles.body}>
           {banned
@@ -27,7 +30,17 @@ export function SuspendedScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
-  icon: { fontSize: 56 },
+  badge: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
   title: { fontFamily: fonts.bold, fontSize: fontSizes.xl, color: colors.ink, textAlign: 'center' },
   body: {
     fontFamily: fonts.regular,

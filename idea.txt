@@ -1,0 +1,9 @@
+make all num fa
+fix rader in changers
+fix buy plan bug 
+why discover not work
+fix the icons and bages 
+adding logout
+full test
+redisgn all of pages
+fix discover page 

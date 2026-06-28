@@ -1,8 +1,11 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
 import type { Candidate, SwipeAction, MatchResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { CandidateDTO, MatchDTO } from '@/data/dto';
-import { toCandidate, toMatchResult } from '@/data/mappers';
+import type { CandidateDTO } from '@/data/dto';
+import { toCandidate } from '@/data/mappers';
+
+// نگاشتِ کنشِ سواایپِ دامنه به مقادیرِ موردِ انتظارِ بک‌اند (like | nope | super)
+const API_ACTION: Record<SwipeAction, string> = { like: 'like', super: 'super', pass: 'nope' };
 
 export class DiscoveryRepositoryImpl implements DiscoveryRepository {
   constructor(private readonly http: HttpClient) {}
@@ -13,10 +16,11 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
   }
 
   async swipe(targetId: number, action: SwipeAction): Promise<MatchResult> {
-    const d = await this.http.request<{ match?: MatchDTO }>('/api/swipes', {
+    // پاسخِ بک‌اند تخت است: { matched, match_id }
+    const d = await this.http.request<{ matched?: boolean; match_id?: number }>('/api/swipes', {
       method: 'POST',
-      body: { target_id: targetId, action },
+      body: { target_id: targetId, action: API_ACTION[action] },
     });
-    return toMatchResult(d?.match);
+    return { matchId: d?.matched && d.match_id ? d.match_id : undefined };
   }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +12,7 @@ import {
 import { DIProvider } from '@/core/di/DIProvider';
 import { SessionProvider, useSession } from '@/presentation/providers/SessionProvider';
 import { Loading } from '@/presentation/components/Loading';
+import { AnimatedSplash } from '@/presentation/components/AnimatedSplash';
 import { colors } from '@/core/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -62,6 +63,7 @@ export default function RootLayout() {
     Vazirmatn_500Medium,
     Vazirmatn_700Bold,
   });
+  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
@@ -75,6 +77,7 @@ export default function RootLayout() {
         <SessionProvider>
           <StatusBar style="light" />
           <AuthGate />
+          {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
         </SessionProvider>
       </DIProvider>
     </SafeAreaProvider>

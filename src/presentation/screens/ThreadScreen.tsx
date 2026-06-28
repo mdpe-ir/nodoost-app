@@ -10,11 +10,21 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { Loading } from '@/presentation/components/Loading';
+import { Avatar } from '@/presentation/components/Avatar';
+import { Icon } from '@/presentation/components/Icon';
 import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
-import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
+import { faNum } from '@/core/utils/faNum';
+import { colors, fonts, fontSizes, spacing, radius, gradients } from '@/core/theme';
+
+function fmtTime(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return faNum(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+}
 
 export function ThreadScreen({ matchId, name }: { matchId: number; name?: string }) {
   const vm = useThreadViewModel(matchId);
@@ -23,9 +33,10 @@ export function ThreadScreen({ matchId, name }: { matchId: number; name?: string
   return (
     <ScreenContainer flush style={styles.wrap}>
       <View style={styles.header}>
-        <Pressable hitSlop={10} onPress={() => router.back()}>
-          <Ionicons name="chevron-forward" size={26} color={colors.ink} />
+        <Pressable hitSlop={10} onPress={() => router.back()} accessibilityLabel="بازگشت">
+          <Icon name="chevron-prev" size={24} tint="white" />
         </Pressable>
+        <Avatar name={name} size={38} ring />
         <Text style={styles.headerName} numberOfLines={1}>
           {name || 'گفتگو'}
         </Text>
@@ -43,17 +54,21 @@ export function ThreadScreen({ matchId, name }: { matchId: number; name?: string
           <FlatList
             ref={listRef}
             data={vm.messages}
-            keyExtractor={(m, i) => String(m.id ?? i)}
+            keyExtractor={(m, i) => String(m.id ?? `i${i}`)}
             contentContainerStyle={styles.list}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
               const mine = item.senderId === vm.myId;
+              const time = fmtTime(item.createdAt);
               return (
                 <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
                   <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
                     {item.body}
                   </Text>
+                  {time ? (
+                    <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>{time}</Text>
+                  ) : null}
                 </View>
               );
             }}
@@ -71,11 +86,18 @@ export function ThreadScreen({ matchId, name }: { matchId: number; name?: string
             multiline
           />
           <Pressable
-            style={[styles.send, !vm.draft.trim() && styles.sendOff]}
+            style={styles.send}
             onPress={vm.send}
             disabled={vm.sending || !vm.draft.trim()}
+            accessibilityLabel="ارسال"
           >
-            <Ionicons name="send" size={20} color={colors.onGold} />
+            <LinearGradient
+              colors={gradients.gold}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[StyleSheet.absoluteFill, !vm.draft.trim() && styles.sendOff]}
+            />
+            <Icon name="send-fill" size={20} tint="ink" />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -89,13 +111,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
-  headerName: { flex: 1, fontFamily: fonts.bold, fontSize: fontSizes.lg, color: colors.ink, textAlign: 'right', marginRight: spacing.md },
-  headerSpacer: { width: 26 },
+  headerName: { flex: 1, fontFamily: fonts.bold, fontSize: fontSizes.lg, color: colors.ink, textAlign: 'right' },
+  headerSpacer: { width: 4 },
   list: { padding: spacing.lg, gap: spacing.sm },
   bubble: { maxWidth: '78%', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.lg },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.gold, borderBottomRightRadius: 4 },
@@ -103,6 +126,9 @@ const styles = StyleSheet.create({
   bubbleText: { fontFamily: fonts.regular, fontSize: fontSizes.md, lineHeight: 22, textAlign: 'right' },
   mineText: { color: colors.onGold },
   theirsText: { color: colors.ink },
+  time: { fontFamily: fonts.regular, fontSize: 10, marginTop: 3, textAlign: 'left' },
+  timeMine: { color: 'rgba(42,29,18,0.6)' },
+  timeTheirs: { color: colors.ink3 },
   composer: {
     flexDirection: 'row-reverse',
     alignItems: 'flex-end',
@@ -126,6 +152,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     fontSize: fontSizes.md,
   },
-  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center' },
+  send: { width: 46, height: 46, borderRadius: 23, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   sendOff: { opacity: 0.4 },
 });
