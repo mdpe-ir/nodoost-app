@@ -5,7 +5,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 # آدرسِ API در زمانِ build درون‌ریزی می‌شود؛ با --build-arg قابلِ تغییر است.
-ARG EXPO_PUBLIC_API_BASE_URL=https://nodoost-bakcend.darkube.app
+ARG EXPO_PUBLIC_API_BASE_URL=https://nodoost-bakcend.darkube.ir
 ENV EXPO_PUBLIC_API_BASE_URL=${EXPO_PUBLIC_API_BASE_URL}
 # خروجیِ استاتیکِ وب در ./dist تولید می‌شود (app.json: web.output = static)
 RUN npx expo export -p web
