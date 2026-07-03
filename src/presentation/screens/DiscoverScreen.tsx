@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { SwipeCard, type SwipeCardHandle } from '@/presentation/components/SwipeCard';
 import { EmptyState } from '@/presentation/components/EmptyState';
+import { NudgeBanner } from '@/presentation/components/NudgeBanner';
 import { CardSkeleton } from '@/presentation/components/Skeleton';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
@@ -27,6 +28,17 @@ export function DiscoverScreen() {
   return (
     <ScreenContainer flush style={styles.wrap}>
       <ScreenHeader title="کاوش" />
+
+      {vm.needsLocation ? (
+        <NudgeBanner
+          icon="shield"
+          title="موقعیتت روشن نیست"
+          hint="بدونِ موقعیت، دیگران تو را در کاوش نمی‌بینند. روشنش کن تا پیدات کنند."
+          ctaLabel="روشن کردنِ موقعیت"
+          busy={vm.locating}
+          onPress={vm.enableLocation}
+        />
+      ) : null}
 
       <View style={styles.deck}>
         {vm.current ? (

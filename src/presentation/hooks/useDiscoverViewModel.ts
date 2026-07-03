@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { useCases } from '@/core/di/DIProvider';
 import { ApiError } from '@/core/http/ApiError';
@@ -7,6 +8,9 @@ import type { Candidate, MatchResult } from '@/domain/entities';
 /**
  * ویومدلِ کاوش. کارت‌ها بلافاصله بارگذاری می‌شوند و موقعیت در پس‌زمینه ست
  * می‌شود؛ پس صفحه هیچ‌وقت منتظرِ GPS بلاک نمی‌ماند.
+ *
+ * اگر موقعیتِ کاربر ست نشود، او در کاوشِ دیگران دیده نمی‌شود؛ در آن حالت
+ * `needsLocation` روشن می‌شود تا صفحه یک نکته‌ی راهنما نشان دهد.
  */
 export function useDiscoverViewModel() {
   const uc = useCases();
@@ -15,6 +19,8 @@ export function useDiscoverViewModel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [match, setMatch] = useState<MatchResult | null>(null);
+  const [needsLocation, setNeedsLocation] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const load = useCallback(
     async (silent = false) => {
@@ -34,24 +40,55 @@ export function useDiscoverViewModel() {
     [uc]
   );
 
+  // تلاش برای گرفتنِ موقعیت و ذخیره‌ی آن. اگر مجوز نبود، `needsLocation` روشن می‌ماند.
+  // `interactive` یعنی کاربر خودش دکمه را زده؛ آن‌وقت اگر مجوز برای همیشه رد شده،
+  // او را به تنظیماتِ سیستم می‌بریم.
+  const captureLocation = useCallback(
+    async (interactive = false): Promise<boolean> => {
+      try {
+        let perm = await Location.getForegroundPermissionsAsync();
+        if (!perm.granted && perm.canAskAgain) {
+          perm = await Location.requestForegroundPermissionsAsync();
+        }
+        if (!perm.granted) {
+          if (interactive && !perm.canAskAgain) await Linking.openSettings().catch(() => {});
+          setNeedsLocation(true);
+          return false;
+        }
+        const loc = await Location.getCurrentPositionAsync({}).catch(() => null);
+        if (!loc) {
+          setNeedsLocation(true);
+          return false;
+        }
+        await uc.profile.setLocation(loc.coords.latitude, loc.coords.longitude);
+        setNeedsLocation(false);
+        return true;
+      } catch {
+        setNeedsLocation(true);
+        return false;
+      }
+    },
+    [uc]
+  );
+
   useEffect(() => {
     let alive = true;
     load();
     (async () => {
+      // اگر موقعیتِ کاربر قبلاً ست نشده، در پس‌زمینه تلاش کن؛ در غیرِ این صورت نکته را نشان بده.
+      let hasLocation = false;
       try {
-        const perm = await Location.requestForegroundPermissionsAsync();
-        if (!perm.granted) return;
-        const loc = await Location.getCurrentPositionAsync({}).catch(() => null);
-        if (alive && loc) {
-          await uc.profile.setLocation(loc.coords.latitude, loc.coords.longitude);
-          if (alive) load(true);
-        }
+        const me = await uc.profile.getMe();
+        hasLocation = me?.hasLocation ?? false;
       } catch {}
+      if (!alive || hasLocation) return;
+      const ok = await captureLocation(false);
+      if (alive && ok) load(true);
     })();
     return () => {
       alive = false;
     };
-  }, [uc, load]);
+  }, [uc, load, captureLocation]);
 
   const current = cards[index];
 
@@ -70,12 +107,23 @@ export function useDiscoverViewModel() {
     [cards, index, uc]
   );
 
+  const enableLocation = useCallback(async () => {
+    if (locating) return;
+    setLocating(true);
+    const ok = await captureLocation(true);
+    setLocating(false);
+    if (ok) load(true);
+  }, [locating, captureLocation, load]);
+
   return {
     current,
     loading,
     error,
     match,
+    needsLocation,
+    locating,
     swipe,
+    enableLocation,
     reload: () => load(),
     dismissMatch: () => setMatch(null),
   };

@@ -44,6 +44,7 @@ export const toUser = (d: UserDTO): User => ({
   banReason: d.ban_reason,
   verified: d.verified,
   isPlus: d.is_plus,
+  hasLocation: d.has_location,
   interests: d.interests,
   photos: d.photos?.map(toPhoto),
 });

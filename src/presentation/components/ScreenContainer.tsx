@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing } from '@/core/theme';
+import { InstallButton } from '@/presentation/components/InstallButton';
 
 interface Props {
   children: React.ReactNode;
@@ -34,7 +35,7 @@ export function ScreenHeader({
 }) {
   return (
     <View style={styles.head}>
-      {action ?? <View />}
+      {action ?? <InstallButton />}
       <View style={styles.headText}>
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

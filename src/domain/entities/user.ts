@@ -20,6 +20,8 @@ export interface User {
   banReason?: string;
   verified?: boolean;
   isPlus?: boolean;
+  /** موقعیت ست شده؟ بدونِ آن، کاربر در کاوشِ دیگران دیده نمی‌شود. */
+  hasLocation?: boolean;
   interests?: string[];
   photos?: Photo[];
 }

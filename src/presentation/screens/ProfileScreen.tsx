@@ -42,12 +42,35 @@ export function ProfileScreen() {
         </View>
 
         <Text style={styles.section}>عکس‌ها</Text>
+        <Text style={styles.photoNote}>
+          عکس‌های تازه پیش از نمایش به دیگران توسطِ مدیر بررسی می‌شوند. تا زمانِ تأیید فقط خودت آن‌ها را می‌بینی.
+        </Text>
         <View style={styles.grid}>
           {vm.photos.map((p) => {
             const uri = mediaUrl(p.url);
+            const pending = p.status === 'pending' || p.status == null;
+            const rejected = p.status === 'rejected';
             return (
               <View key={p.id} style={styles.photoTile}>
-                {uri ? <Image source={{ uri }} style={styles.photo} contentFit="cover" cachePolicy="memory-disk" /> : null}
+                {uri ? (
+                  <Image
+                    source={{ uri }}
+                    style={[styles.photo, (pending || rejected) && styles.photoDim]}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : null}
+                {pending ? (
+                  <View style={styles.statusTag}>
+                    <Icon name="clock" size={11} tint="ink" />
+                    <Text style={styles.statusText}>در انتظارِ تأیید</Text>
+                  </View>
+                ) : null}
+                {rejected ? (
+                  <View style={[styles.statusTag, styles.statusTagReject]}>
+                    <Text style={styles.statusText}>رد شد</Text>
+                  </View>
+                ) : null}
                 <Pressable style={styles.del} onPress={() => vm.deletePhoto(p.id)} disabled={vm.busy} hitSlop={6} accessibilityLabel="حذفِ عکس">
                   <Icon name="close" size={14} tint="white" />
                 </Pressable>
@@ -114,6 +137,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
+  photoNote: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    color: colors.ink3,
+    textAlign: 'right',
+    lineHeight: 20,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   grid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.md },
   photoTile: {
     width: 96,
@@ -125,6 +157,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   photo: { width: '100%', height: '100%' },
+  photoDim: { opacity: 0.45 },
+  statusTag: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    backgroundColor: colors.goldFaint,
+  },
+  statusTagReject: { backgroundColor: 'rgba(120,20,30,0.55)' },
+  statusText: { fontFamily: fonts.medium, fontSize: 10, color: colors.ink },
   del: {
     position: 'absolute',
     top: 4,

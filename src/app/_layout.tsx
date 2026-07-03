@@ -11,6 +11,8 @@ import {
 } from '@expo-google-fonts/vazirmatn';
 import { DIProvider } from '@/core/di/DIProvider';
 import { SessionProvider, useSession } from '@/presentation/providers/SessionProvider';
+import { PwaInstallProvider } from '@/presentation/providers/PwaInstallProvider';
+import { isProfileComplete } from '@/domain/policies/profile';
 import { Loading } from '@/presentation/components/Loading';
 import { AnimatedSplash } from '@/presentation/components/AnimatedSplash';
 import { colors } from '@/core/theme';
@@ -36,7 +38,8 @@ function AuthGate() {
       if (root !== 'suspended') router.replace('/suspended');
       return;
     }
-    if (!user?.name) {
+    // تا وقتی پروفایل کامل نشده (نام، جنسیت، سن و حداقل یک عکس) اجازه‌ی ورود به اپ نیست.
+    if (!isProfileComplete(user)) {
       if (root !== 'onboarding') router.replace('/onboarding');
       return;
     }
@@ -75,9 +78,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <DIProvider>
         <SessionProvider>
-          <StatusBar style="light" />
-          <AuthGate />
-          {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+          <PwaInstallProvider>
+            <StatusBar style="light" />
+            <AuthGate />
+            {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+          </PwaInstallProvider>
         </SessionProvider>
       </DIProvider>
     </SafeAreaProvider>

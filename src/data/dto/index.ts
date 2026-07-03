@@ -18,6 +18,7 @@ export interface UserDTO {
   ban_reason?: string;
   is_plus?: boolean;
   verified?: boolean;
+  has_location?: boolean;
   interests?: string[];
   photos?: PhotoDTO[];
 }
