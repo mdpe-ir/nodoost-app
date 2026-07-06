@@ -178,7 +178,12 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
               if (matchId) {
                 router.push({
                   pathname: '/thread/[id]',
-                  params: { id: String(matchId), name: p.name ?? '', peerId: String(p.id) },
+                  params: {
+                    id: String(matchId),
+                    name: p.name ?? '',
+                    peerId: String(p.id),
+                    photoUrl: p.photos[0] ?? '',
+                  },
                 });
               }
             }}
@@ -203,7 +208,15 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           onChat={() => {
             const id = vm.match?.matchId;
             vm.dismissMatch();
-            if (id) router.push({ pathname: '/thread/[id]', params: { id: String(id), name: p.name ?? '' } });
+            if (id) router.push({
+              pathname: '/thread/[id]',
+              params: {
+                id: String(id),
+                name: p.name ?? '',
+                peerId: String(p.id),
+                photoUrl: p.photos[0] ?? '',
+              },
+            });
             else router.push('/chat');
           }}
           onDismiss={vm.dismissMatch}

@@ -62,10 +62,12 @@ export function ThreadScreen({
   matchId,
   name,
   peerId,
+  photoUrl,
 }: {
   matchId: number;
   name?: string;
   peerId?: number;
+  photoUrl?: string;
 }) {
   const vm = useThreadViewModel(matchId);
   const insets = useSafeAreaInsets();
@@ -98,7 +100,7 @@ export function ThreadScreen({
           accessibilityRole="button"
           accessibilityLabel={`پروفایلِ ${name ?? 'کاربر'}`}
         >
-          <Avatar name={name} size={40} ring />
+          <Avatar uri={photoUrl} name={name} size={40} ring />
           <View style={styles.headerText}>
             <Text style={styles.headerName} numberOfLines={1}>
               {name || 'گفتگو'}

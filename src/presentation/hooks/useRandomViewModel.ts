@@ -19,7 +19,12 @@ export function useRandomViewModel() {
         setState('idle');
         router.push({
           pathname: '/thread/[id]',
-          params: { id: String(r.matchId), name: r.peer?.name ?? 'ناشناس' },
+          params: {
+            id: String(r.matchId),
+            name: r.peer?.name ?? 'ناشناس',
+            peerId: r.peer?.id ? String(r.peer.id) : '',
+            photoUrl: r.peer?.photoUrl ?? '',
+          },
         });
       }
     } catch {

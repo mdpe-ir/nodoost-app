@@ -60,6 +60,7 @@ export function ChatScreen() {
                       id: String(item.matchId),
                       name: item.otherName ?? '',
                       peerId: String(item.otherId),
+                      photoUrl: item.otherPhotoUrl ?? '',
                     },
                   })
                 }

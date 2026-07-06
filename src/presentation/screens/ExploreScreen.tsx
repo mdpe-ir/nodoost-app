@@ -202,8 +202,13 @@ export function ExploreView() {
           onChat={() => {
             const id = vm.match?.matchId;
             const name = vm.match?.peer?.name ?? '';
+            const peerId = vm.match?.peer?.id;
+            const photoUrl = vm.match?.peer?.photoUrl;
             vm.dismissMatch();
-            if (id) router.push({ pathname: '/thread/[id]', params: { id: String(id), name } });
+            if (id) router.push({
+              pathname: '/thread/[id]',
+              params: { id: String(id), name, peerId: peerId ? String(peerId) : '', photoUrl: photoUrl ?? '' },
+            });
             else router.push('/chat');
           }}
           onDismiss={vm.dismissMatch}

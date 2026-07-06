@@ -51,13 +51,14 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   padded: { paddingHorizontal: PAGE_PADDING },
   head: {
-    flexDirection: 'row-reverse',
+    // ریشهٔ وب عمداً LTR است؛ action به‌عنوان فرزند اول در چپ و متن در راست می‌نشیند.
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
   },
-  headText: { flexShrink: 1, alignItems: 'flex-end' },
+  headText: { flex: 1, alignItems: 'flex-end' },
   title: {
     fontFamily: fonts.bold,
     fontSize: 26,
