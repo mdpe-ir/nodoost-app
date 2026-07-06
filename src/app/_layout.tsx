@@ -55,6 +55,8 @@ function AuthGate() {
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="suspended" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="likes" />
+      <Stack.Screen name="user/[id]" />
       <Stack.Screen name="thread/[id]" />
     </Stack>
   );

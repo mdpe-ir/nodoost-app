@@ -1,17 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, fonts, fontSizes, spacing } from '@/core/theme';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import { Icon, type IconName } from './Icon';
 
 interface Props {
   icon?: IconName;
   title: string;
   hint?: string;
+  /** کنشِ اختیاری (مثلاً «بارگذاریِ دوباره»). */
+  actionLabel?: string;
+  onAction?: () => void;
+  actionIcon?: IconName;
 }
 
-export function EmptyState({ icon, title, hint }: Props) {
+export function EmptyState({ icon, title, hint, actionLabel, onAction, actionIcon = 'rewind' }: Props) {
   return (
-    <View style={styles.wrap}>
+    <Animated.View entering={FadeInDown.duration(280)} style={styles.wrap}>
       {icon ? (
         <View style={styles.badge}>
           <Icon name={icon} size={30} tint="gold" />
@@ -19,7 +24,17 @@ export function EmptyState({ icon, title, hint }: Props) {
       ) : null}
       <Text style={styles.title}>{title}</Text>
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-    </View>
+      {actionLabel && onAction ? (
+        <Pressable
+          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
+          onPress={onAction}
+          accessibilityRole="button"
+        >
+          <Icon name={actionIcon} size={16} tint="gold" />
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -43,6 +58,21 @@ const styles = StyleSheet.create({
     color: colors.ink3,
     textAlign: 'center',
     marginTop: spacing.sm,
-    lineHeight: 22,
+    lineHeight: lineHeights.sm,
+    maxWidth: 280,
   },
+  action: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.goldFaint,
+  },
+  actionPressed: { opacity: 0.8 },
+  actionText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
 });

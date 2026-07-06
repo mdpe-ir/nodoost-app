@@ -8,10 +8,11 @@ export const spacing = {
   xxl: 32,
 } as const;
 
+/** شعاع‌های گردترِ مدرن. */
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 26,
   pill: 999,
 } as const;

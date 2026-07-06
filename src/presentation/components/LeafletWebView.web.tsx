@@ -55,7 +55,7 @@ export function LeafletWebView({ html, payload, onEvent }: Props) {
       ref={ref}
       srcDoc={html}
       title="map"
-      style={{ border: 'none', width: '100%', height: '100%', backgroundColor: '#0F0A0C' }}
+      style={{ border: 'none', width: '100%', height: '100%', backgroundColor: '#0B0910' }}
     />
   );
 }

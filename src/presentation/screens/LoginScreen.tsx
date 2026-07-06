@@ -8,18 +8,17 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  I18nManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '@/presentation/components/Icon';
+import { Button } from '@/presentation/components/Button';
 import { useLogin } from '@/presentation/hooks/useLogin';
-import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients, shadow } from '@/core/theme';
 import { faNum } from '@/core/utils/faNum';
 
-const GOLD_GRADIENT = ['#F4E1B0', '#DAB877', '#C49E55'] as const;
 const CODE_LEN = 4;
 
 export function LoginScreen() {
@@ -28,7 +27,7 @@ export function LoginScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#160F12', colors.bg]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#141020', colors.bg]} style={StyleSheet.absoluteFill} />
       <View style={[styles.blob, styles.blobGold]} />
       <View style={[styles.blob, styles.blobRose]} />
 
@@ -48,9 +47,9 @@ export function LoginScreen() {
                 style={styles.glow}
                 contentFit="contain"
               />
-              <View style={styles.mark}>
+              <View style={[styles.mark, shadow.gold]}>
                 <LinearGradient
-                  colors={GOLD_GRADIENT}
+                  colors={gradients.gold}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFill}
@@ -70,7 +69,7 @@ export function LoginScreen() {
             <Text style={styles.tagline}>دوست‌یابیِ لوکس، نزدیکِ تو</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInUp.delay(180).duration(560)} style={styles.card}>
+          <Animated.View entering={FadeInUp.delay(180).duration(560)} style={[styles.card, shadow.card]}>
             {vm.step === 'phone' ? (
               <>
                 <Text style={styles.cardTitle}>ورود یا ثبت‌نام</Text>
@@ -92,7 +91,7 @@ export function LoginScreen() {
                 </View>
 
                 {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
-                <GoldButton label="ارسالِ کدِ تأیید" onPress={vm.sendOtp} loading={vm.loading} />
+                <Button label="ارسالِ کدِ تأیید" onPress={vm.sendOtp} loading={vm.loading} style={styles.cta} />
               </>
             ) : (
               <>
@@ -104,15 +103,25 @@ export function LoginScreen() {
                 {vm.debugCode ? <Text style={styles.debug}>کدِ آزمایشی: {faNum(vm.debugCode)}</Text> : null}
                 {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
 
-                <GoldButton
+                <Button
                   label="ورود"
                   onPress={vm.verify}
                   loading={vm.loading}
-                  disabled={vm.code.trim().length < 4}
+                  disabled={vm.code.trim().length < CODE_LEN}
+                  style={styles.cta}
                 />
-                <Pressable onPress={vm.back} style={styles.changeBtn} accessibilityRole="button">
-                  <Text style={styles.changeText}>تغییرِ شماره</Text>
-                </Pressable>
+                <View style={styles.codeFooter}>
+                  <Pressable onPress={vm.back} style={styles.footerBtn} accessibilityRole="button">
+                    <Text style={styles.footerBtnText}>تغییرِ شماره</Text>
+                  </Pressable>
+                  {vm.resendIn > 0 ? (
+                    <Text style={styles.resendWait}>ارسالِ دوباره تا {faNum(vm.resendIn)} ثانیه</Text>
+                  ) : (
+                    <Pressable onPress={vm.sendOtp} style={styles.footerBtn} accessibilityRole="button">
+                      <Text style={styles.footerBtnText}>ارسالِ دوباره‌ی کد</Text>
+                    </Pressable>
+                  )}
+                </View>
               </>
             )}
           </Animated.View>
@@ -124,41 +133,16 @@ export function LoginScreen() {
   );
 }
 
-/** دکمه‌ی طلاییِ گرادیانی */
-function GoldButton({
-  label,
-  onPress,
-  loading,
-  disabled,
-}: {
-  label: string;
-  onPress: () => void;
-  loading?: boolean;
-  disabled?: boolean;
-}) {
-  const off = loading || disabled;
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={off}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.cta, off && styles.ctaOff, pressed && !off && styles.ctaPressed]}
-    >
-      <LinearGradient colors={GOLD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      <Text style={styles.ctaText}>{loading ? '…' : label}</Text>
-    </Pressable>
-  );
-}
-
-/** ورودیِ کدِ بخش‌بخش (۶ خانه) با ارقامِ فارسی */
+/**
+ * ورودیِ کدِ بخش‌بخش با ارقامِ فارسی.
+ * ردیفِ خانه‌ها عمداً LTR است (عدد چپ‌به‌راست خوانده می‌شود)؛ چون جهتِ پایه‌ی
+ * اپ در همه‌ی پلتفرم‌ها LTR است، flexDirection:'row' همین را تضمین می‌کند.
+ */
 function CodeBoxes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const ref = useRef<TextInput>(null);
-  // ترتیبِ خانه‌ها همیشه چپ‌به‌راست خوانده می‌شود (عدد LTR است)؛
-  // در RTL ترتیبِ فرزندان را برعکس می‌کنیم تا چیدمانِ flex آن را به LTR برگرداند.
-  const order = Array.from({ length: CODE_LEN }, (_, i) => (I18nManager.isRTL ? CODE_LEN - 1 - i : i));
   return (
     <Pressable style={styles.codeRow} onPress={() => ref.current?.focus()}>
-      {order.map((idx) => {
+      {Array.from({ length: CODE_LEN }, (_, idx) => {
         const ch = value[idx];
         const active = idx === value.length;
         return (
@@ -184,7 +168,7 @@ function CodeBoxes({ value, onChange }: { value: string; onChange: (v: string) =
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'center' },
+  scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, justifyContent: 'center' },
 
   blob: { position: 'absolute', width: 340, height: 340, borderRadius: 170 },
   blobGold: { backgroundColor: colors.gold, top: -120, right: -90, opacity: 0.16 },
@@ -200,64 +184,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 18,
-    elevation: 9,
   },
   markImg: { width: 50, height: 50 },
   wordmark: { width: 168, height: 50 },
-  tagline: { fontFamily: fonts.regular, fontSize: fontSizes.md, color: colors.ink2, marginTop: 12 },
+  tagline: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.md,
+    lineHeight: lineHeights.md,
+    color: colors.ink2,
+    marginTop: spacing.md,
+  },
 
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(243,233,223,0.07)',
+    borderColor: colors.line,
     padding: spacing.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 22,
-    elevation: 12,
   },
-  cardTitle: { fontFamily: fonts.bold, fontSize: 20, color: colors.ink },
-  cardSub: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink2, marginTop: 6, lineHeight: 22, marginBottom: 22 },
-  label: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2, marginBottom: 10, textAlign: 'right' },
+  cardTitle: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.lg,
+    lineHeight: lineHeights.lg,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  cardSub: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    color: colors.ink2,
+    marginTop: spacing.xs,
+    lineHeight: lineHeights.sm,
+    marginBottom: spacing.xl - 2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.ink2,
+    marginBottom: spacing.sm + 2,
+    textAlign: 'right',
+  },
   inputRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
     height: 56,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
   },
   input: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 17, letterSpacing: 1 },
-  error: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.rose, marginTop: 12, textAlign: 'right' },
-  debug: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.gold2, textAlign: 'center', marginTop: 12 },
-
-  cta: {
-    height: 54,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    marginTop: 18,
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 18,
-    elevation: 9,
+  error: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    color: colors.rose,
+    marginTop: spacing.md,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
-  ctaOff: { opacity: 0.5 },
-  ctaPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
-  ctaText: { fontFamily: fonts.medium, fontSize: 16, color: colors.onGold },
+  debug: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    color: colors.gold2,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
 
-  codeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, position: 'relative' },
+  cta: { marginTop: spacing.lg + 2 },
+
+  // ردیفِ کد عمداً row (چپ‌به‌راست) است — عدد LTR خوانده می‌شود.
+  codeRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, position: 'relative' },
   codeBox: {
     flex: 1,
     height: 58,
@@ -270,11 +271,27 @@ const styles = StyleSheet.create({
   },
   codeBoxFilled: { borderColor: colors.goldSoft },
   codeBoxActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  codeChar: { fontFamily: fonts.bold, fontSize: 22, color: colors.gold2 },
+  codeChar: { fontFamily: fonts.bold, fontSize: fontSizes.xl, color: colors.gold2 },
   hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0 },
 
-  changeBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 6 },
-  changeText: { fontFamily: fonts.medium, fontSize: 14, color: colors.gold },
+  codeFooter: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
+  footerBtn: { paddingVertical: spacing.md },
+  footerBtnText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold },
+  resendWait: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3 },
 
-  terms: { fontFamily: fonts.regular, fontSize: 11, color: colors.ink3, textAlign: 'center', lineHeight: 20, marginTop: 24, paddingHorizontal: 10 },
+  terms: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    color: colors.ink3,
+    textAlign: 'center',
+    lineHeight: lineHeights.xs + 2,
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.sm,
+    writingDirection: 'rtl',
+  },
 });

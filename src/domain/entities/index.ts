@@ -6,6 +6,7 @@ export type {
   MatchResult,
   Liker,
   LikesOverview,
+  PeerProfile,
   RandomMatch,
   RandomFilters,
 } from './discovery';

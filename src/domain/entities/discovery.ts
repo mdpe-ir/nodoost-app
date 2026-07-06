@@ -47,6 +47,24 @@ export interface LikesOverview {
   likers: Liker[];
 }
 
+/** پروفایلِ عمومیِ یک کاربرِ دیگر — برای صفحه‌ی نمایشِ پروفایل. */
+export interface PeerProfile {
+  id: number;
+  name?: string;
+  age?: number;
+  gender?: string;
+  bio?: string;
+  verified?: boolean;
+  tier?: number;
+  distanceM?: number;
+  isMatch?: boolean;
+  /** اگر مچ شده‌اند، برای رفتنِ مستقیم به گفتگو. */
+  matchId?: number;
+  interests: string[];
+  /** فقط عکس‌های تأییدشده. */
+  photos: string[];
+}
+
 /** نتیجه‌ی پیوستن به چتِ تصادفی. */
 export interface RandomMatch {
   status: 'waiting' | 'matched';

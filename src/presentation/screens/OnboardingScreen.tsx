@@ -12,10 +12,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { Button } from '@/presentation/components/Button';
+import { Chip } from '@/presentation/components/Chip';
 import { Icon } from '@/presentation/components/Icon';
 import { useOnboarding } from '@/presentation/hooks/useOnboarding';
 import { faNum } from '@/core/utils/faNum';
-import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import type { Gender } from '@/domain/entities';
 
 const GENDERS: { key: Gender; label: string }[] = [
@@ -23,6 +24,7 @@ const GENDERS: { key: Gender; label: string }[] = [
   { key: 'm', label: 'مرد' },
 ];
 const STEPS = 5;
+const BIO_MAX = 160;
 
 export function OnboardingScreen() {
   const vm = useOnboarding();
@@ -77,7 +79,8 @@ export function OnboardingScreen() {
   return (
     <ScreenContainer>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <View style={styles.top}>
+        <View>
+          {/* نوارِ پیشرفت راست‌به‌چپ پر می‌شود — هم‌جهت با خواندنِ فارسی */}
           <View style={styles.progress}>
             {Array.from({ length: STEPS }).map((_, i) => (
               <View key={i} style={[styles.seg, i <= step && styles.segOn]} />
@@ -104,19 +107,15 @@ export function OnboardingScreen() {
 
           {step === 1 ? (
             <View style={styles.genderRow}>
-              {GENDERS.map((g) => {
-                const active = vm.gender === g.key;
-                return (
-                  <Pressable
-                    key={g.key}
-                    onPress={() => vm.setGender(g.key)}
-                    style={[styles.genderBtn, active && styles.genderActive]}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.genderText, active && styles.genderTextActive]}>{g.label}</Text>
-                  </Pressable>
-                );
-              })}
+              {GENDERS.map((g) => (
+                <Chip
+                  key={g.key}
+                  label={g.label}
+                  active={vm.gender === g.key}
+                  onPress={() => vm.setGender(g.key)}
+                  style={styles.genderChip}
+                />
+              ))}
             </View>
           ) : null}
 
@@ -135,28 +134,37 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 3 ? (
-            <TextInput
-              style={[styles.input, styles.bio]}
-              value={vm.bio}
-              onChangeText={vm.setBio}
-              placeholder="چند کلمه از خودت بنویس…"
-              placeholderTextColor={colors.ink3}
-              textAlign="right"
-              multiline
-              maxLength={160}
-            />
+            <>
+              <TextInput
+                style={[styles.input, styles.bio]}
+                value={vm.bio}
+                onChangeText={vm.setBio}
+                placeholder="چند کلمه از خودت بنویس…"
+                placeholderTextColor={colors.ink3}
+                textAlign="right"
+                multiline
+                maxLength={BIO_MAX}
+              />
+              <Text style={styles.bioCount}>{faNum(vm.bio.length)} / {faNum(BIO_MAX)}</Text>
+            </>
           ) : null}
 
           {step === 4 ? (
             <View style={styles.photoStep}>
               <Pressable
-                style={styles.photoTile}
+                style={({ pressed }) => [styles.photoTile, pressed && styles.photoTilePressed]}
                 onPress={vm.pickPhoto}
                 accessibilityRole="button"
                 accessibilityLabel="افزودنِ عکس"
               >
                 {vm.photoUri ? (
-                  <Image source={{ uri: vm.photoUri }} style={styles.photoImg} contentFit="cover" transition={200} />
+                  <>
+                    <Image source={{ uri: vm.photoUri }} style={styles.photoImg} contentFit="cover" transition={200} />
+                    <View style={styles.photoEditTag}>
+                      <Icon name="edit" size={13} tint="ink" />
+                      <Text style={styles.photoEditText}>تغییرِ عکس</Text>
+                    </View>
+                  </>
                 ) : (
                   <View style={styles.photoEmpty}>
                     <Icon name="plus" size={30} tint="gold" />
@@ -177,8 +185,12 @@ export function OnboardingScreen() {
         <View style={styles.footer}>
           <Button label={step < STEPS - 1 ? 'ادامه' : 'پایان'} onPress={next} loading={vm.loading} />
           {step > 0 ? (
-            <Pressable onPress={() => setStep((s) => s - 1)} style={styles.backBtn} accessibilityRole="button">
-              <Icon name="chevron-prev" size={16} tint="gold" />
+            <Pressable
+              onPress={() => setStep((s) => s - 1)}
+              style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+              accessibilityRole="button"
+            >
+              <Icon name="chevron-next" size={16} tint="gold" />
               <Text style={styles.backText}>گامِ قبلی</Text>
             </Pressable>
           ) : null}
@@ -190,14 +202,35 @@ export function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, paddingVertical: spacing.lg },
-  top: {},
-  progress: { flexDirection: 'row', gap: 8 },
+  progress: { flexDirection: 'row-reverse', gap: spacing.sm },
   seg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surface2 },
   segOn: { backgroundColor: colors.gold },
-  stepLabel: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, marginTop: spacing.md, textAlign: 'right' },
+  stepLabel: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    color: colors.ink3,
+    marginTop: spacing.md,
+    textAlign: 'right',
+  },
   body: { flex: 1, justifyContent: 'center' },
-  title: { fontFamily: fonts.bold, fontSize: fontSizes.xxl, color: colors.ink, textAlign: 'right' },
-  sub: { fontFamily: fonts.regular, fontSize: fontSizes.md, color: colors.ink2, textAlign: 'right', marginTop: spacing.sm, marginBottom: spacing.xl },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xxl,
+    lineHeight: lineHeights.xxl,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  sub: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.md,
+    lineHeight: lineHeights.md,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+  },
   input: {
     minHeight: 56,
     borderRadius: radius.md,
@@ -209,22 +242,19 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fonts.medium,
     fontSize: 17,
+    // جهتِ نوشتار rtl تا placeholder و متنِ فارسی درست چیده شوند
+    writingDirection: 'rtl',
   },
   bio: { minHeight: 120, textAlignVertical: 'top' },
-  genderRow: { flexDirection: 'row-reverse', gap: spacing.md },
-  genderBtn: {
-    flex: 1,
-    height: 56,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
+  bioCount: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    color: colors.ink3,
+    textAlign: 'left',
+    marginTop: spacing.sm,
   },
-  genderActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  genderText: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink2 },
-  genderTextActive: { color: colors.gold2 },
+  genderRow: { flexDirection: 'row-reverse', gap: spacing.md },
+  genderChip: { flex: 1, minHeight: 56 },
   photoStep: { alignItems: 'center' },
   photoTile: {
     width: 168,
@@ -235,7 +265,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldSoft,
   },
+  photoTilePressed: { opacity: 0.85 },
   photoImg: { width: '100%', height: '100%' },
+  photoEditTag: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    backgroundColor: colors.goldSoft,
+  },
+  photoEditText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.ink },
   photoEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   photoHint: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
   reviewNote: {
@@ -245,9 +289,31 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingHorizontal: spacing.md,
   },
-  reviewText: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink2, textAlign: 'right', flexShrink: 1 },
-  error: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.rose, textAlign: 'right', marginTop: spacing.lg },
+  reviewText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    flexShrink: 1,
+  },
+  error: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    color: colors.rose,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.lg,
+  },
   footer: { gap: spacing.md },
-  backBtn: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.sm },
+  backBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+  },
+  backBtnPressed: { opacity: 0.7 },
   backText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
@@ -8,10 +8,12 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { ScreenContainer } from '@/presentation/components/ScreenContainer';
+import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { Button } from '@/presentation/components/Button';
+import { Chip } from '@/presentation/components/Chip';
+import { Icon } from '@/presentation/components/Icon';
 import { useRandomViewModel } from '@/presentation/hooks/useRandomViewModel';
-import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 
 const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
   { key: '', label: 'فرقی نداره' },
@@ -43,8 +45,7 @@ export function RandomScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>تصادفی</Text>
-      <Text style={styles.sub}>با یک غریبه‌ی نزدیک، گفتگوی زنده را شروع کن</Text>
+      <ScreenHeader title="تصادفی" subtitle="با یک غریبه‌ی نزدیک، گفتگوی زنده را شروع کن" />
 
       <View style={styles.center}>
         <View style={styles.orbWrap}>
@@ -55,31 +56,31 @@ export function RandomScreen() {
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.orbInner}>
+              <Icon name={waiting ? 'clock' : 'lightning-fill'} size={26} tint="gold" />
               <Text style={styles.orbText}>{waiting ? 'در حالِ پیدا کردن…' : 'آماده‌ای؟'}</Text>
             </View>
           </Animated.View>
         </View>
+        {waiting ? (
+          <Text style={styles.waitHint}>به‌محضِ پیدا شدنِ هم‌صحبت، گفتگو خودکار باز می‌شود.</Text>
+        ) : null}
       </View>
 
       {!waiting ? (
         <>
           <Text style={styles.label}>ترجیحِ جنسیتِ هم‌صحبت</Text>
           <View style={styles.row}>
-            {OPTIONS.map((o) => {
-              const active = vm.gender === o.key;
-              return (
-                <Pressable
-                  key={o.key || 'any'}
-                  onPress={() => vm.setGender(o.key)}
-                  style={[styles.chip, active && styles.chipActive]}
-                  accessibilityRole="button"
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{o.label}</Text>
-                </Pressable>
-              );
-            })}
+            {OPTIONS.map((o) => (
+              <Chip
+                key={o.key || 'any'}
+                label={o.label}
+                active={vm.gender === o.key}
+                onPress={() => vm.setGender(o.key)}
+                style={styles.chip}
+              />
+            ))}
           </View>
-          <Button label="شروعِ گفتگوی تصادفی" onPress={vm.join} style={styles.action} />
+          <Button label="شروعِ گفتگوی تصادفی" icon="lightning-fill" onPress={vm.join} style={styles.action} />
         </>
       ) : (
         <Button label="لغو" onPress={vm.leave} variant="outline" style={styles.action} />
@@ -90,11 +91,16 @@ export function RandomScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontFamily: fonts.bold, fontSize: fontSizes.xl, color: colors.gold, textAlign: 'right', marginTop: spacing.sm },
-  sub: { fontFamily: fonts.regular, fontSize: fontSizes.md, color: colors.ink2, textAlign: 'right', marginTop: spacing.xs },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   orbWrap: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center' },
-  pulseRing: { position: 'absolute', width: 200, height: 200, borderRadius: 100, borderWidth: 1.5, borderColor: colors.goldSoft },
+  pulseRing: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 1.5,
+    borderColor: colors.goldSoft,
+  },
   orb: { width: 200, height: 200, borderRadius: 100, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   orbInner: {
     width: 150,
@@ -105,24 +111,40 @@ const styles = StyleSheet.create({
     borderColor: colors.goldSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
     paddingHorizontal: 14,
   },
-  orbText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2, textAlign: 'center' },
-  label: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2, textAlign: 'right', marginBottom: spacing.md },
-  row: { flexDirection: 'row-reverse', gap: spacing.sm },
-  chip: {
-    flex: 1,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
+  orbText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.gold2,
+    textAlign: 'center',
   },
-  chipActive: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  chipText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
-  chipTextActive: { color: colors.gold2 },
-  action: { marginTop: spacing.xl },
-  error: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.rose, textAlign: 'center', marginTop: spacing.md },
+  waitHint: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink3,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+    maxWidth: 260,
+  },
+  label: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.ink2,
+    textAlign: 'right',
+    marginBottom: spacing.md,
+  },
+  row: { flexDirection: 'row-reverse', gap: spacing.sm },
+  chip: { flex: 1 },
+  action: { marginTop: spacing.xl, marginBottom: spacing.md },
+  error: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    color: colors.rose,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
 });

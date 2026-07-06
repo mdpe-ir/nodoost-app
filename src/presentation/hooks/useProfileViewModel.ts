@@ -5,7 +5,7 @@ import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import type { Photo, Tier } from '@/domain/entities';
 
-/** ویومدلِ پروفایل: عکس‌ها، تایرها، آپلود/حذفِ عکس، خرید، خروج. */
+/** ویومدلِ پروفایل: عکس‌ها، تایرها، ویرایشِ نام/بیو، آپلود/حذفِ عکس، خرید، خروج. */
 export function useProfileViewModel() {
   const uc = useCases();
   const { user, refreshUser, logout } = useSession();
@@ -13,6 +13,36 @@ export function useProfileViewModel() {
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+
+  // — ویرایشِ نام و بیو —
+  const [draftName, setDraftName] = useState('');
+  const [draftBio, setDraftBio] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+
+  useEffect(() => {
+    setDraftName(user?.name ?? '');
+    setDraftBio(user?.bio ?? '');
+    // فقط وقتی هویتِ کاربر عوض می‌شود مقداردهی کن، نه وسطِ تایپ.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const dirty =
+    draftName.trim() !== (user?.name ?? '') || draftBio.trim() !== (user?.bio ?? '');
+
+  const saveProfile = useCallback(async () => {
+    if (draftName.trim().length < 2) return;
+    setSaving(true);
+    setSaveError(false);
+    try {
+      await uc.profile.updateProfile({ name: draftName.trim(), bio: draftBio.trim() });
+      await refreshUser();
+    } catch {
+      setSaveError(true);
+    } finally {
+      setSaving(false);
+    }
+  }, [draftName, draftBio, uc, refreshUser]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,5 +106,23 @@ export function useProfileViewModel() {
     [uc]
   );
 
-  return { user, photos, tiers, loading, busy, addPhoto, deletePhoto, buy, logout };
+  return {
+    user,
+    photos,
+    tiers,
+    loading,
+    busy,
+    addPhoto,
+    deletePhoto,
+    buy,
+    logout,
+    draftName,
+    setDraftName,
+    draftBio,
+    setDraftBio,
+    dirty,
+    saving,
+    saveError,
+    saveProfile,
+  };
 }

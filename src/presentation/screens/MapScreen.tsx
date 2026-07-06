@@ -1,25 +1,23 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { EmptyState } from '@/presentation/components/EmptyState';
+import { MapSkeleton } from '@/presentation/components/Skeleton';
 import { Avatar } from '@/presentation/components/Avatar';
-import { Icon } from '@/presentation/components/Icon';
+import { Button } from '@/presentation/components/Button';
+import { IconButton } from '@/presentation/components/IconButton';
 import { LeafletWebView, type LeafletEvent } from '@/presentation/components/LeafletWebView';
 import { useCases } from '@/core/di/DIProvider';
 import { useMapViewModel } from '@/presentation/hooks/useMapViewModel';
+import { faNum, faDistance } from '@/core/utils/faNum';
 import type { MapUser } from '@/domain/entities';
-import { colors, fonts, fontSizes, spacing, radius, shadow } from '@/core/theme';
-
-// فاصله را برای نمایش قالب‌بندی می‌کند (متر → «۱٫۲ کیلومتر» / «۳۰۰ متر»).
-function formatDistance(m?: number): string | null {
-  if (m == null) return null;
-  if (m >= 1000) return `${(m / 1000).toLocaleString('fa-IR', { maximumFractionDigits: 1 })} کیلومتر`;
-  return `${m.toLocaleString('fa-IR')} متر`;
-}
+import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
 
 // HTML ثابتِ نقشه‌ی Leaflet. نشانگرها بعداً با postMessage تزریق می‌شوند تا
 // نیازی به بازسازیِ WebView نباشد. تایل‌ها از OpenStreetMap با فیلترِ تیره.
+// رنگ‌ها از پالتِ تم تزریق می‌شوند تا دو نسخه‌ی حقیقت نداشته باشیم.
 const MAP_HTML = `<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -28,14 +26,14 @@ const MAP_HTML = `<!DOCTYPE html>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; background: #0F0A0C; }
+    html, body, #map { height: 100%; margin: 0; padding: 0; background: ${colors.bg}; }
     .leaflet-tile { filter: brightness(0.7) invert(0.92) contrast(0.9) hue-rotate(180deg) saturate(0.6) brightness(0.9); }
-    .leaflet-container { background: #0F0A0C; }
-    .me-dot { width: 18px; height: 18px; border-radius: 50%; background: #DAB877; border: 3px solid #2A1D12; box-shadow: 0 0 0 4px rgba(218,184,119,0.35); }
-    .pin { width: 40px; height: 40px; border-radius: 50% 50% 50% 0; background: #DAB877; border: 2px solid #2A1D12; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,0.5); overflow: hidden; }
-    .pin.match { background: #FF6F80; }
+    .leaflet-container { background: ${colors.bg}; }
+    .me-dot { width: 18px; height: 18px; border-radius: 50%; background: ${colors.gold}; border: 3px solid ${colors.onGold}; box-shadow: 0 0 0 4px ${colors.goldSoft}; }
+    .pin { width: 40px; height: 40px; border-radius: 50% 50% 50% 0; background: ${colors.gold}; border: 2px solid ${colors.onGold}; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,0.5); overflow: hidden; }
+    .pin.match { background: ${colors.rose}; }
     .pin img { width: 100%; height: 100%; object-fit: cover; transform: rotate(45deg) scale(1.4); }
-    .pin .ph { transform: rotate(45deg); color: #2A1D12; font: 700 16px sans-serif; text-align: center; line-height: 36px; }
+    .pin .ph { transform: rotate(45deg); color: ${colors.onGold}; font: 700 16px sans-serif; text-align: center; line-height: 36px; }
   </style>
 </head>
 <body>
@@ -88,9 +86,14 @@ const MAP_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export function MapScreen() {
+/**
+ * نمای نقشه‌ی کاربرانِ نزدیک — داخلِ صفحه‌ی «اطراف» رندر می‌شود
+ * (هدر و قابِ صفحه را میزبان می‌دهد).
+ */
+export function MapView() {
   const uc = useCases();
   const vm = useMapViewModel();
+  const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<MapUser | null>(null);
   const [swiping, setSwiping] = useState(false);
 
@@ -121,117 +124,122 @@ export function MapScreen() {
     setSelected(null);
   }, [selected, swiping, uc]);
 
-  // ---- حالت‌های خاص ----
   if (vm.loading && vm.users.length === 0) {
     return (
-      <ScreenContainer style={styles.center}>
-        <ScreenHeader title="نقشه" />
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.gold} />
-        </View>
-      </ScreenContainer>
+      <View style={styles.wrap}>
+        <MapSkeleton />
+      </View>
     );
   }
 
   if (vm.permissionState === 'denied') {
     return (
-      <ScreenContainer style={styles.padded}>
-        <ScreenHeader title="نقشه" />
-        <View style={styles.center}>
-          <EmptyState
-            icon="map"
-            title="موقعیتت روشن نیست"
-            hint="برای دیدنِ کاربرانِ نزدیک روی نقشه، دسترسی به موقعیت لازم است."
-          />
-          <Pressable style={styles.cta} onPress={vm.refresh} accessibilityRole="button">
-            <Icon name="map" size={16} tint="gold" />
-            <Text style={styles.ctaText}>روشن کردنِ موقعیت</Text>
-          </Pressable>
-        </View>
-      </ScreenContainer>
+      <View style={styles.center}>
+        <EmptyState
+          icon="map"
+          title="موقعیتت روشن نیست"
+          hint="برای دیدنِ کاربرانِ نزدیک روی نقشه، دسترسی به موقعیت لازم است."
+          actionLabel="روشن کردنِ موقعیت"
+          actionIcon="map"
+          onAction={vm.refresh}
+        />
+      </View>
     );
   }
 
   return (
-    <ScreenContainer flush style={styles.wrap}>
-      <View style={styles.headerRow}>
-        <ScreenHeader title="نقشه" subtitle="کاربرانِ نزدیکِ تو" />
-      </View>
-
+    <View style={styles.wrap}>
       <View style={styles.mapArea}>
         <LeafletWebView html={MAP_HTML} payload={payload} onEvent={onEvent} />
 
         {vm.error && vm.users.length === 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>ارتباط با سرور ناموفق بود ({vm.error})</Text>
-          </View>
+          <Animated.View entering={FadeIn.duration(220)} style={styles.badge}>
+            <Text style={styles.badgeText}>ارتباط با سرور ناموفق بود</Text>
+          </Animated.View>
         ) : !vm.loading && vm.users.length === 0 ? (
-          <View style={styles.badge}>
+          <Animated.View entering={FadeIn.duration(220)} style={styles.badge}>
             <Text style={styles.badgeText}>فعلاً کسی این نزدیکی روی نقشه نیست</Text>
-          </View>
+          </Animated.View>
         ) : null}
 
-        <Pressable style={styles.refresh} onPress={vm.refresh} accessibilityLabel="تازه‌سازی">
-          <Icon name="rewind" size={18} tint="gold" />
-        </Pressable>
+        <IconButton
+          icon="rewind"
+          size={48}
+          variant="ghost"
+          onPress={vm.refresh}
+          accessibilityLabel="تازه‌سازی"
+          style={styles.refresh}
+        />
       </View>
 
       {selected ? (
         <View style={styles.sheetWrap}>
-          <Pressable style={styles.sheetBackdrop} onPress={() => setSelected(null)} />
-          <View style={[styles.sheet, shadow.gold]}>
+          <Animated.View entering={FadeIn.duration(180)} style={StyleSheet.absoluteFill}>
+            <Pressable
+              onPress={() => setSelected(null)}
+              style={styles.sheetBackdrop}
+              accessibilityLabel="بستن"
+            />
+          </Animated.View>
+          <Animated.View
+            entering={FadeInUp.duration(220)}
+            style={[styles.sheet, { paddingBottom: Math.max(spacing.xl, insets.bottom + spacing.md) }, shadow.card]}
+          >
+            <View style={styles.sheetHandle} />
             <View style={styles.sheetRow}>
               <Avatar uri={selected.photoUrl} name={selected.name} size={64} ring />
               <View style={styles.sheetInfo}>
-                <Text style={styles.sheetName}>
+                <Text style={styles.sheetName} numberOfLines={1}>
                   {selected.name}
-                  {selected.age ? `، ${selected.age.toLocaleString('fa-IR')}` : ''}
+                  {selected.age ? `، ${faNum(selected.age)}` : ''}
                 </Text>
-                {formatDistance(selected.distanceM) ? (
-                  <Text style={styles.sheetDist}>{formatDistance(selected.distanceM)}</Text>
+                {faDistance(selected.distanceM) ? (
+                  <Text style={styles.sheetDist}>{faDistance(selected.distanceM)}</Text>
                 ) : null}
                 {selected.isMatch ? <Text style={styles.sheetMatch}>با هم مَچ شده‌اید</Text> : null}
               </View>
-              <Pressable onPress={() => setSelected(null)} hitSlop={10}>
-                <Icon name="close" size={20} tint="white" style={{ opacity: 0.6 }} />
-              </Pressable>
+              <IconButton
+                icon="close"
+                size={34}
+                variant="surface"
+                onPress={() => setSelected(null)}
+                accessibilityLabel="بستن"
+              />
             </View>
 
-            <View style={styles.sheetActions}>
-              {selected.isMatch ? (
-                <Pressable
-                  style={[styles.actionBtn, styles.actionPrimary, shadow.gold]}
-                  onPress={() => {
-                    setSelected(null);
-                    router.push('/chat');
-                  }}
-                >
-                  <Text style={styles.actionPrimaryText}>گفتگو</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={[styles.actionBtn, styles.actionPrimary, shadow.gold]}
-                  onPress={like}
-                  disabled={swiping}
-                >
-                  <Icon name="heart-fill" size={18} tint="ink" />
-                  <Text style={styles.actionPrimaryText}>پسندیدن</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
+            {selected.isMatch ? (
+              <Button
+                label="گفتگو"
+                icon="tab-chat"
+                onPress={() => {
+                  setSelected(null);
+                  router.push('/chat');
+                }}
+              />
+            ) : (
+              <Button label="پسندیدن" icon="heart-fill" onPress={like} loading={swiping} />
+            )}
+            <Button
+              label="دیدنِ پروفایل"
+              variant="outline"
+              size="md"
+              onPress={() => {
+                const id = selected.id;
+                setSelected(null);
+                router.push({ pathname: '/user/[id]', params: { id: String(id) } });
+              }}
+            />
+          </Animated.View>
         </View>
       ) : null}
-    </ScreenContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {},
+  wrap: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  padded: { paddingHorizontal: 18 },
-  headerRow: { paddingHorizontal: 18 },
-  mapArea: { flex: 1, overflow: 'hidden' },
+  mapArea: { flex: 1, overflow: 'hidden', borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
   badge: {
     position: 'absolute',
     top: spacing.md,
@@ -244,34 +252,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   badgeText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
-  refresh: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    left: spacing.lg,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.goldSoft,
-  },
-  cta: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.goldSoft,
-    backgroundColor: colors.goldFaint,
-  },
-  ctaText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
+  refresh: { position: 'absolute', bottom: spacing.lg, right: spacing.lg },
   sheetWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' },
-  sheetBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(12,8,10,0.55)' },
+  sheetBackdrop: { flex: 1, backgroundColor: colors.backdrop },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,
@@ -279,24 +262,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.xl,
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.line,
+    marginTop: -spacing.sm,
   },
   sheetRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
   sheetInfo: { flex: 1, alignItems: 'flex-end' },
-  sheetName: { fontFamily: fonts.bold, fontSize: fontSizes.lg, color: colors.ink, textAlign: 'right' },
+  sheetName: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.lg,
+    lineHeight: lineHeights.lg,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   sheetDist: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink3, marginTop: 2 },
   sheetMatch: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.rose, marginTop: 2 },
-  sheetActions: { flexDirection: 'row-reverse', gap: spacing.md },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    height: 50,
-    borderRadius: radius.md,
-  },
-  actionPrimary: { backgroundColor: colors.gold },
-  actionPrimaryText: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.onGold },
 });

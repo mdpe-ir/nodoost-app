@@ -7,7 +7,7 @@
     "icon": "./assets/logo/app-icon-1024.png",
     "scheme": "nodoost",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0F0A0C",
+    "backgroundColor": "#0B0910",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ir.nodoost.app"
@@ -15,7 +15,7 @@
     "android": {
       "package": "ir.nodoost.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0F0A0C",
+        "backgroundColor": "#0B0910",
         "foregroundImage": "./assets/logo/logo-mark-gold.png"
       },
       "predictiveBackGestureEnabled": false
@@ -29,7 +29,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0F0A0C",
+          "backgroundColor": "#0B0910",
           "image": "./assets/logo/logo-mark-gold.png",
           "imageWidth": 120,
           "android": {

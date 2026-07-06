@@ -4,6 +4,7 @@ import type {
   Candidate,
   MapUser,
   Liker,
+  PeerProfile,
   Conversation,
   Message,
   Tier,
@@ -18,6 +19,7 @@ import type {
   CandidateDTO,
   MapUserDTO,
   LikerDTO,
+  PeerProfileDTO,
   ConversationDTO,
   MessageDTO,
   TierDTO,
@@ -90,10 +92,26 @@ export const toLiker = (d: LikerDTO): Liker => ({
   tier: d.tier,
 });
 
+export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
+  id: d.id,
+  name: undefIfNull(d.name),
+  age: d.age ?? undefined,
+  gender: undefIfNull(d.gender),
+  bio: undefIfNull(d.bio),
+  verified: d.verified,
+  tier: d.tier,
+  distanceM: d.distance_m ?? undefined,
+  isMatch: d.is_match ?? false,
+  matchId: d.match_id ?? undefined,
+  interests: d.interests ?? [],
+  photos: d.photos ?? [],
+});
+
 export const toConversation = (d: ConversationDTO): Conversation => ({
   matchId: d.match_id,
   otherId: d.other_id,
   otherName: d.other_name,
+  otherPhotoUrl: undefIfNull(d.other_photo_url),
   lastBody: d.last_body,
   lastAt: d.last_at,
   unread: d.unread,

@@ -1,8 +1,8 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { Candidate, MapUser, SwipeAction, MatchResult } from '@/domain/entities';
+import type { Candidate, MapUser, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { CandidateDTO, MapUserDTO } from '@/data/dto';
-import { toCandidate, toMapUser } from '@/data/mappers';
+import type { CandidateDTO, MapUserDTO, PeerProfileDTO } from '@/data/dto';
+import { toCandidate, toMapUser, toPeerProfile } from '@/data/mappers';
 
 // نگاشتِ کنشِ سواایپِ دامنه به مقادیرِ موردِ انتظارِ بک‌اند (like | nope | super)
 const API_ACTION: Record<SwipeAction, string> = { like: 'like', super: 'super', pass: 'nope' };
@@ -27,6 +27,13 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
       `/api/map/nearby?radius_m=${encodeURIComponent(radiusM)}`
     );
     return (d?.results ?? []).map(toMapUser);
+  }
+
+  async getProfile(userId: number): Promise<PeerProfile> {
+    const d = await this.http.request<PeerProfileDTO>(
+      `/api/users/${encodeURIComponent(userId)}/profile`
+    );
+    return toPeerProfile(d);
   }
 
   async swipe(targetId: number, action: SwipeAction): Promise<MatchResult> {

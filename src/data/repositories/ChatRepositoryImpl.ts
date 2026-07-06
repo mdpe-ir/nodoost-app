@@ -19,6 +19,14 @@ export class ChatRepositoryImpl implements ChatRepository {
     return (d?.messages ?? []).map(toMessage);
   }
 
+  async startDirect(userId: number): Promise<number> {
+    const d = await this.http.request<{ match_id: number }>('/api/matches/direct', {
+      method: 'POST',
+      body: { user_id: userId },
+    });
+    return d.match_id;
+  }
+
   async sendMessage(matchId: number, body: string): Promise<Message> {
     const dto = await this.http.request<MessageDTO>(`/api/matches/${matchId}/messages`, {
       method: 'POST',

@@ -34,6 +34,21 @@ export interface CandidateDTO {
   interests?: string[];
 }
 
+export interface PeerProfileDTO {
+  id: number;
+  name?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  bio?: string | null;
+  verified?: boolean;
+  tier?: number;
+  distance_m?: number | null;
+  is_match?: boolean;
+  match_id?: number | null;
+  interests?: string[];
+  photos?: string[];
+}
+
 export interface LikerDTO {
   id: number;
   name?: string | null;
@@ -58,6 +73,7 @@ export interface ConversationDTO {
   match_id: number;
   other_id: number;
   other_name?: string;
+  other_photo_url?: string | null;
   last_body?: string;
   last_at?: string;
   unread?: number;

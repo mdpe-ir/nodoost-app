@@ -1,7 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
+
+const RESEND_WAIT = 60;
 
 /** ویومدلِ ورود: شماره → کد → ورود → مسیردهی به onboarding یا کاوش. */
 export function useLogin() {
@@ -13,6 +15,14 @@ export function useLogin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugCode, setDebugCode] = useState<string | null>(null);
+  /** ثانیه‌های باقی‌مانده تا امکانِ ارسالِ دوباره‌ی کد. */
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (step !== 'code' || resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [step, resendIn]);
 
   const sendOtp = useCallback(async () => {
     if (phone.trim().length < 10) {
@@ -24,6 +34,8 @@ export function useLogin() {
     try {
       const r = await uc.auth.requestOtp(phone.trim());
       setDebugCode(r.debugCode ?? null);
+      setCode('');
+      setResendIn(RESEND_WAIT);
       setStep('code');
     } catch {
       setError('ارسالِ کد ناموفق بود. دوباره تلاش کن.');
@@ -58,11 +70,13 @@ export function useLogin() {
     loading,
     error,
     debugCode,
+    resendIn,
     sendOtp,
     verify,
     back: () => {
       setStep('phone');
       setError(null);
+      setResendIn(0);
     },
   };
 }

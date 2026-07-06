@@ -3,7 +3,7 @@ import type { ViewStyle } from 'react-native';
 /** گرادیان‌های برند — برای دکمه‌ها، اسکریم و نشان‌ها. */
 export const gradients = {
   gold: ['#F4E1B0', '#DAB877', '#C49E55'] as const,
-  cardScrim: ['rgba(15,10,12,0)', 'rgba(15,10,12,0.5)', 'rgba(11,7,9,0.96)'] as const,
+  cardScrim: ['rgba(11,9,16,0)', 'rgba(11,9,16,0.5)', 'rgba(8,6,12,0.96)'] as const,
 } as const;
 
 /** سایه‌های یک‌دستِ ارتفاع. */

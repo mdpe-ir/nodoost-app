@@ -7,7 +7,9 @@ import { ScrollViewStyleReset } from 'expo-router/html';
  */
 export default function Root({ children }: PropsWithChildren) {
   return (
-    <html lang="fa" dir="rtl">
+    // dir عمداً ltr است: راست‌چینی در سراسرِ اپ با row-reverse و textAlign ساخته می‌شود
+    // (همان قراردادِ نیتیو که forceRTL ندارد). dir="rtl" اینجا flexها را دوباره برعکس می‌کرد.
+    <html lang="fa" dir="ltr">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -17,7 +19,7 @@ export default function Root({ children }: PropsWithChildren) {
         />
 
         {/* رنگِ نوارِ مرورگر و پس‌زمینه‌ی نصب */}
-        <meta name="theme-color" content="#0F0A0C" />
+        <meta name="theme-color" content="#0B0910" />
 
         {/* PWA — اندروید/دسکتاپ */}
         <link rel="manifest" href="/manifest.json" />
@@ -44,8 +46,8 @@ export default function Root({ children }: PropsWithChildren) {
 }
 
 const BACKGROUND_CSS = `
-html, body { background-color: #0F0A0C; }
-@media (prefers-color-scheme: light) { html, body { background-color: #0F0A0C; } }
+html, body { background-color: #0B0910; }
+@media (prefers-color-scheme: light) { html, body { background-color: #0B0910; } }
 `;
 
 const SW_REGISTER = `

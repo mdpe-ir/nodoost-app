@@ -60,14 +60,17 @@ export function createContainer() {
       getExplore: discovery.makeGetExplore(discoveryRepo),
       getNearbyMapUsers: discovery.makeGetNearbyMapUsers(discoveryRepo),
       swipe: discovery.makeSwipe(discoveryRepo),
+      getPeerProfile: discovery.makeGetPeerProfile(discoveryRepo),
     },
     likes: {
       getLikes: likes.makeGetLikes(likesRepo),
+      getSentLikes: likes.makeGetSentLikes(likesRepo),
     },
     chat: {
       getConversations: chat.makeGetConversations(chatRepo),
       getMessages: chat.makeGetMessages(chatRepo),
       sendMessage: chat.makeSendMessage(chatRepo),
+      startDirect: chat.makeStartDirect(chatRepo),
     },
     random: {
       join: random.makeJoinRandom(randomRepo),

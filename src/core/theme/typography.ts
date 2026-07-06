@@ -13,3 +13,13 @@ export const fontSizes = {
   xl: 22,
   xxl: 28,
 } as const;
+
+/** ارتفاعِ خطِ متناظر با هر اندازه — وزیرمتن قدبلند است و به فضای عمودی نیاز دارد. */
+export const lineHeights: Record<keyof typeof fontSizes, number> = {
+  xs: 18,
+  sm: 22,
+  md: 24,
+  lg: 28,
+  xl: 32,
+  xxl: 40,
+};

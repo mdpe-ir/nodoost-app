@@ -70,9 +70,69 @@ export function GridSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
+/** اسکلتِ پروفایلِ خودم — آواتارِ گرد + خط‌ها + شبکه‌ی عکس. */
+export function ProfileSkeleton() {
+  return (
+    <View style={styles.profileWrap}>
+      <Skeleton width={124} height={124} br={62} style={{ alignSelf: 'center' }} />
+      <Skeleton width={140} height={18} style={{ alignSelf: 'center', marginTop: 14 }} />
+      <Skeleton width={90} height={12} style={{ alignSelf: 'center', marginTop: 8 }} />
+      <Skeleton width="100%" height={64} br={radius.lg} style={{ marginTop: 24 }} />
+      <Skeleton width="45%" height={16} style={{ alignSelf: 'flex-end', marginTop: 24 }} />
+      <View style={styles.grid}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} width="31%" height={120} br={radius.md} style={{ marginTop: 12 }} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** اسکلتِ پروفایلِ دیگران — کارتِ عکسِ بزرگ + خط‌ها. */
+export function PeerProfileSkeleton() {
+  return (
+    <View style={styles.profileWrap}>
+      <Skeleton width="100%" height={380} br={radius.xl} />
+      <Skeleton width="50%" height={20} style={{ alignSelf: 'flex-end', marginTop: 18 }} />
+      <Skeleton width="30%" height={13} style={{ alignSelf: 'flex-end', marginTop: 8 }} />
+      <Skeleton width="90%" height={13} style={{ alignSelf: 'flex-end', marginTop: 20 }} />
+      <Skeleton width="70%" height={13} style={{ alignSelf: 'flex-end', marginTop: 8 }} />
+      <Skeleton width="100%" height={50} br={radius.md} style={{ marginTop: 24 }} />
+    </View>
+  );
+}
+
+/** اسکلتِ حباب‌های گفتگو — چپ/راستِ متناوب. */
+export function BubblesSkeleton({ count = 6 }: { count?: number }) {
+  const widths = [150, 210, 120, 180, 140, 200];
+  return (
+    <View style={styles.bubbles}>
+      {Array.from({ length: count }).map((_, i) => {
+        const mine = i % 2 === 0;
+        return (
+          <Skeleton
+            key={i}
+            width={widths[i % widths.length]}
+            height={40}
+            br={radius.lg}
+            style={{ alignSelf: mine ? 'flex-end' : 'flex-start', marginTop: 10 }}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/** اسکلتِ تمام‌صفحه‌ی نقشه. */
+export function MapSkeleton() {
+  return <Skeleton width="100%" height="100%" br={radius.lg} />;
+}
+
 const styles = StyleSheet.create({
   deck: { flex: 1, marginVertical: 12 },
   row: { flexDirection: 'row-reverse', alignItems: 'center', paddingVertical: 12, gap: 14 },
   rowMid: { flex: 1 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 6 },
+  grid: { flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'space-between', paddingTop: 6 },
+  profileWrap: { paddingTop: 8 },
+  bubbles: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
 });

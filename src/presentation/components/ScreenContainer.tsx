@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, spacing } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 import { InstallButton } from '@/presentation/components/InstallButton';
+
+/** حاشیه‌ی افقیِ استانداردِ صفحات — برای محاسبه‌ی عرضِ سلول‌ها هم استفاده می‌شود. */
+export const PAGE_PADDING = 18;
 
 interface Props {
   children: React.ReactNode;
@@ -46,7 +49,7 @@ export function ScreenHeader({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  padded: { paddingHorizontal: 18 },
+  padded: { paddingHorizontal: PAGE_PADDING },
   head: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -55,6 +58,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   headText: { flexShrink: 1, alignItems: 'flex-end' },
-  title: { fontFamily: fonts.bold, fontSize: 26, color: colors.gold2 },
-  subtitle: { fontFamily: fonts.regular, fontSize: 13, color: colors.ink3, marginTop: 3, textAlign: 'right' },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: 26,
+    lineHeight: 38,
+    color: colors.gold2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  subtitle: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink3,
+    marginTop: 2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
 });

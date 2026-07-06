@@ -3,6 +3,7 @@ export interface Conversation {
   matchId: number;
   otherId: number;
   otherName?: string;
+  otherPhotoUrl?: string;
   lastBody?: string;
   lastAt?: string;
   unread?: number;

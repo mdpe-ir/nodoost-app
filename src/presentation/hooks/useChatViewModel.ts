@@ -2,20 +2,36 @@ import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import type { Conversation } from '@/domain/entities';
 
-/** ویومدلِ فهرستِ گفتگوها. */
+/** ویومدلِ فهرستِ گفتگوها — با خطا و کشیدن‌برای‌تازه‌سازی. */
 export function useChatViewModel() {
   const uc = useCases();
   const [items, setItems] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       setItems(await uc.chat.getConversations());
     } catch {
       setItems([]);
+      setError(true);
     } finally {
       setLoading(false);
+    }
+  }, [uc]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      setItems(await uc.chat.getConversations());
+      setError(false);
+    } catch {
+      /* فهرستِ فعلی را نگه می‌داریم */
+    } finally {
+      setRefreshing(false);
     }
   }, [uc]);
 
@@ -23,5 +39,5 @@ export function useChatViewModel() {
     load();
   }, [load]);
 
-  return { items, loading, reload: load };
+  return { items, loading, refreshing, error, reload: load, refresh };
 }

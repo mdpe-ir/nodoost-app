@@ -1,0 +1,284 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { ScreenContainer, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
+import { StackHeader } from '@/presentation/components/StackHeader';
+import { PeerProfileSkeleton } from '@/presentation/components/Skeleton';
+import { EmptyState } from '@/presentation/components/EmptyState';
+import { Icon } from '@/presentation/components/Icon';
+import { Button } from '@/presentation/components/Button';
+import { Scrim } from '@/presentation/components/Scrim';
+import { TierBadge } from '@/presentation/components/TierBadge';
+import { MatchOverlay } from '@/presentation/components/MatchOverlay';
+import { usePeerProfileViewModel } from '@/presentation/hooks/usePeerProfileViewModel';
+import { mediaUrl } from '@/core/http/mediaUrl';
+import { faNum, faDistance } from '@/core/utils/faNum';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
+
+/** پروفایلِ عمومیِ یک کاربرِ دیگر — عکس‌ها، معرفی، علاقه‌مندی‌ها و کنشِ پسند. */
+export function PeerProfileScreen({ userId }: { userId: number }) {
+  const vm = usePeerProfileViewModel(userId);
+  const { width } = useWindowDimensions();
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const heroW = width - PAGE_PADDING * 2;
+
+  if (vm.loading) {
+    return (
+      <ScreenContainer>
+        <StackHeader title="پروفایل" />
+        <PeerProfileSkeleton />
+      </ScreenContainer>
+    );
+  }
+
+  if (vm.error || !vm.profile) {
+    return (
+      <ScreenContainer>
+        <StackHeader title="پروفایل" />
+        <View style={styles.center}>
+          <EmptyState
+            icon="rewind"
+            title="پروفایل در دسترس نیست"
+            hint="ارتباط با سرور ناموفق بود یا این کاربر دیگر فعال نیست."
+            actionLabel="تلاشِ دوباره"
+            onAction={vm.reload}
+          />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  const p = vm.profile;
+  const photos = p.photos.map((u) => mediaUrl(u)).filter(Boolean) as string[];
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const i = Math.round(e.nativeEvent.contentOffset.x / heroW);
+    if (i !== photoIdx) setPhotoIdx(i);
+  };
+
+  return (
+    <ScreenContainer>
+      <StackHeader title={p.name ?? 'پروفایل'} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <View style={[styles.hero, { height: heroW * 1.15 }]}>
+          {photos.length > 0 ? (
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onScroll}
+                scrollEventThrottle={32}
+              >
+                {photos.map((u) => (
+                  <Image
+                    key={u}
+                    source={{ uri: u }}
+                    style={{ width: heroW, height: '100%' }}
+                    contentFit="cover"
+                    transition={180}
+                    cachePolicy="memory-disk"
+                  />
+                ))}
+              </ScrollView>
+              <Scrim height="35%" />
+              {photos.length > 1 ? (
+                <View style={styles.dots}>
+                  {photos.map((_, i) => (
+                    <View key={i} style={[styles.dot, i === photoIdx && styles.dotActive]} />
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <View style={styles.noPhoto}>
+              <Text style={styles.noPhotoText}>{(p.name || '؟').charAt(0)}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {p.name ?? 'بی‌نام'}
+            {p.age ? `، ${faNum(p.age)}` : ''}
+          </Text>
+          {p.verified ? <Icon name="shield-check" size={20} tint="gold" /> : null}
+          {p.tier ? <TierBadge tier={p.tier} /> : null}
+        </View>
+
+        <View style={styles.metaRow}>
+          {faDistance(p.distanceM) ? (
+            <View style={styles.metaItem}>
+              <Icon name="map" size={13} tint="gold" />
+              <Text style={styles.metaText}>{faDistance(p.distanceM)}</Text>
+            </View>
+          ) : null}
+          {p.isMatch ? (
+            <View style={[styles.metaItem, styles.matchTag]}>
+              <Icon name="heart-fill" size={12} tint="white" />
+              <Text style={[styles.metaText, styles.matchTagText]}>با هم مَچ شده‌اید</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {p.bio ? (
+          <>
+            <Text style={styles.section}>درباره‌اش</Text>
+            <Text style={styles.bio}>{p.bio}</Text>
+          </>
+        ) : null}
+
+        {p.interests.length > 0 ? (
+          <>
+            <Text style={styles.section}>علاقه‌مندی‌ها</Text>
+            <View style={styles.interests}>
+              {p.interests.map((label) => (
+                <View key={label} style={styles.interest}>
+                  <Text style={styles.interestText}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {/* کنش‌ها کنارِ هم — پسندیدن راست، ارسالِ پیام چپ */}
+        <View style={styles.actions}>
+          {!p.isMatch ? (
+            <Button
+              label={vm.liked ? 'پسندیدی' : 'پسندیدن'}
+              icon="heart-fill"
+              onPress={vm.like}
+              loading={vm.swiping}
+              disabled={vm.liked}
+              style={styles.actionBtn}
+            />
+          ) : null}
+          <Button
+            label="ارسالِ پیام"
+            icon="tab-chat"
+            variant={p.isMatch ? 'gold' : 'outline'}
+            loading={vm.openingChat}
+            onPress={async () => {
+              const matchId = await vm.startChat();
+              if (matchId) {
+                router.push({
+                  pathname: '/thread/[id]',
+                  params: { id: String(matchId), name: p.name ?? '', peerId: String(p.id) },
+                });
+              }
+            }}
+            style={styles.actionBtn}
+          />
+        </View>
+      </ScrollView>
+
+      {vm.match ? (
+        <MatchOverlay
+          peerName={p.name}
+          peerPhotoUrl={p.photos[0]}
+          onChat={() => {
+            const id = vm.match?.matchId;
+            vm.dismissMatch();
+            if (id) router.push({ pathname: '/thread/[id]', params: { id: String(id), name: p.name ?? '' } });
+            else router.push('/chat');
+          }}
+          onDismiss={vm.dismissMatch}
+        />
+      ) : null}
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  center: { flex: 1, justifyContent: 'center' },
+  scroll: { paddingBottom: spacing.xxl },
+  hero: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  noPhoto: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
+  noPhotoText: { fontFamily: fonts.bold, fontSize: 72, color: colors.goldSoft },
+  dots: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 5,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  dotActive: { backgroundColor: colors.gold2, width: 16 },
+  nameRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  name: {
+    flexShrink: 1,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xl,
+    lineHeight: lineHeights.xl,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs },
+  metaItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
+  metaText: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink2 },
+  matchTag: {
+    backgroundColor: colors.roseFaint,
+    borderWidth: 1,
+    borderColor: 'rgba(255,92,122,0.35)',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 2,
+  },
+  matchTagText: { color: colors.rose, fontSize: fontSizes.xs },
+  section: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.md,
+    lineHeight: lineHeights.md,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+  },
+  bio: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.md,
+    lineHeight: lineHeights.md,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  interests: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.sm },
+  interest: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  interestText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
+  actions: { flexDirection: 'row-reverse', marginTop: spacing.xl, gap: spacing.md },
+  actionBtn: { flex: 1 },
+});
