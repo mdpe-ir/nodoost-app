@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { router } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
+import { LeafletWebView, type LeafletEvent } from '@/presentation/components/LeafletWebView';
 import { useCases } from '@/core/di/DIProvider';
 import { useMapViewModel } from '@/presentation/hooks/useMapViewModel';
 import type { MapUser } from '@/domain/entities';
@@ -47,7 +47,9 @@ const MAP_HTML = `<!DOCTYPE html>
     var markers = [];
 
     function post(msg) {
-      if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+      var s = JSON.stringify(msg);
+      if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s);
+      else if (window.parent && window.parent !== window) window.parent.postMessage(s, '*');
     }
 
     function clearMarkers() {
@@ -89,7 +91,6 @@ const MAP_HTML = `<!DOCTYPE html>
 export function MapScreen() {
   const uc = useCases();
   const vm = useMapViewModel();
-  const webRef = useRef<WebView>(null);
   const [selected, setSelected] = useState<MapUser | null>(null);
   const [swiping, setSwiping] = useState(false);
 
@@ -98,27 +99,16 @@ export function MapScreen() {
     [vm.me, vm.users]
   );
 
-  // بعد از هر تغییرِ داده (و آماده‌شدنِ WebView) نشانگرها را به داخل تزریق کن.
-  const pushData = useCallback(() => {
-    webRef.current?.postMessage(payload);
-  }, [payload]);
-
-  const onMessage = useCallback(
-    (e: WebViewMessageEvent) => {
-      let msg: { type?: string; id?: number };
-      try {
-        msg = JSON.parse(e.nativeEvent.data);
-      } catch {
-        return;
-      }
-      if (msg.type === 'ready') {
-        pushData();
-      } else if (msg.type === 'marker' && msg.id != null) {
+  // تپِ نشانگر: کارتِ کاربر را باز کن. تزریقِ داده و رویدادِ ready داخلِ
+  // LeafletWebView مدیریت می‌شود (نیتیو با webview، وب با iframe).
+  const onEvent = useCallback(
+    (msg: LeafletEvent) => {
+      if (msg.type === 'marker' && msg.id != null) {
         const u = vm.users.find((x) => x.id === msg.id);
         if (u) setSelected(u);
       }
     },
-    [pushData, vm.users]
+    [vm.users]
   );
 
   const like = useCallback(async () => {
@@ -169,16 +159,7 @@ export function MapScreen() {
       </View>
 
       <View style={styles.mapArea}>
-        <WebView
-          ref={webRef}
-          originWhitelist={['*']}
-          source={{ html: MAP_HTML }}
-          onMessage={onMessage}
-          style={styles.web}
-          javaScriptEnabled
-          domStorageEnabled
-          setSupportMultipleWindows={false}
-        />
+        <LeafletWebView html={MAP_HTML} payload={payload} onEvent={onEvent} />
 
         {vm.error && vm.users.length === 0 ? (
           <View style={styles.badge}>
@@ -251,7 +232,6 @@ const styles = StyleSheet.create({
   padded: { paddingHorizontal: 18 },
   headerRow: { paddingHorizontal: 18 },
   mapArea: { flex: 1, overflow: 'hidden' },
-  web: { flex: 1, backgroundColor: colors.bg },
   badge: {
     position: 'absolute',
     top: spacing.md,
