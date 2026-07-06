@@ -42,6 +42,18 @@ export interface LikerDTO {
   tier?: number;
 }
 
+export interface MapUserDTO {
+  id: number;
+  name: string | null;
+  age?: number;
+  photo_url?: string | null;
+  lat: number;
+  lng: number;
+  distance_m?: number;
+  is_match?: boolean;
+  tier?: number;
+}
+
 export interface ConversationDTO {
   match_id: number;
   other_id: number;

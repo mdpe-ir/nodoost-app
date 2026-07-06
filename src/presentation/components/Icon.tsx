@@ -20,6 +20,7 @@ export type IconName =
   | 'lightning-fill'
   | 'lightning'
   | 'lock'
+  | 'map'
   | 'moon'
   | 'more'
   | 'next-arrows'
@@ -55,6 +56,7 @@ const SOURCES: Record<IconTint, Record<IconName, number>> = {
     'lightning-fill': require('../../../assets/icons/gold/lightning-fill.png'),
     lightning: require('../../../assets/icons/gold/lightning.png'),
     lock: require('../../../assets/icons/gold/lock.png'),
+    map: require('../../../assets/icons/gold/map.png'),
     moon: require('../../../assets/icons/gold/moon.png'),
     more: require('../../../assets/icons/gold/more.png'),
     'next-arrows': require('../../../assets/icons/gold/next-arrows.png'),
@@ -85,6 +87,7 @@ const SOURCES: Record<IconTint, Record<IconName, number>> = {
     'lightning-fill': require('../../../assets/icons/white/lightning-fill.png'),
     lightning: require('../../../assets/icons/white/lightning.png'),
     lock: require('../../../assets/icons/white/lock.png'),
+    map: require('../../../assets/icons/white/map.png'),
     moon: require('../../../assets/icons/white/moon.png'),
     more: require('../../../assets/icons/white/more.png'),
     'next-arrows': require('../../../assets/icons/white/next-arrows.png'),
@@ -115,6 +118,7 @@ const SOURCES: Record<IconTint, Record<IconName, number>> = {
     'lightning-fill': require('../../../assets/icons/ink/lightning-fill.png'),
     lightning: require('../../../assets/icons/ink/lightning.png'),
     lock: require('../../../assets/icons/ink/lock.png'),
+    map: require('../../../assets/icons/ink/map.png'),
     moon: require('../../../assets/icons/ink/moon.png'),
     more: require('../../../assets/icons/ink/more.png'),
     'next-arrows': require('../../../assets/icons/ink/next-arrows.png'),

@@ -7,6 +7,7 @@ import { colors, fonts, radius } from '@/core/theme';
 // نگاشتِ نامِ مسیر به آیکنِ برند
 const ICONS: Record<string, IconName> = {
   discover: 'tab-discover',
+  map: 'map',
   random: 'lightning',
   likes: 'tab-likes',
   chat: 'tab-chat',

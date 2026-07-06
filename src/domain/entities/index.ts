@@ -1,6 +1,7 @@
 export type { Gender, AccountStatus, Photo, User, ProfileDraft } from './user';
 export type {
   Candidate,
+  MapUser,
   SwipeAction,
   MatchResult,
   Liker,

@@ -2,6 +2,7 @@ import type {
   User,
   Photo,
   Candidate,
+  MapUser,
   Liker,
   Conversation,
   Message,
@@ -15,6 +16,7 @@ import type {
   UserDTO,
   PhotoDTO,
   CandidateDTO,
+  MapUserDTO,
   LikerDTO,
   ConversationDTO,
   MessageDTO,
@@ -66,6 +68,18 @@ export const toCandidate = (d: CandidateDTO): Candidate => ({
   tier: d.tier,
   photoUrl: undefIfNull(d.photo_url),
   interests: d.interests,
+});
+
+export const toMapUser = (d: MapUserDTO): MapUser => ({
+  id: d.id,
+  name: d.name ?? 'بی‌نام',
+  age: d.age,
+  photoUrl: undefIfNull(d.photo_url),
+  lat: d.lat,
+  lng: d.lng,
+  distanceM: d.distance_m,
+  isMatch: d.is_match ?? false,
+  tier: d.tier,
 });
 
 export const toLiker = (d: LikerDTO): Liker => ({

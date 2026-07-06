@@ -10,6 +10,19 @@ export interface Candidate {
   interests?: string[];
 }
 
+/** یک نشانگرِ کاربر روی نقشه (مختصات همیشه فازی‌شده). */
+export interface MapUser {
+  id: number;
+  name: string;
+  age?: number;
+  photoUrl?: string;
+  lat: number;
+  lng: number;
+  distanceM?: number;
+  isMatch?: boolean;
+  tier?: number;
+}
+
 export type SwipeAction = 'like' | 'super' | 'pass';
 
 /** نتیجه‌ی سواایپ؛ اگر مَچ شود peer پر می‌شود. */
