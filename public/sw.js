@@ -4,7 +4,7 @@
  * راهبرد: پیمایش‌ها network-first (تازه بمانند)، داراییِ hash‌دارِ _expo cache-first.
  * نکته: دیتای API هرگز cache نمی‌شود تا کاربر همیشه داده‌ی زنده ببیند.
  */
-const CACHE = 'nodoost-shell-v1';
+const CACHE = 'nodoost-shell-v2';
 const SHELL = ['/', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

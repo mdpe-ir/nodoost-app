@@ -36,7 +36,10 @@ export function useOnboarding() {
   const [error, setError] = useState<string | null>(null);
 
   // عکس یا از قبل آپلود شده یا همین حالا انتخاب شده است.
-  const hasPhoto = (user?.photos?.length ?? 0) > 0 || !!photoUri;
+  const hasPhoto = user?.photos?.some((photo) => photo.status === 'approved') === true || !!photoUri;
+  const rejectionReasons = user?.photos
+    ?.filter((photo) => photo.status === 'rejected' && photo.rejectionReason)
+    .map((photo) => photo.rejectionReason as string) ?? [];
 
   const pickPhoto = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -99,6 +102,7 @@ export function useOnboarding() {
     photoUri,
     pickPhoto,
     hasPhoto,
+    rejectionReasons,
     loading,
     error,
     submit,

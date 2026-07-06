@@ -72,7 +72,7 @@ export function OnboardingScreen() {
     'برای نمایشِ بهترِ پروفایلت لازم است.',
     'سن برای نمایش و پیشنهادِ افرادِ هم‌سن لازم است.',
     'اختیاری — اما کمک می‌کند بهتر دیده شوی.',
-    'برای استفاده از اپ حداقل یک عکس لازم است. پس از تأییدِ مدیر به دیگران نشان داده می‌شود.',
+    'برای استفاده از اپ حداقل یک عکس معتبر لازم است؛ عکس تازه بلافاصله فعال می‌شود.',
   ];
   const err = local || vm.error;
 
@@ -174,8 +174,11 @@ export function OnboardingScreen() {
               </Pressable>
               <View style={styles.reviewNote}>
                 <Icon name="shield" size={14} tint="gold" />
-                <Text style={styles.reviewText}>عکس‌ها پیش از نمایش به دیگران توسطِ مدیر بررسی می‌شوند.</Text>
+                <Text style={styles.reviewText}>اگر عکس خلاف قوانین باشد، مدیر آن را همراه با دلیل رد می‌کند.</Text>
               </View>
+              {vm.rejectionReasons.map((reason, index) => (
+                <Text key={`${reason}-${index}`} style={styles.rejectionReason}>دلیل رد عکس قبلی: {reason}</Text>
+              ))}
             </View>
           ) : null}
 
@@ -297,6 +300,14 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     flexShrink: 1,
+  },
+  rejectionReason: {
+    marginTop: spacing.sm,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    color: colors.rose,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   error: {
     fontFamily: fonts.regular,

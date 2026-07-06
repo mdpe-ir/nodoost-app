@@ -12,6 +12,8 @@ export function usePeerProfileViewModel(userId: number) {
   /** پس از پسندِ بدونِ مچ، دکمه را قفل می‌کنیم تا دوباره نزند. */
   const [liked, setLiked] = useState(false);
   const [match, setMatch] = useState<MatchResult | null>(null);
+  const [reporting, setReporting] = useState(false);
+  const [reported, setReported] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,7 +44,7 @@ export function usePeerProfileViewModel(userId: number) {
     } finally {
       setOpeningChat(false);
     }
-  }, [profile?.matchId, uc, userId]);
+  }, [profile, uc, userId]);
 
   const like = useCallback(async () => {
     if (swiping || liked) return;
@@ -58,6 +60,20 @@ export function usePeerProfileViewModel(userId: number) {
     }
   }, [uc, userId, swiping, liked]);
 
+  const reportPhoto = useCallback(async (photoId: number | undefined, reason: string) => {
+    if (reporting) return false;
+    setReporting(true);
+    try {
+      await uc.safety.report(userId, reason, photoId);
+      setReported(true);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setReporting(false);
+    }
+  }, [reporting, uc, userId]);
+
   return {
     profile,
     loading,
@@ -69,6 +85,9 @@ export function usePeerProfileViewModel(userId: number) {
     match,
     startChat,
     openingChat,
+    reportPhoto,
+    reporting,
+    reported,
     dismissMatch: () => setMatch(null),
   };
 }

@@ -8,10 +8,10 @@ export class SafetyRepositoryImpl implements SafetyRepository {
     await this.http.request('/api/safety/block', { method: 'POST', body: { target_id: targetId } });
   }
 
-  async report(targetId: number, reason: string): Promise<void> {
+  async report(targetId: number, reason: string, photoId?: number): Promise<void> {
     await this.http.request('/api/safety/report', {
       method: 'POST',
-      body: { target_id: targetId, reason },
+      body: { target_id: targetId, reason, photo_id: photoId },
     });
   }
 }

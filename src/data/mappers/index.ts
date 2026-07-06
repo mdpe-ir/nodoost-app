@@ -35,6 +35,7 @@ export const toPhoto = (d: PhotoDTO): Photo => ({
   url: d.url,
   isPrimary: d.is_primary,
   status: d.status,
+  rejectionReason: undefIfNull(d.rejection_reason),
 });
 
 export const toUser = (d: UserDTO): User => ({
@@ -105,6 +106,7 @@ export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
   matchId: d.match_id ?? undefined,
   interests: d.interests ?? [],
   photos: d.photos ?? [],
+  photoIds: d.photo_ids ?? [],
 });
 
 export const toConversation = (d: ConversationDTO): Conversation => ({

@@ -4,6 +4,9 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  Modal,
+  Pressable,
+  TextInput,
   useWindowDimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
@@ -29,6 +32,9 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
   const vm = usePeerProfileViewModel(userId);
   const { width } = useWindowDimensions();
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportError, setReportError] = useState(false);
   const heroW = width - PAGE_PADDING * 2;
 
   if (vm.loading) {
@@ -179,6 +185,15 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
             style={styles.actionBtn}
           />
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="گزارش عکس پروفایل"
+          onPress={() => setReportOpen(true)}
+          style={({ pressed }) => [styles.reportLink, pressed && styles.reportLinkPressed]}
+        >
+          <Icon name="shield" size={15} tint="ink" />
+          <Text style={styles.reportLinkText}>{vm.reported ? 'گزارش ثبت شد' : 'گزارش عکس پروفایل'}</Text>
+        </Pressable>
       </ScrollView>
 
       {vm.match ? (
@@ -194,6 +209,41 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           onDismiss={vm.dismissMatch}
         />
       ) : null}
+
+      <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.reportModal}>
+            <Text style={styles.reportTitle}>گزارش عکس پروفایل</Text>
+            <Text style={styles.reportHint}>لطفاً کوتاه توضیح بده چرا این تصویر مناسب نیست.</Text>
+            <TextInput
+              autoFocus
+              multiline
+              maxLength={500}
+              value={reportReason}
+              onChangeText={(value) => { setReportReason(value); setReportError(false); }}
+              placeholder="دلیل گزارش…"
+              placeholderTextColor={colors.ink3}
+              style={styles.reportInput}
+              textAlign="right"
+            />
+            {reportError ? <Text style={styles.reportError}>ثبت گزارش ناموفق بود؛ دوباره تلاش کن.</Text> : null}
+            <View style={styles.modalActions}>
+              <Button
+                label="ثبت گزارش"
+                loading={vm.reporting}
+                disabled={!reportReason.trim()}
+                onPress={async () => {
+                  const ok = await vm.reportPhoto(p.photoIds[photoIdx], reportReason.trim());
+                  if (ok) { setReportOpen(false); setReportReason(''); }
+                  else setReportError(true);
+                }}
+                style={styles.modalButton}
+              />
+              <Button label="انصراف" variant="outline" onPress={() => setReportOpen(false)} style={styles.modalButton} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -251,6 +301,17 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   matchTagText: { color: colors.rose, fontSize: fontSizes.xs },
+  reportLink: { flexDirection: 'row-reverse', alignSelf: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg, padding: spacing.sm },
+  reportLinkPressed: { opacity: 0.6 },
+  reportLinkText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
+  modalBackdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(0,0,0,0.72)' },
+  reportModal: { borderRadius: radius.xl, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: spacing.lg },
+  reportTitle: { fontFamily: fonts.bold, fontSize: fontSizes.lg, color: colors.ink, textAlign: 'right' },
+  reportHint: { marginTop: spacing.xs, fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink2, textAlign: 'right' },
+  reportInput: { minHeight: 110, marginTop: spacing.md, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: spacing.md, fontFamily: fonts.regular, color: colors.ink, backgroundColor: colors.surface2, textAlignVertical: 'top' },
+  reportError: { marginTop: spacing.xs, fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.rose, textAlign: 'right' },
+  modalActions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.md },
+  modalButton: { flex: 1 },
   section: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.md,

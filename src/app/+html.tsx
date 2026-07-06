@@ -52,8 +52,22 @@ html, body { background-color: #0B0910; }
 
 const SW_REGISTER = `
 if ('serviceWorker' in navigator) {
+  var refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (registration) {
+      registration.update().catch(function () {});
+      window.setInterval(function () {
+        registration.update().catch(function () {});
+      }, 60 * 60 * 1000);
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') registration.update().catch(function () {});
+      });
+    }).catch(function () {});
   });
 }
 `;

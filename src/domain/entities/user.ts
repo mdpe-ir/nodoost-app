@@ -6,6 +6,7 @@ export interface Photo {
   url: string;
   isPrimary?: boolean;
   status?: string;
+  rejectionReason?: string;
 }
 
 /** کاربرِ جاری (پروفایلِ خودم). */

@@ -10,7 +10,7 @@ export function isProfileComplete(user: User | null | undefined): boolean {
     !!user.name?.trim() &&
     !!user.gender &&
     !!user.birthdate &&
-    (user.photos?.length ?? 0) > 0
+    user.photos?.some((photo) => photo.status === 'approved') === true
   );
 }
 

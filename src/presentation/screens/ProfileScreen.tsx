@@ -130,7 +130,7 @@ export function ProfileScreen() {
 
         <Section title="عکس‌ها" />
         <Text style={styles.photoNote}>
-          عکس‌های تازه پیش از نمایش به دیگران توسطِ مدیر بررسی می‌شوند. تا زمانِ تأیید فقط خودت آن‌ها را می‌بینی.
+          عکس‌های تازه بلافاصله نمایش داده می‌شوند. اگر عکسی خلاف قوانین باشد، دلیل رد آن را همین‌جا می‌بینی.
         </Text>
         <View style={styles.grid}>
           {vm.photos.map((p) => {
@@ -194,6 +194,11 @@ export function ProfileScreen() {
             </Pressable>
           ) : null}
         </View>
+        {vm.photos.filter((photo) => photo.status === 'rejected' && photo.rejectionReason).map((photo) => (
+          <Text key={`reason-${photo.id}`} style={styles.rejectionReason}>
+            دلیل رد عکس: {photo.rejectionReason}
+          </Text>
+        ))}
 
         <Section title="عضویت" />
         <View style={styles.tiers}>
@@ -373,6 +378,7 @@ const styles = StyleSheet.create({
   },
   statusTagReject: { backgroundColor: 'rgba(120,20,30,0.55)' },
   statusText: { fontFamily: fonts.medium, fontSize: 10, color: colors.ink },
+  rejectionReason: { fontFamily: fonts.regular, fontSize: 12, color: colors.rose, textAlign: 'right', marginTop: spacing.xs },
   del: {
     position: 'absolute',
     top: 4,

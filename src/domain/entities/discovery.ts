@@ -63,6 +63,8 @@ export interface PeerProfile {
   interests: string[];
   /** فقط عکس‌های تأییدشده. */
   photos: string[];
+  /** شناسه‌ها هم‌ردیف photos، برای گزارش دقیق همان تصویر. */
+  photoIds: number[];
 }
 
 /** نتیجه‌ی پیوستن به چتِ تصادفی. */

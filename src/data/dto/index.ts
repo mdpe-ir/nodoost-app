@@ -5,6 +5,7 @@ export interface PhotoDTO {
   url: string;
   is_primary?: boolean;
   status?: string;
+  rejection_reason?: string | null;
 }
 
 export interface UserDTO {
@@ -47,6 +48,7 @@ export interface PeerProfileDTO {
   match_id?: number | null;
   interests?: string[];
   photos?: string[];
+  photo_ids?: number[];
 }
 
 export interface LikerDTO {
