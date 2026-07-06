@@ -9,6 +9,7 @@ export default function TabsLayout() {
       tabBar={(props: React.ComponentProps<typeof BottomTabBar>) => <BottomTabBar {...props} />}
     >
       <Tabs.Screen name="discover" options={{ title: 'کاوش' }} />
+      <Tabs.Screen name="explore" options={{ title: 'اکسپلور' }} />
       <Tabs.Screen name="map" options={{ title: 'نقشه' }} />
       <Tabs.Screen name="random" options={{ title: 'تصادفی' }} />
       <Tabs.Screen name="likes" options={{ title: 'پسندها' }} />

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Icon, type IconName } from './Icon';
 import { colors, fonts, radius } from '@/core/theme';
 
@@ -12,6 +13,11 @@ const ICONS: Record<string, IconName> = {
   likes: 'tab-likes',
   chat: 'tab-chat',
   profile: 'tab-profile',
+};
+
+// مسیرهایی که آیکنِ برندِ اختصاصی ندارند از پکِ آیکنِ Ionicons استفاده می‌کنند.
+const VECTOR_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  explore: 'compass',
 };
 
 interface Route {
@@ -39,6 +45,7 @@ export function BottomTabBar({ state, descriptors, navigation }: TabBarProps) {
         const focused = state.index === index;
         const label = descriptors[route.key]?.options.title ?? route.name;
         const iconName = ICONS[route.name] ?? 'tab-discover';
+        const vectorIcon = VECTOR_ICONS[route.name];
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
@@ -54,12 +61,21 @@ export function BottomTabBar({ state, descriptors, navigation }: TabBarProps) {
             hitSlop={6}
           >
             <View style={[styles.pill, focused && styles.pillActive]}>
-              <Icon
-                name={iconName}
-                size={23}
-                tint={focused ? 'gold' : 'white'}
-                style={focused ? undefined : { opacity: 0.5 }}
-              />
+              {vectorIcon ? (
+                <Ionicons
+                  name={vectorIcon}
+                  size={23}
+                  color={focused ? colors.gold : colors.ink}
+                  style={focused ? undefined : { opacity: 0.5 }}
+                />
+              ) : (
+                <Icon
+                  name={iconName}
+                  size={23}
+                  tint={focused ? 'gold' : 'white'}
+                  style={focused ? undefined : { opacity: 0.5 }}
+                />
+              )}
             </View>
             <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
               {label}

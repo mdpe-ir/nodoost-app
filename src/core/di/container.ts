@@ -57,6 +57,7 @@ export function createContainer() {
     },
     discovery: {
       getCandidates: discovery.makeGetCandidates(discoveryRepo),
+      getExplore: discovery.makeGetExplore(discoveryRepo),
       getNearbyMapUsers: discovery.makeGetNearbyMapUsers(discoveryRepo),
       swipe: discovery.makeSwipe(discoveryRepo),
     },

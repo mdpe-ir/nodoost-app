@@ -15,6 +15,13 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     return (d?.results ?? []).map(toCandidate);
   }
 
+  async getExplore(page = 1, limit = 24): Promise<Candidate[]> {
+    const d = await this.http.request<{ results: CandidateDTO[] }>(
+      `/api/explore?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`
+    );
+    return (d?.results ?? []).map(toCandidate);
+  }
+
   async getNearbyMapUsers(radiusM = 25000): Promise<MapUser[]> {
     const d = await this.http.request<{ results: MapUserDTO[] }>(
       `/api/map/nearby?radius_m=${encodeURIComponent(radiusM)}`

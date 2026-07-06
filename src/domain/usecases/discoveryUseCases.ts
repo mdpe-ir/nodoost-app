@@ -2,6 +2,8 @@ import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryReposit
 import type { SwipeAction } from '@/domain/entities';
 
 export const makeGetCandidates = (r: DiscoveryRepository) => () => r.getCandidates();
+export const makeGetExplore =
+  (r: DiscoveryRepository) => (page?: number, limit?: number) => r.getExplore(page, limit);
 export const makeGetNearbyMapUsers =
   (r: DiscoveryRepository) => (radiusM?: number) => r.getNearbyMapUsers(radiusM);
 export const makeSwipe =
@@ -10,6 +12,7 @@ export const makeSwipe =
 
 export type DiscoveryUseCases = {
   getCandidates: ReturnType<typeof makeGetCandidates>;
+  getExplore: ReturnType<typeof makeGetExplore>;
   getNearbyMapUsers: ReturnType<typeof makeGetNearbyMapUsers>;
   swipe: ReturnType<typeof makeSwipe>;
 };
