@@ -2,7 +2,7 @@
   "expo": {
     "name": "نودوست",
     "slug": "nodoost",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/logo/app-icon-1024.png",
     "scheme": "nodoost",
