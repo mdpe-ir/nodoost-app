@@ -29,11 +29,13 @@ const MAP_HTML = `<!DOCTYPE html>
     html, body, #map { height: 100%; margin: 0; padding: 0; background: ${colors.bg}; }
     .leaflet-tile { filter: brightness(0.7) invert(0.92) contrast(0.9) hue-rotate(180deg) saturate(0.6) brightness(0.9); }
     .leaflet-container { background: ${colors.bg}; }
-    .me-dot { width: 18px; height: 18px; border-radius: 50%; background: ${colors.gold}; border: 3px solid ${colors.onGold}; box-shadow: 0 0 0 4px ${colors.goldSoft}; }
-    .pin { width: 40px; height: 40px; border-radius: 50% 50% 50% 0; background: ${colors.gold}; border: 2px solid ${colors.onGold}; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0,0,0,0.5); overflow: hidden; }
-    .pin.match { background: ${colors.rose}; }
-    .pin img { width: 100%; height: 100%; object-fit: cover; transform: rotate(45deg) scale(1.4); }
-    .pin .ph { transform: rotate(45deg); color: ${colors.onGold}; font: 700 16px sans-serif; text-align: center; line-height: 36px; }
+    .pin { width: 44px; height: 52px; position: relative; }
+    .pin .av { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: ${colors.gold}; border: 3px solid ${colors.gold}; box-shadow: 0 2px 6px rgba(0,0,0,0.5); box-sizing: border-box; }
+    .pin.match .av { background: ${colors.rose}; border-color: ${colors.rose}; }
+    .pin .av img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .pin .tail { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid ${colors.gold}; }
+    .pin.match .tail { border-top-color: ${colors.rose}; }
+    .pin .ph { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: ${colors.onGold}; font: 700 18px sans-serif; }
   </style>
 </head>
 <body>
@@ -41,8 +43,8 @@ const MAP_HTML = `<!DOCTYPE html>
   <script>
     var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([35.7, 51.4], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    var meMarker = null;
     var markers = [];
+    var centered = false;
 
     function post(msg) {
       var s = JSON.stringify(msg);
@@ -56,11 +58,11 @@ const MAP_HTML = `<!DOCTYPE html>
     }
 
     function render(data) {
-      if (data.me) {
-        var meIcon = L.divIcon({ className: '', html: '<div class="me-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
-        if (meMarker) map.removeLayer(meMarker);
-        meMarker = L.marker([data.me.lat, data.me.lng], { icon: meIcon, interactive: false }).addTo(map);
+      // موقعیتِ خودِ کاربر روی نقشه نشانگر ندارد؛ فقط یک‌بار نقشه را روی آن مرکز
+      // می‌کنیم تا با هر تازه‌سازی، نمای کاربر به عقب نپرد.
+      if (data.me && !centered) {
         map.setView([data.me.lat, data.me.lng], 13);
+        centered = true;
       }
       clearMarkers();
       (data.users || []).forEach(function (u) {
@@ -69,9 +71,9 @@ const MAP_HTML = `<!DOCTYPE html>
           : '<div class="ph">' + (u.name ? u.name.charAt(0) : '؟') + '</div>';
         var icon = L.divIcon({
           className: '',
-          html: '<div class="pin ' + (u.isMatch ? 'match' : '') + '">' + inner + '</div>',
-          iconSize: [40, 40],
-          iconAnchor: [20, 40],
+          html: '<div class="pin ' + (u.isMatch ? 'match' : '') + '"><div class="av">' + inner + '</div><div class="tail"></div></div>',
+          iconSize: [44, 52],
+          iconAnchor: [22, 52],
         });
         var mk = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
         mk.on('click', function () { post({ type: 'marker', id: u.id }); });
