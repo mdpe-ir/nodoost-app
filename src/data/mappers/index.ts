@@ -52,6 +52,10 @@ export const toUser = (d: UserDTO): User => ({
   hasLocation: d.has_location,
   interests: d.interests,
   photos: d.photos?.map(toPhoto),
+  prefs: {
+    showOnMap: d.prefs?.show_on_map ?? true,
+    showExactLocationOnMap: d.prefs?.show_exact_location_on_map ?? false,
+  },
 });
 
 export const fromProfileDraft = (draft: ProfileDraft) => ({
@@ -60,6 +64,12 @@ export const fromProfileDraft = (draft: ProfileDraft) => ({
   gender: draft.gender,
   birthdate: draft.birthdate,
   interests: draft.interests,
+  prefs: draft.prefs
+    ? {
+        show_on_map: draft.prefs.showOnMap,
+        show_exact_location_on_map: draft.prefs.showExactLocationOnMap,
+      }
+    : undefined,
 });
 
 export const toCandidate = (d: CandidateDTO): Candidate => ({

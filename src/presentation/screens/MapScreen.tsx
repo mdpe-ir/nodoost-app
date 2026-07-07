@@ -132,13 +132,15 @@ export function MapView() {
     );
   }
 
+  // نقشه فقط با دسترسیِ موقعیت باز می‌شود؛ اگر کاربر اجازه نداده باشد، به‌جای
+  // نقشه صفحه‌ی درخواستِ مجوز نشان داده می‌شود تا موقعیت را روشن کند.
   if (vm.permissionState === 'denied') {
     return (
       <View style={styles.center}>
         <EmptyState
           icon="map"
           title="موقعیتت روشن نیست"
-          hint="برای دیدنِ کاربرانِ نزدیک روی نقشه، دسترسی به موقعیت لازم است."
+          hint="برای دیدنِ نقشه و کاربرانِ فعال، دسترسی به موقعیت لازم است."
           actionLabel="روشن کردنِ موقعیت"
           actionIcon="map"
           onAction={vm.refresh}
@@ -158,7 +160,7 @@ export function MapView() {
           </Animated.View>
         ) : !vm.loading && vm.users.length === 0 ? (
           <Animated.View entering={FadeIn.duration(220)} style={styles.badge}>
-            <Text style={styles.badgeText}>فعلاً کسی این نزدیکی روی نقشه نیست</Text>
+            <Text style={styles.badgeText}>هنوز کاربرِ فعالی روی نقشه نیست</Text>
           </Animated.View>
         ) : null}
 

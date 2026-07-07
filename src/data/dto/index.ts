@@ -22,6 +22,11 @@ export interface UserDTO {
   has_location?: boolean;
   interests?: string[];
   photos?: PhotoDTO[];
+  prefs?: {
+    show_on_map?: boolean;
+    show_exact_location_on_map?: boolean;
+    [key: string]: unknown;
+  };
 }
 
 export interface CandidateDTO {

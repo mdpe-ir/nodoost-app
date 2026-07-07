@@ -12,11 +12,11 @@ export class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   async updateProfile(draft: ProfileDraft): Promise<User> {
-    const dto = await this.http.request<UserDTO>('/api/me', {
+    await this.http.request('/api/me', {
       method: 'PATCH',
       body: fromProfileDraft(draft),
     });
-    return toUser(dto);
+    return this.getMe();
   }
 
   async deleteAccount(): Promise<void> {

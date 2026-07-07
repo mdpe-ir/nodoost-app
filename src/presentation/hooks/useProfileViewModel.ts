@@ -3,6 +3,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
+import { getPaymentMode } from '@/core/billing/paymentStrategy';
+import { bazaarBilling } from '@/core/billing/bazaarBilling';
 import type { Photo, Tier } from '@/domain/entities';
 
 /** ویومدلِ پروفایل: عکس‌ها، تایرها، ویرایشِ نام/بیو، آپلود/حذفِ عکس، خرید، خروج. */
@@ -19,6 +21,7 @@ export function useProfileViewModel() {
   const [draftBio, setDraftBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [privacySaving, setPrivacySaving] = useState(false);
 
   useEffect(() => {
     setDraftName(user?.name ?? '');
@@ -43,6 +46,24 @@ export function useProfileViewModel() {
       setSaving(false);
     }
   }, [draftName, draftBio, uc, refreshUser]);
+
+  const updateMapPrivacy = useCallback(async (showExactLocationOnMap: boolean) => {
+    setPrivacySaving(true);
+    setSaveError(false);
+    try {
+      await uc.profile.updateProfile({
+        prefs: {
+          showOnMap: user?.prefs?.showOnMap ?? true,
+          showExactLocationOnMap,
+        },
+      });
+      await refreshUser();
+    } catch {
+      setSaveError(true);
+    } finally {
+      setPrivacySaving(false);
+    }
+  }, [uc, user, refreshUser]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,13 +118,26 @@ export function useProfileViewModel() {
   const buy = useCallback(
     async (plan: string) => {
       try {
+        if (getPaymentMode() === 'bazaar') {
+          // بیلدِ کافه‌بازار: خریدِ درون‌برنامه‌ای (Poolakey) سپس اعتبارسنجیِ سرور.
+          // `plan` همان code تایر و همان SKUِ ثبت‌شده در کنسولِ بازار است.
+          setBusy(true);
+          await bazaarBilling.connect();
+          const purchase = await bazaarBilling.purchase(plan);
+          await uc.catalog.verifyBazaarPurchase(purchase.productId, purchase.purchaseToken);
+          await refreshUser();
+          return;
+        }
+        // وب/PWA: بازآوردِ زرین‌پال در مرورگر.
         const { payUrl } = await uc.catalog.startPayment(plan);
         if (payUrl) await WebBrowser.openBrowserAsync(payUrl);
       } catch {
         /* نادیده */
+      } finally {
+        setBusy(false);
       }
     },
-    [uc]
+    [uc, refreshUser]
   );
 
   return {
@@ -124,5 +158,7 @@ export function useProfileViewModel() {
     saving,
     saveError,
     saveProfile,
+    privacySaving,
+    updateMapPrivacy,
   };
 }

@@ -25,6 +25,14 @@ export interface User {
   hasLocation?: boolean;
   interests?: string[];
   photos?: Photo[];
+  prefs?: UserPreferences;
+}
+
+export interface UserPreferences {
+  /** حضور روی نقشه؛ پیش‌فرض روشن است. */
+  showOnMap: boolean;
+  /** نمایش نقطه‌ی دقیق؛ پیش‌فرض خاموش است. */
+  showExactLocationOnMap: boolean;
 }
 
 export interface ProfileDraft {
@@ -33,4 +41,5 @@ export interface ProfileDraft {
   gender?: Gender;
   birthdate?: string;
   interests?: string[];
+  prefs?: Partial<UserPreferences>;
 }

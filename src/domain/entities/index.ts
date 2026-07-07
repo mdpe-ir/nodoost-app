@@ -1,4 +1,4 @@
-export type { Gender, AccountStatus, Photo, User, ProfileDraft } from './user';
+export type { Gender, AccountStatus, Photo, User, UserPreferences, ProfileDraft } from './user';
 export type {
   Candidate,
   MapUser,

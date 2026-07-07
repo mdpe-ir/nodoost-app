@@ -19,4 +19,18 @@ export class CatalogRepositoryImpl implements CatalogRepository {
     });
     return { payUrl: d.pay_url };
   }
+
+  async verifyBazaarPurchase(
+    productId: string,
+    purchaseToken: string
+  ): Promise<{ subscriptionUntil?: string }> {
+    const d = await this.http.request<{ subscription_until?: string }>(
+      '/api/payments/bazaar/verify',
+      {
+        method: 'POST',
+        body: { product_id: productId, purchase_token: purchaseToken },
+      }
+    );
+    return { subscriptionUntil: d?.subscription_until };
+  }
 }

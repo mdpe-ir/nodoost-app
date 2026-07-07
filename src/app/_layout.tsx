@@ -12,6 +12,7 @@ import {
 import { DIProvider } from '@/core/di/DIProvider';
 import { SessionProvider, useSession } from '@/presentation/providers/SessionProvider';
 import { PwaInstallProvider } from '@/presentation/providers/PwaInstallProvider';
+import { UpdateGateProvider } from '@/presentation/providers/UpdateGateProvider';
 import { isProfileComplete } from '@/domain/policies/profile';
 import { Loading } from '@/presentation/components/Loading';
 import { AnimatedSplash } from '@/presentation/components/AnimatedSplash';
@@ -81,9 +82,11 @@ export default function RootLayout() {
       <DIProvider>
         <SessionProvider>
           <PwaInstallProvider>
-            <StatusBar style="light" />
-            <AuthGate />
-            {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+            <UpdateGateProvider>
+              <StatusBar style="light" />
+              <AuthGate />
+              {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+            </UpdateGateProvider>
           </PwaInstallProvider>
         </SessionProvider>
       </DIProvider>

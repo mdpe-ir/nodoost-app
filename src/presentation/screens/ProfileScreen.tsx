@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   Pressable,
+  Switch,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -70,6 +71,24 @@ export function ProfileScreen() {
           <View style={styles.tierRow}>
             <TierBadge tier={user?.tier ?? 1} />
             <Text style={styles.tierText}>سطحِ {tierName(user?.tier ?? 1) || 'پایه'}</Text>
+          </View>
+        </View>
+
+        <Section title="حریم خصوصی نقشه" />
+        <View style={styles.privacyCard}>
+          <Switch
+            value={user?.prefs?.showExactLocationOnMap ?? false}
+            onValueChange={vm.updateMapPrivacy}
+            disabled={vm.privacySaving}
+            trackColor={{ false: colors.line, true: colors.goldSoft }}
+            thumbColor={user?.prefs?.showExactLocationOnMap ? colors.gold : colors.ink3}
+            accessibilityLabel="نمایش موقعیت دقیق روی نقشه"
+          />
+          <View style={styles.privacyBody}>
+            <Text style={styles.privacyTitle}>نمایش موقعیت دقیق</Text>
+            <Text style={styles.privacyHint}>
+              به‌طور پیش‌فرض فقط یک نقطه‌ی تقریبی نمایش داده می‌شود. این گزینه مکان دقیق تو را برای کاربران روی نقشه آشکار می‌کند.
+            </Text>
           </View>
         </View>
 
@@ -316,6 +335,26 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  privacyCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  privacyBody: { flex: 1, alignItems: 'flex-end', gap: spacing.xs },
+  privacyTitle: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.ink, textAlign: 'right' },
+  privacyHint: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink3,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   fieldLabel: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2, textAlign: 'right' },
   input: {

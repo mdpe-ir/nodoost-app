@@ -10,7 +10,7 @@ export interface Candidate {
   interests?: string[];
 }
 
-/** یک نشانگرِ کاربر روی نقشه (مختصات همیشه فازی‌شده). */
+/** یک نشانگرِ کاربر روی نقشه (فازی‌شده، مگر با رضایت صریح کاربر). */
 export interface MapUser {
   id: number;
   name: string;

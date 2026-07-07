@@ -66,6 +66,9 @@ export function useMapViewModel(radiusM = 25000) {
     [uc]
   );
 
+  // نقشه فقط با دسترسیِ موقعیت باز می‌شود. اگر مجوز نبود، کاربر را نمی‌آوریم و
+  // صفحه به درخواستِ روشن‌کردنِ موقعیت می‌رود. با روشن‌شدن، همه‌ی کاربرانِ فعالِ
+  // نقشه (نه فقط شعاعِ نزدیک) بارگذاری می‌شوند.
   const refresh = useCallback(async () => {
     setLoading(true);
     const ok = await captureLocation(true);

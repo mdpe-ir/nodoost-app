@@ -79,6 +79,7 @@ export function createContainer() {
     catalog: {
       getTiers: catalog.makeGetTiers(catalogRepo),
       startPayment: catalog.makeStartPayment(catalogRepo),
+      verifyBazaarPurchase: catalog.makeVerifyBazaarPurchase(catalogRepo),
     },
     safety: {
       block: safety.makeBlockUser(safetyRepo),

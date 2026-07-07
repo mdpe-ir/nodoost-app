@@ -8,6 +8,13 @@
     "scheme": "nodoost",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0B0910",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ir.nodoost.app"
@@ -50,7 +57,8 @@
           "photosPermission": "برای انتخابِ عکسِ پروفایل، به گالریِ تصاویر دسترسی نیاز داریم."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withBazaarBilling"
     ],
     "experiments": {
       "typedRoutes": true,
