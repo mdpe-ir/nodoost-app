@@ -26,6 +26,12 @@ export const colors = {
   overlay: 'rgba(10,8,14,0.9)',
   /** پس‌زمینه‌ی نیمه‌شفافِ پشتِ برگه‌ها. */
   backdrop: 'rgba(7,5,11,0.65)',
+  /** رنگِ سطح‌های عضویت: ۱ عادی، ۲ برنزی، ۳ نقره‌ای، ۴ طلایی، ۵ الماس. */
+  tierNormal: '#9A93A5',
+  tierBronze: '#C4874F',
+  tierSilver: '#C9CDD6',
+  tierGold: '#DAB877',
+  tierDiamond: '#8FB7F2',
 } as const;
 
 export type ColorKey = keyof typeof colors;

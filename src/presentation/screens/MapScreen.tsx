@@ -9,6 +9,7 @@ import { Avatar } from '@/presentation/components/Avatar';
 import { Button } from '@/presentation/components/Button';
 import { IconButton } from '@/presentation/components/IconButton';
 import { LeafletWebView, type LeafletEvent } from '@/presentation/components/LeafletWebView';
+import { TierBadge } from '@/presentation/components/TierBadge';
 import { useCases } from '@/core/di/DIProvider';
 import { useMapViewModel } from '@/presentation/hooks/useMapViewModel';
 import { faNum, faDistance } from '@/core/utils/faNum';
@@ -45,6 +46,8 @@ const MAP_HTML = `<!DOCTYPE html>
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     var markers = [];
     var centered = false;
+    // رنگِ حلقه‌ی هر نشانگر از سطحِ عضویتِ کاربر می‌آید (مچ‌ها رز می‌مانند).
+    var TIER_COLORS = { 1: '${colors.tierNormal}', 2: '${colors.tierBronze}', 3: '${colors.tierSilver}', 4: '${colors.tierGold}', 5: '${colors.tierDiamond}' };
 
     function post(msg) {
       var s = JSON.stringify(msg);
@@ -69,9 +72,12 @@ const MAP_HTML = `<!DOCTYPE html>
         var inner = u.photoUrl
           ? '<img src="' + u.photoUrl + '" />'
           : '<div class="ph">' + (u.name ? u.name.charAt(0) : '؟') + '</div>';
+        var tc = u.isMatch ? '' : (TIER_COLORS[u.tier] || '');
+        var avStyle = tc ? ' style="border-color:' + tc + ';background:' + tc + '"' : '';
+        var tailStyle = tc ? ' style="border-top-color:' + tc + '"' : '';
         var icon = L.divIcon({
           className: '',
-          html: '<div class="pin ' + (u.isMatch ? 'match' : '') + '"><div class="av">' + inner + '</div><div class="tail"></div></div>',
+          html: '<div class="pin ' + (u.isMatch ? 'match' : '') + '"><div class="av"' + avStyle + '>' + inner + '</div><div class="tail"' + tailStyle + '></div></div>',
           iconSize: [44, 52],
           iconAnchor: [22, 52],
         });
@@ -193,10 +199,13 @@ export function MapView() {
             <View style={styles.sheetRow}>
               <Avatar uri={selected.photoUrl} name={selected.name} size={64} ring />
               <View style={styles.sheetInfo}>
-                <Text style={styles.sheetName} numberOfLines={1}>
-                  {selected.name}
-                  {selected.age ? `، ${faNum(selected.age)}` : ''}
-                </Text>
+                <View style={styles.sheetNameRow}>
+                  <Text style={styles.sheetName} numberOfLines={1}>
+                    {selected.name}
+                    {selected.age ? `، ${faNum(selected.age)}` : ''}
+                  </Text>
+                  {selected.tier ? <TierBadge tier={selected.tier} height={18} /> : null}
+                </View>
                 {faDistance(selected.distanceM) ? (
                   <Text style={styles.sheetDist}>{faDistance(selected.distanceM)}</Text>
                 ) : null}
@@ -278,6 +287,7 @@ const styles = StyleSheet.create({
   },
   sheetRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
   sheetInfo: { flex: 1, alignItems: 'flex-end' },
+  sheetNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
   sheetName: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.lg,

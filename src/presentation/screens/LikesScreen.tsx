@@ -18,6 +18,7 @@ import { EmptyState } from '@/presentation/components/EmptyState';
 import { Scrim } from '@/presentation/components/Scrim';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
+import { TierBadge } from '@/presentation/components/TierBadge';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { useLikesViewModel } from '@/presentation/hooks/useLikesViewModel';
 import { faNum } from '@/core/utils/faNum';
@@ -62,6 +63,11 @@ function LikerTile({ liker, w, h }: { liker: Liker; w: number; h: number }) {
           {liker.name ?? 'بی‌نام'}
           {liker.age ? <Text style={styles.tileAge}>{`  ${faNum(liker.age)}`}</Text> : null}
         </Text>
+        {liker.tier ? (
+          <View style={styles.tileBadge}>
+            <TierBadge tier={liker.tier} height={16} />
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -229,6 +235,7 @@ const styles = StyleSheet.create({
   tileFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
   tileInitial: { fontFamily: fonts.bold, fontSize: 40, color: colors.goldSoft },
   tileMeta: { position: 'absolute', right: 8, left: 8, bottom: 8 },
+  tileBadge: { alignItems: 'flex-end', marginTop: 3 },
   tileName: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.sm,

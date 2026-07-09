@@ -15,9 +15,10 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     return (d?.results ?? []).map(toCandidate);
   }
 
-  async getExplore(page = 1, limit = 24): Promise<Candidate[]> {
+  async getExplore(page = 1, limit = 24, tier?: number): Promise<Candidate[]> {
+    const tierParam = tier ? `&tier=${encodeURIComponent(tier)}` : '';
     const d = await this.http.request<{ results: CandidateDTO[] }>(
-      `/api/explore?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`
+      `/api/explore?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}${tierParam}`
     );
     return (d?.results ?? []).map(toCandidate);
   }

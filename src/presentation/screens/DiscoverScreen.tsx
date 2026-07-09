@@ -93,10 +93,11 @@ export function DiscoverScreen() {
             const name = vm.match?.peer?.name ?? '';
             const peerId = vm.match?.peer?.id;
             const photoUrl = vm.match?.peer?.photoUrl;
+            const peerTier = vm.match?.peer?.tier;
             vm.dismissMatch();
             if (id) router.push({
               pathname: '/thread/[id]',
-              params: { id: String(id), name, peerId: peerId ? String(peerId) : '', photoUrl: photoUrl ?? '' },
+              params: { id: String(id), name, peerId: peerId ? String(peerId) : '', photoUrl: photoUrl ?? '', peerTier: peerTier ? String(peerTier) : '' },
             });
             else router.push('/chat');
           }}

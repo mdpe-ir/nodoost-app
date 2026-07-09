@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { router } from 'expo-router';
 import { useCases } from '@/core/di/DIProvider';
+import { ApiError } from '@/core/http/ApiError';
 import type { RandomMatch } from '@/domain/entities';
 
 /** ویومدلِ چتِ تصادفی: پیوستن/خروج با فیلترِ جنسیت. */
@@ -24,12 +25,17 @@ export function useRandomViewModel() {
             name: r.peer?.name ?? 'ناشناس',
             peerId: r.peer?.id ? String(r.peer.id) : '',
             photoUrl: r.peer?.photoUrl ?? '',
+            peerTier: r.peer?.tier ? String(r.peer.tier) : '',
           },
         });
       }
-    } catch {
+    } catch (e) {
       setState('idle');
-      setError('پیوستن ناموفق بود. دوباره تلاش کن.');
+      setError(
+        e instanceof ApiError && e.code === 'random_limit_reached'
+          ? 'سهمِ چتِ تصادفیِ امروزت پر شده — برای بیشتر، سطحت را ارتقا بده.'
+          : 'پیوستن ناموفق بود. دوباره تلاش کن.'
+      );
     }
   }, [gender, uc]);
 

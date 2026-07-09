@@ -5,6 +5,7 @@ import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenC
 import { RowsSkeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
+import { TierBadge } from '@/presentation/components/TierBadge';
 import { useChatViewModel } from '@/presentation/hooks/useChatViewModel';
 import { timeAgo } from '@/core/utils/time';
 import { faNum } from '@/core/utils/faNum';
@@ -61,6 +62,8 @@ export function ChatScreen() {
                       name: item.otherName ?? '',
                       peerId: String(item.otherId),
                       photoUrl: item.otherPhotoUrl ?? '',
+                      peerTier: String(item.otherTier ?? ''),
+                      initiatedBy: String(item.initiatedBy ?? ''),
                     },
                   })
                 }
@@ -82,6 +85,7 @@ export function ChatScreen() {
                       <Text style={styles.name} numberOfLines={1}>
                         {item.otherName ?? 'ناشناس'}
                       </Text>
+                      {item.otherTier ? <TierBadge tier={item.otherTier} height={18} /> : null}
                       {item.source === 'random' ? (
                         <View style={styles.sourceTag}>
                           <Text style={styles.sourceTagText}>تصادفی</Text>

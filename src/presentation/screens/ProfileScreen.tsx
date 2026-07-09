@@ -25,6 +25,13 @@ import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '
 const GAP = spacing.md;
 const COLS = 3;
 
+const faShortDate = (iso?: string): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
+};
+
 function Section({ title }: { title: string }) {
   return <Text style={styles.section}>{title}</Text>;
 }
@@ -48,6 +55,15 @@ export function ProfileScreen() {
   const primary = vm.photos.find((p) => p.isPrimary) ?? vm.photos[0];
   const heroUri = mediaUrl(primary?.url);
   const version = Constants.expoConfig?.version;
+  const userTier = user?.tier ?? 1;
+  const activeTierName = tierName(userTier) || 'رایگان';
+  const isTrial = user?.subscriptionStatus === 'trial' || user?.subscriptionProvider === 'trial';
+  const expiry = faShortDate(user?.subscriptionUntil);
+  const membershipText = user?.isPlus
+    ? isTrial
+      ? `اشتراک آزمایشی ${activeTierName} فعال است${expiry ? ` تا ${expiry}` : ''}`
+      : `اشتراک ${activeTierName} فعال است${expiry ? ` تا ${expiry}` : ''}`
+    : 'تو کاربر رایگان هستی؛ برای امکانات بیشتر پلن را ارتقا بده.';
 
   return (
     <ScreenContainer flush>
@@ -69,8 +85,8 @@ export function ProfileScreen() {
             {user?.verified ? <Icon name="shield-check" size={18} tint="gold" /> : null}
           </View>
           <View style={styles.tierRow}>
-            <TierBadge tier={user?.tier ?? 1} />
-            <Text style={styles.tierText}>سطحِ {tierName(user?.tier ?? 1) || 'پایه'}</Text>
+            <TierBadge tier={userTier} />
+            <Text style={styles.tierText}>{membershipText}</Text>
           </View>
         </View>
 
@@ -221,8 +237,22 @@ export function ProfileScreen() {
 
         <Section title="عضویت" />
         <View style={styles.tiers}>
+          {!user?.isPlus ? (
+            <View style={[styles.tierCard, styles.tierCardCurrent, shadow.soft]}>
+              <View style={styles.tierInfo}>
+                <View style={styles.tierNameRow}>
+                  <Text style={styles.tierName}>رایگان</Text>
+                  <View style={styles.currentTag}>
+                    <Text style={styles.currentTagText}>پلنِ فعلی</Text>
+                  </View>
+                </View>
+                <Text style={styles.tierPrice}>بدون پرداخت</Text>
+              </View>
+              <Icon name="check" size={20} tint="gold" />
+            </View>
+          ) : null}
           {vm.tiers.map((t) => {
-            const current = t.level === (user?.tier ?? 1);
+            const current = user?.isPlus && t.level === userTier;
             return (
               <View key={t.id} style={[styles.tierCard, current && styles.tierCardCurrent, shadow.soft]}>
                 <View style={styles.tierInfo}>
@@ -230,7 +260,7 @@ export function ProfileScreen() {
                     <Text style={styles.tierName}>{t.name}</Text>
                     {current ? (
                       <View style={styles.currentTag}>
-                        <Text style={styles.currentTagText}>پلنِ فعلی</Text>
+                        <Text style={styles.currentTagText}>{isTrial ? 'trial فعال' : 'پلنِ فعلی'}</Text>
                       </View>
                     ) : null}
                   </View>

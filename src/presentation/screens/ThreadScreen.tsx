@@ -17,6 +17,8 @@ import { BubblesSkeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
+import { Button } from '@/presentation/components/Button';
+import { TierBadge, tierName } from '@/presentation/components/TierBadge';
 import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
 import { faClock, faDayLabel, dayKey } from '@/core/utils/time';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients } from '@/core/theme';
@@ -63,17 +65,22 @@ export function ThreadScreen({
   name,
   peerId,
   photoUrl,
+  peerTier,
 }: {
   matchId: number;
   name?: string;
   peerId?: number;
   photoUrl?: string;
+  peerTier?: number;
 }) {
   const vm = useThreadViewModel(matchId);
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
   const canSend = !!vm.draft.trim() && !vm.sending;
+  // قانونِ سطح: تا وقتی گفتگو پیامی ندارد، فقط هم‌سطح یا بالاتر می‌تواند شروع کند.
+  // اگر طرفِ مقابل سطحِ بالاتری دارد، ورودی قفل می‌شود تا او پیامِ اول را بدهد.
+  const tierLocked = !vm.loading && vm.messages.length === 0 && !!peerTier && peerTier > vm.myTier;
 
   const openPeerProfile = () => {
     if (peerId) router.push({ pathname: '/user/[id]', params: { id: String(peerId) } });
@@ -102,9 +109,12 @@ export function ThreadScreen({
         >
           <Avatar uri={photoUrl} name={name} size={40} ring />
           <View style={styles.headerText}>
-            <Text style={styles.headerName} numberOfLines={1}>
-              {name || 'گفتگو'}
-            </Text>
+            <View style={styles.headerNameRow}>
+              <Text style={styles.headerName} numberOfLines={1}>
+                {name || 'گفتگو'}
+              </Text>
+              {peerTier ? <TierBadge tier={peerTier} height={18} /> : null}
+            </View>
             {peerId ? <Text style={styles.headerHint}>دیدنِ پروفایل</Text> : null}
           </View>
         </Pressable>
@@ -122,7 +132,11 @@ export function ThreadScreen({
             <EmptyState
               icon="heart-fill"
               title={name ? `با ${name} مَچ شدی` : 'مَچ شدید'}
-              hint="یخ را بشکن — یک سلامِ ساده بهترین شروع است."
+              hint={
+                tierLocked
+                  ? 'او سطحِ بالاتری دارد؛ هر وقت پیام بدهد می‌توانی پاسخ بدهی.'
+                  : 'یخ را بشکن — یک سلامِ ساده بهترین شروع است.'
+              }
             />
           </View>
         ) : (
@@ -165,7 +179,20 @@ export function ThreadScreen({
           />
         )}
 
+        {tierLocked ? (
+          <View style={[styles.lockedBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+            <Text style={styles.lockedText}>
+              {`این کاربر سطحِ ${tierName(peerTier!)} دارد. برای شروعِ گفتگو باید سطحِ حسابت را ارتقا بدهی.`}
+            </Text>
+            <Button
+              label="مشاهده‌ی سطح‌های اشتراک"
+              size="sm"
+              onPress={() => router.push('/profile')}
+            />
+          </View>
+        ) : (
         <View style={[styles.composer, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+          {vm.sendError ? <Text style={styles.sendError}>{vm.sendError}</Text> : null}
           <TextInput
             style={styles.input}
             value={vm.draft}
@@ -191,6 +218,7 @@ export function ThreadScreen({
             <Icon name="send-fill" size={20} tint="ink" />
           </Pressable>
         </View>
+        )}
       </KeyboardAvoidingView>
     </ScreenContainer>
   );
@@ -217,6 +245,7 @@ const styles = StyleSheet.create({
   backPressed: { backgroundColor: colors.surface },
   headerPeer: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
   headerText: { flex: 1 },
+  headerNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
   headerHint: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, textAlign: 'right' },
   headerName: {
     fontFamily: fonts.bold,
@@ -304,4 +333,37 @@ const styles = StyleSheet.create({
   },
   sendPressed: { transform: [{ scale: 0.92 }] },
   sendOff: { opacity: 0.35 },
+  lockedBar: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+  },
+  lockedText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink2,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  sendError: {
+    position: 'absolute',
+    top: -34,
+    left: spacing.md,
+    right: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    backgroundColor: colors.roseFaint,
+    color: colors.rose,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.xs,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    overflow: 'hidden',
+  },
 });

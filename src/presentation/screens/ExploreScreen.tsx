@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Pressable,
+  ScrollView,
   StyleSheet,
   FlatList,
   RefreshControl,
@@ -20,11 +21,13 @@ import { Button } from '@/presentation/components/Button';
 import { IconButton } from '@/presentation/components/IconButton';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { Scrim } from '@/presentation/components/Scrim';
-import { TierBadge } from '@/presentation/components/TierBadge';
+import { TierBadge, tierName } from '@/presentation/components/TierBadge';
+import { Chip } from '@/presentation/components/Chip';
 import { GridSkeleton } from '@/presentation/components/Skeleton';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { useExploreViewModel } from '@/presentation/hooks/useExploreViewModel';
+import { useSession } from '@/presentation/providers/SessionProvider';
 import type { Candidate } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
 
@@ -37,8 +40,12 @@ const COLS = 2;
  */
 export function ExploreView() {
   const vm = useExploreViewModel();
+  const { user } = useSession();
   const { width } = useWindowDimensions();
   const cellW = (width - PAGE_PADDING * 2 - GAP * (COLS - 1)) / COLS;
+  // فیلترِ سطح از برنزی به بالا؛ فقط سطح‌هایی که کاربر به آن‌ها دسترسیِ پیام دارد.
+  const myTier = user?.tier ?? 1;
+  const canFilterTier = myTier >= 2;
 
   const renderItem = ({ item }: { item: Candidate }) => (
     <Animated.View entering={FadeIn.duration(220)}>
@@ -60,7 +67,7 @@ export function ExploreView() {
           </View>
         )}
         <Scrim height="52%" />
-        {item.tier && item.tier >= 2 ? (
+        {item.tier ? (
           <View style={styles.cellBadge}>
             <TierBadge tier={item.tier} height={20} />
           </View>
@@ -92,6 +99,31 @@ export function ExploreView() {
           onPress={vm.enableLocation}
         />
       ) : null}
+
+      {/* فیلترِ سطحِ کاربران؛ گزینه‌های خارج از دسترس قفل‌اند و به صفحه‌ی عضویت می‌برند. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        <Chip label="همه" active={vm.tierFilter === 0} onPress={() => vm.setTier(0)} style={styles.filterChip} />
+        {[1, 2, 3, 4, 5].map((lvl) => {
+          const locked = !canFilterTier || lvl > myTier;
+          return (
+            <Chip
+              key={lvl}
+              label={locked ? `${tierName(lvl)} · قفل` : tierName(lvl)}
+              active={vm.tierFilter === lvl}
+              onPress={() => {
+                if (locked) router.push('/profile');
+                else vm.setTier(vm.tierFilter === lvl ? 0 : lvl);
+              }}
+              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
+            />
+          );
+        })}
+      </ScrollView>
 
       {vm.loading ? (
         <GridSkeleton count={6} />
@@ -150,10 +182,13 @@ export function ExploreView() {
               <View style={styles.sheetHandle} />
             </View>
             <View style={styles.sheetBody}>
-              <Text style={styles.sheetName} numberOfLines={1}>
-                {vm.selected.name}
-                {vm.selected.age ? <Text style={styles.sheetAge}>{`  ${faNum(vm.selected.age)}`}</Text> : null}
-              </Text>
+              <View style={styles.sheetNameRow}>
+                <Text style={styles.sheetName} numberOfLines={1}>
+                  {vm.selected.name}
+                  {vm.selected.age ? <Text style={styles.sheetAge}>{`  ${faNum(vm.selected.age)}`}</Text> : null}
+                </Text>
+                {vm.selected.tier ? <TierBadge tier={vm.selected.tier} height={20} /> : null}
+              </View>
               {faDistance(vm.selected.distanceM) ? (
                 <Text style={styles.sheetDist}>{faDistance(vm.selected.distanceM)}</Text>
               ) : null}
@@ -204,10 +239,11 @@ export function ExploreView() {
             const name = vm.match?.peer?.name ?? '';
             const peerId = vm.match?.peer?.id;
             const photoUrl = vm.match?.peer?.photoUrl;
+            const peerTier = vm.match?.peer?.tier;
             vm.dismissMatch();
             if (id) router.push({
               pathname: '/thread/[id]',
-              params: { id: String(id), name, peerId: peerId ? String(peerId) : '', photoUrl: photoUrl ?? '' },
+              params: { id: String(id), name, peerId: peerId ? String(peerId) : '', photoUrl: photoUrl ?? '', peerTier: peerTier ? String(peerTier) : '' },
             });
             else router.push('/chat');
           }}
@@ -221,6 +257,10 @@ export function ExploreView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: PAGE_PADDING },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  filterScroll: { flexGrow: 0, marginBottom: spacing.sm },
+  filterRow: { flexDirection: 'row-reverse', gap: spacing.sm, paddingVertical: 2 },
+  filterChip: { minHeight: 38, paddingHorizontal: 14 },
+  filterChipLocked: { opacity: 0.45 },
   list: { paddingBottom: spacing.xl },
   row: { flexDirection: 'row-reverse', gap: GAP, marginBottom: GAP },
   footer: { paddingVertical: spacing.lg },
@@ -276,6 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.55)',
   },
   sheetBody: { padding: spacing.lg },
+  sheetNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
   sheetName: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.xl,

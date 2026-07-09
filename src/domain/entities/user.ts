@@ -21,6 +21,10 @@ export interface User {
   banReason?: string;
   verified?: boolean;
   isPlus?: boolean;
+  subscriptionUntil?: string;
+  subscriptionPlan?: string;
+  subscriptionProvider?: string;
+  subscriptionStatus?: string;
   /** موقعیت ست شده؟ بدونِ آن، کاربر در کاوشِ دیگران دیده نمی‌شود. */
   hasLocation?: boolean;
   interests?: string[];

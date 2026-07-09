@@ -3,7 +3,8 @@ import type { SwipeAction } from '@/domain/entities';
 
 export const makeGetCandidates = (r: DiscoveryRepository) => () => r.getCandidates();
 export const makeGetExplore =
-  (r: DiscoveryRepository) => (page?: number, limit?: number) => r.getExplore(page, limit);
+  (r: DiscoveryRepository) => (page?: number, limit?: number, tier?: number) =>
+    r.getExplore(page, limit, tier);
 export const makeGetNearbyMapUsers =
   (r: DiscoveryRepository) => (radiusM?: number) => r.getNearbyMapUsers(radiusM);
 export const makeGetPeerProfile =

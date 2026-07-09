@@ -21,8 +21,10 @@ import { Icon } from '@/presentation/components/Icon';
 import { Button } from '@/presentation/components/Button';
 import { Scrim } from '@/presentation/components/Scrim';
 import { TierBadge } from '@/presentation/components/TierBadge';
+import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { usePeerProfileViewModel } from '@/presentation/hooks/usePeerProfileViewModel';
+import { useSession } from '@/presentation/providers/SessionProvider';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
@@ -30,8 +32,10 @@ import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/t
 /** پروفایلِ عمومیِ یک کاربرِ دیگر — عکس‌ها، معرفی، علاقه‌مندی‌ها و کنشِ پسند. */
 export function PeerProfileScreen({ userId }: { userId: number }) {
   const vm = usePeerProfileViewModel(userId);
+  const { user } = useSession();
   const { width } = useWindowDimensions();
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [lockOpen, setLockOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportError, setReportError] = useState(false);
@@ -65,6 +69,9 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
 
   const p = vm.profile;
   const photos = p.photos.map((u) => mediaUrl(u)).filter(Boolean) as string[];
+  // قانونِ سطح: شروعِ گفتگو فقط با هم‌سطح یا پایین‌تر؛ پیام روی سطحِ بالاتر قفل است.
+  const myTier = user?.tier ?? 1;
+  const tierLocked = !!p.tier && p.tier > myTier;
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const i = Math.round(e.nativeEvent.contentOffset.x / heroW);
@@ -169,11 +176,15 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
             />
           ) : null}
           <Button
-            label="ارسالِ پیام"
+            label={tierLocked ? 'برای پیام، ارتقای سطح' : 'ارسالِ پیام'}
             icon="tab-chat"
-            variant={p.isMatch ? 'gold' : 'outline'}
+            variant={p.isMatch && !tierLocked ? 'gold' : 'outline'}
             loading={vm.openingChat}
             onPress={async () => {
+              if (tierLocked) {
+                setLockOpen(true);
+                return;
+              }
               const matchId = await vm.startChat();
               if (matchId) {
                 router.push({
@@ -183,6 +194,7 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
                     name: p.name ?? '',
                     peerId: String(p.id),
                     photoUrl: p.photos[0] ?? '',
+                    peerTier: String(p.tier ?? ''),
                   },
                 });
               }
@@ -215,6 +227,7 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
                 name: p.name ?? '',
                 peerId: String(p.id),
                 photoUrl: p.photos[0] ?? '',
+                peerTier: String(p.tier ?? ''),
               },
             });
             else router.push('/chat');
@@ -222,6 +235,8 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           onDismiss={vm.dismissMatch}
         />
       ) : null}
+
+      <TierLockModal visible={lockOpen} requiredTier={p.tier ?? 1} onClose={() => setLockOpen(false)} />
 
       <Modal visible={reportOpen} transparent animationType="fade" onRequestClose={() => setReportOpen(false)}>
         <View style={styles.modalBackdrop}>

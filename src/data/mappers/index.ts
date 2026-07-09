@@ -49,6 +49,10 @@ export const toUser = (d: UserDTO): User => ({
   banReason: d.ban_reason,
   verified: d.verified,
   isPlus: d.is_plus,
+  subscriptionUntil: undefIfNull(d.subscription_until),
+  subscriptionPlan: undefIfNull(d.subscription_plan),
+  subscriptionProvider: undefIfNull(d.subscription_provider),
+  subscriptionStatus: undefIfNull(d.subscription_status),
   hasLocation: d.has_location,
   interests: d.interests,
   photos: d.photos?.map(toPhoto),
@@ -124,10 +128,12 @@ export const toConversation = (d: ConversationDTO): Conversation => ({
   otherId: d.other_id,
   otherName: d.other_name,
   otherPhotoUrl: undefIfNull(d.other_photo_url),
+  otherTier: d.other_tier,
   lastBody: d.last_body,
   lastAt: d.last_at,
   unread: d.unread,
   source: d.source,
+  initiatedBy: d.initiated_by,
 });
 
 export const toMessage = (d: MessageDTO): Message => ({

@@ -25,6 +25,9 @@ export function useExploreViewModel() {
   const [match, setMatch] = useState<MatchResult | null>(null);
   const [needsLocation, setNeedsLocation] = useState(false);
   const [locating, setLocating] = useState(false);
+  // فیلترِ سطحِ کاربران (۰ = همه). فقط سطح‌های در دسترسِ کاربر سمتِ UI باز است.
+  const [tierFilter, setTierFilter] = useState(0);
+  const tierFilterRef = useRef(0);
   // شناسه‌هایی که کنش‌شان کرده‌ایم تا از گرید حذف شوند و دوباره برنگردند.
   const actedRef = useRef<Set<number>>(new Set());
 
@@ -35,7 +38,7 @@ export function useExploreViewModel() {
       else setRefreshing(true);
       setError(null);
       try {
-        const list = await uc.discovery.getExplore(p, PAGE_SIZE);
+        const list = await uc.discovery.getExplore(p, PAGE_SIZE, tierFilterRef.current || undefined);
         const fresh = list.filter((c) => !actedRef.current.has(c.id));
         setItems((prev) => (mode === 'more' ? [...prev, ...fresh] : fresh));
         setPage(p);
@@ -109,6 +112,15 @@ export function useExploreViewModel() {
     loadPage(1, 'refresh');
   }, [refreshing, loadPage]);
 
+  const setTier = useCallback(
+    (t: number) => {
+      tierFilterRef.current = t;
+      setTierFilter(t);
+      loadPage(1, 'refresh');
+    },
+    [loadPage]
+  );
+
   const enableLocation = useCallback(async () => {
     if (locating) return;
     setLocating(true);
@@ -143,6 +155,8 @@ export function useExploreViewModel() {
     match,
     needsLocation,
     locating,
+    tierFilter,
+    setTier,
     loadMore,
     refresh,
     reload: refresh,

@@ -18,6 +18,10 @@ export interface UserDTO {
   status: 'active' | 'banned' | 'pending_review';
   ban_reason?: string;
   is_plus?: boolean;
+  subscription_until?: string | null;
+  subscription_plan?: string | null;
+  subscription_provider?: string | null;
+  subscription_status?: string | null;
   verified?: boolean;
   has_location?: boolean;
   interests?: string[];
@@ -81,10 +85,12 @@ export interface ConversationDTO {
   other_id: number;
   other_name?: string;
   other_photo_url?: string | null;
+  other_tier?: number;
   last_body?: string;
   last_at?: string;
   unread?: number;
   source?: 'swipe' | 'random';
+  initiated_by?: number | null;
 }
 
 export interface MessageDTO {
