@@ -5,6 +5,7 @@ import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { getPaymentMode } from '@/core/billing/paymentStrategy';
 import { bazaarBilling } from '@/core/billing/bazaarBilling';
+import { normalizeImage } from '@/core/media/normalizeImage';
 import type { Photo, Tier } from '@/domain/entities';
 
 /** ویومدلِ پروفایل: عکس‌ها، تایرها، ویرایشِ نام/بیو، آپلود/حذفِ عکس، خرید، خروج. */
@@ -89,7 +90,7 @@ export function useProfileViewModel() {
     if (res.canceled || !res.assets?.[0]) return;
     setBusy(true);
     try {
-      await uc.profile.addPhoto(res.assets[0].uri);
+      await uc.profile.addPhoto(await normalizeImage(res.assets[0].uri));
       await load();
       await refreshUser();
     } catch {

@@ -10,6 +10,7 @@ export interface PhotoDTO {
 
 export interface UserDTO {
   id: number;
+  phone?: string;
   name?: string;
   bio?: string;
   birthdate?: string;

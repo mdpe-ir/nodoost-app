@@ -12,6 +12,8 @@ export interface Photo {
 /** کاربرِ جاری (پروفایلِ خودم). */
 export interface User {
   id: number;
+  /** شماره‌ی موبایلِ کاربر (فقط در پروفایلِ خودم). */
+  phone?: string;
   name?: string;
   bio?: string;
   birthdate?: string;

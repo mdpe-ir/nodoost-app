@@ -3,7 +3,22 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { useCases } from '@/core/di/DIProvider';
+import { normalizeImage } from '@/core/media/normalizeImage';
+import { ApiError } from '@/core/http/ApiError';
 import type { Gender } from '@/domain/entities';
+
+/** خطای بک‌اندِ آپلود را به پیامِ قابلِ‌فهمِ فارسی نگاشت می‌کند. */
+function uploadErrorMessage(e: unknown): string {
+  if (e instanceof ApiError) {
+    if (e.status === 402 || e.code === 'photo_limit_reached') {
+      return 'به سقفِ تعدادِ عکسِ مجاز رسیده‌ای.';
+    }
+    if (e.code === 'not a valid image' || e.code === 'invalid upload') {
+      return 'این عکس قابلِ استفاده نیست (فرمت یا حجمِ نامناسب). عکسِ دیگری انتخاب کن.';
+    }
+  }
+  return 'ثبت ناموفق بود. دوباره تلاش کن.';
+}
 
 /** سن را به تاریخِ تولدِ تقریبی (میلادی) تبدیل می‌کند — کاوش به birthdate نیاز دارد. */
 function ageToBirthdate(age: number): string {
@@ -50,7 +65,8 @@ export function useOnboarding() {
     const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
     if (res.canceled || !res.assets?.[0]) return;
     setError(null);
-    setPhotoUri(res.assets[0].uri);
+    // به JPEGِ فشرده تبدیل کن تا با دیکدرِ بک‌اند و سقفِ ۸ مگابایت بخواند.
+    setPhotoUri(await normalizeImage(res.assets[0].uri));
   }, []);
 
   const submit = useCallback(async () => {
@@ -83,8 +99,8 @@ export function useOnboarding() {
       if (photoUri) await uc.profile.addPhoto(photoUri);
       await refreshUser();
       router.replace('/discover');
-    } catch {
-      setError('ثبت ناموفق بود. دوباره تلاش کن.');
+    } catch (e) {
+      setError(uploadErrorMessage(e));
     } finally {
       setLoading(false);
     }

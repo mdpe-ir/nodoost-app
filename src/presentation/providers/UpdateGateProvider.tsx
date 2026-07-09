@@ -16,7 +16,7 @@ import { Button } from '@/presentation/components/Button';
  *
  * سیاست: fail-open — اگر درخواست شکست خورد یا فیلدها نبود، کاربر مسدود نمی‌شود.
  */
-const PKG = 'ir.nodoost.app';
+const PKG = 'com.nodoost.app';
 const DEFAULT_STORE_URL = `https://cafebazaar.ir/app/${PKG}`;
 const DEEP_LINK = `bazaar://details?id=${PKG}`;
 

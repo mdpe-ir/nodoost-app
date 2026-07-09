@@ -187,7 +187,7 @@ export function ThreadScreen({
             <Button
               label="مشاهده‌ی سطح‌های اشتراک"
               size="sm"
-              onPress={() => router.push('/profile')}
+              onPress={() => router.push('/profile?tab=plans')}
             />
           </View>
         ) : (

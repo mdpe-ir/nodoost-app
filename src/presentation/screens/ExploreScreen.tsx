@@ -116,7 +116,7 @@ export function ExploreView() {
               label={locked ? `${tierName(lvl)} · قفل` : tierName(lvl)}
               active={vm.tierFilter === lvl}
               onPress={() => {
-                if (locked) router.push('/profile');
+                if (locked) router.push('/profile?tab=plans');
                 else vm.setTier(vm.tierFilter === lvl ? 0 : lvl);
               }}
               style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}

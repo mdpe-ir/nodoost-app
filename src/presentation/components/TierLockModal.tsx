@@ -34,7 +34,7 @@ export function TierLockModal({
               label="مشاهده‌ی سطح‌های اشتراک"
               onPress={() => {
                 onClose();
-                router.push('/profile');
+                router.push('/profile?tab=plans');
               }}
               style={styles.btn}
             />

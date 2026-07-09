@@ -141,7 +141,7 @@ export function LikesScreen() {
                   <Text style={styles.bannerText}>
                     با عضویتِ طلایی، چهره‌ی همه‌ی کسانی که تو را پسندیده‌اند آشکار می‌شود.
                   </Text>
-                  <Button label="ارتقای عضویت" size="md" onPress={() => router.push('/profile')} />
+                  <Button label="ارتقای عضویت" size="md" onPress={() => router.push('/profile?tab=plans')} />
                 </View>
               ) : null}
               <View style={styles.grid}>

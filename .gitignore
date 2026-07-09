@@ -14,6 +14,10 @@ android/
 .env.*
 !.env.example
 
+# Release signing secrets and build artifacts — NEVER commit (but back them up!)
+keystore/
+build-output/
+
 # Logs and caches
 *.log
 npm-debug.log*

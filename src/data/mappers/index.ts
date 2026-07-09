@@ -40,6 +40,7 @@ export const toPhoto = (d: PhotoDTO): Photo => ({
 
 export const toUser = (d: UserDTO): User => ({
   id: d.id,
+  phone: d.phone,
   name: d.name,
   bio: d.bio,
   birthdate: d.birthdate,

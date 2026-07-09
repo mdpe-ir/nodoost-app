@@ -66,7 +66,13 @@ export class HttpClient {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: form,
     });
-    if (!res.ok) throw new ApiError(res.status);
+    if (!res.ok) {
+      let code: string | undefined;
+      try {
+        code = (await res.json())?.error;
+      } catch {}
+      throw new ApiError(res.status, code);
+    }
     return (await res.json().catch(() => null)) as T;
   }
 

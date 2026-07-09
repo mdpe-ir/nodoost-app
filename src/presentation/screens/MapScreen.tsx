@@ -12,6 +12,7 @@ import { LeafletWebView, type LeafletEvent } from '@/presentation/components/Lea
 import { TierBadge } from '@/presentation/components/TierBadge';
 import { useCases } from '@/core/di/DIProvider';
 import { useMapViewModel } from '@/presentation/hooks/useMapViewModel';
+import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import type { MapUser } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
@@ -28,12 +29,15 @@ const MAP_HTML = `<!DOCTYPE html>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; background: ${colors.bg}; }
-    .leaflet-tile { filter: brightness(0.7) invert(0.92) contrast(0.9) hue-rotate(180deg) saturate(0.6) brightness(0.9); }
+    /* فیلترِ تیره روی کلِ لایه‌ی تایل‌ها اعمال می‌شود، نه تک‌تکِ تایل‌ها؛ وگرنه
+       هر تایل روی لایه‌ی composite جدا با آفستِ کسری می‌نشیند و درزهای بینِ
+       تایل‌ها به‌صورتِ خط‌های شبکه‌ای دیده می‌شوند. */
+    .leaflet-tile-pane { filter: brightness(0.7) invert(0.92) contrast(0.9) hue-rotate(180deg) saturate(0.6) brightness(0.9); }
     .leaflet-container { background: ${colors.bg}; }
     .pin { width: 44px; height: 52px; position: relative; }
-    .pin .av { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: ${colors.gold}; border: 3px solid ${colors.gold}; box-shadow: 0 2px 6px rgba(0,0,0,0.5); box-sizing: border-box; }
+    .pin .av { position: relative; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: ${colors.gold}; border: 3px solid ${colors.gold}; box-shadow: 0 2px 6px rgba(0,0,0,0.5); box-sizing: border-box; }
     .pin.match .av { background: ${colors.rose}; border-color: ${colors.rose}; }
-    .pin .av img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .pin .av img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
     .pin .tail { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid ${colors.gold}; }
     .pin.match .tail { border-top-color: ${colors.rose}; }
     .pin .ph { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: ${colors.onGold}; font: 700 18px sans-serif; }
@@ -69,9 +73,11 @@ const MAP_HTML = `<!DOCTYPE html>
       }
       clearMarkers();
       (data.users || []).forEach(function (u) {
-        var inner = u.photoUrl
-          ? '<img src="' + u.photoUrl + '" />'
-          : '<div class="ph">' + (u.name ? u.name.charAt(0) : '؟') + '</div>';
+        // حرفِ اول همیشه پس‌زمینه است؛ عکس رویش می‌نشیند و اگر لود نشد (onerror)
+        // حذف می‌شود تا به‌جای عکسِ شکسته، حرفِ اول دیده شود.
+        var initial = u.name ? u.name.charAt(0) : '؟';
+        var inner = '<div class="ph">' + initial + '</div>' +
+          (u.photoUrl ? '<img src="' + u.photoUrl + '" onerror="this.remove()" />' : '');
         var tc = u.isMatch ? '' : (TIER_COLORS[u.tier] || '');
         var avStyle = tc ? ' style="border-color:' + tc + ';background:' + tc + '"' : '';
         var tailStyle = tc ? ' style="border-top-color:' + tc + '"' : '';
@@ -106,7 +112,13 @@ export function MapView() {
   const [swiping, setSwiping] = useState(false);
 
   const payload = useMemo(
-    () => JSON.stringify({ me: vm.me, users: vm.users }),
+    () =>
+      JSON.stringify({
+        me: vm.me,
+        // آدرسِ عکس باید مطلق باشد؛ داخلِ WebView (که با html خام لود می‌شود) baseِ
+        // آدرس ندارد، پس مسیرِ نسبیِ «/uploads/…» حل نمی‌شود و عکس نمایش داده نمی‌شود.
+        users: vm.users.map((u) => ({ ...u, photoUrl: mediaUrl(u.photoUrl) })),
+      }),
     [vm.me, vm.users]
   );
 

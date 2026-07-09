@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Linking } from 'react-native';
-import * as Location from 'expo-location';
 import { useCases } from '@/core/di/DIProvider';
 import { ApiError } from '@/core/http/ApiError';
+import { resolveLocation } from '@/core/utils/location';
 import type { MapUser } from '@/domain/entities';
 
 export interface MyLocation {
@@ -36,32 +35,22 @@ export function useMapViewModel(radiusM = 25000) {
     }
   }, [uc, radiusM]);
 
-  // مجوز را می‌گیرد، موقعیت را ذخیره می‌کند و me را ست می‌کند. اگر مجوز نبود false.
+  // مجوز را می‌گیرد، موقعیت را ذخیره می‌کند و me را ست می‌کند. حالتِ مجوز را برمی‌گرداند.
+  // فقط ردِ مجوز (`denied`) صفحه‌ی «موقعیت روشن نیست» را نشان می‌دهد؛ اگر مجوز هست ولی
+  // fix هنوز آماده نشده (`unavailable`)، نقشه را پنهان نمی‌کنیم و کاربران را از سرور می‌آوریم.
   const captureLocation = useCallback(
-    async (interactive = false): Promise<boolean> => {
-      try {
-        let perm = await Location.getForegroundPermissionsAsync();
-        if (!perm.granted && perm.canAskAgain) {
-          perm = await Location.requestForegroundPermissionsAsync();
-        }
-        if (!perm.granted) {
-          if (interactive && !perm.canAskAgain) await Linking.openSettings().catch(() => {});
-          setPermissionState('denied');
-          return false;
-        }
-        const loc = await Location.getCurrentPositionAsync({}).catch(() => null);
-        if (!loc) {
-          setPermissionState('denied');
-          return false;
-        }
+    async (interactive = false): Promise<PermissionState> => {
+      const res = await resolveLocation(interactive);
+      if (res.ok) {
         setPermissionState('granted');
-        setMe({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-        await uc.profile.setLocation(loc.coords.latitude, loc.coords.longitude);
-        return true;
-      } catch {
-        setPermissionState('denied');
-        return false;
+        setMe(res.coords);
+        // ذخیره‌ی موقعیت روی سرور شبکه‌ای است؛ شکستش نباید نقشه را پنهان کند.
+        await uc.profile.setLocation(res.coords.lat, res.coords.lng).catch(() => {});
+        return 'granted';
       }
+      const state: PermissionState = res.reason === 'denied' ? 'denied' : 'granted';
+      setPermissionState(state);
+      return state;
     },
     [uc]
   );
@@ -71,8 +60,8 @@ export function useMapViewModel(radiusM = 25000) {
   // نقشه (نه فقط شعاعِ نزدیک) بارگذاری می‌شوند.
   const refresh = useCallback(async () => {
     setLoading(true);
-    const ok = await captureLocation(true);
-    if (ok) await fetchUsers();
+    const state = await captureLocation(true);
+    if (state !== 'denied') await fetchUsers();
     setLoading(false);
   }, [captureLocation, fetchUsers]);
 
@@ -80,9 +69,9 @@ export function useMapViewModel(radiusM = 25000) {
     let alive = true;
     (async () => {
       setLoading(true);
-      const ok = await captureLocation(false);
+      const state = await captureLocation(false);
       if (!alive) return;
-      if (ok) await fetchUsers();
+      if (state !== 'denied') await fetchUsers();
       if (alive) setLoading(false);
     })();
     return () => {

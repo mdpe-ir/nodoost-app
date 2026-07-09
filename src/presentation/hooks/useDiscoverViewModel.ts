@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Linking } from 'react-native';
-import * as Location from 'expo-location';
 import { useCases } from '@/core/di/DIProvider';
 import { ApiError } from '@/core/http/ApiError';
+import { resolveLocation } from '@/core/utils/location';
 import type { Candidate, MatchResult } from '@/domain/entities';
 
 /**
@@ -41,32 +40,18 @@ export function useDiscoverViewModel() {
   );
 
   // تلاش برای گرفتنِ موقعیت و ذخیره‌ی آن. اگر مجوز نبود، `needsLocation` روشن می‌ماند.
-  // `interactive` یعنی کاربر خودش دکمه را زده؛ آن‌وقت اگر مجوز برای همیشه رد شده،
-  // او را به تنظیماتِ سیستم می‌بریم.
   const captureLocation = useCallback(
     async (interactive = false): Promise<boolean> => {
-      try {
-        let perm = await Location.getForegroundPermissionsAsync();
-        if (!perm.granted && perm.canAskAgain) {
-          perm = await Location.requestForegroundPermissionsAsync();
-        }
-        if (!perm.granted) {
-          if (interactive && !perm.canAskAgain) await Linking.openSettings().catch(() => {});
-          setNeedsLocation(true);
-          return false;
-        }
-        const loc = await Location.getCurrentPositionAsync({}).catch(() => null);
-        if (!loc) {
-          setNeedsLocation(true);
-          return false;
-        }
-        await uc.profile.setLocation(loc.coords.latitude, loc.coords.longitude);
-        setNeedsLocation(false);
-        return true;
-      } catch {
-        setNeedsLocation(true);
+      const res = await resolveLocation(interactive);
+      if (!res.ok) {
+        // فقط ردِ مجوز نکته‌ی «موقعیت روشن نیست» را نشان می‌دهد؛ اگر مجوز هست ولی fix
+        // نشد (unavailable)، کاربر را با پیامِ اشتباه نمی‌ترسانیم — تلاشِ بعدی ست‌اش می‌کند.
+        if (res.reason === 'denied') setNeedsLocation(true);
         return false;
       }
+      setNeedsLocation(false);
+      await uc.profile.setLocation(res.coords.lat, res.coords.lng).catch(() => {});
+      return true;
     },
     [uc]
   );

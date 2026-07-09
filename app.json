@@ -4,7 +4,7 @@
     "slug": "nodoost",
     "version": "1.0.4",
     "orientation": "portrait",
-    "icon": "./assets/logo/app-icon-1024.png",
+    "icon": "./assets/logo/app-icon.png",
     "scheme": "nodoost",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0B0910",
@@ -17,19 +17,20 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ir.nodoost.app"
+      "bundleIdentifier": "com.nodoost.app"
     },
     "android": {
-      "package": "ir.nodoost.app",
+      "package": "com.nodoost.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
-        "foregroundImage": "./assets/logo/logo-mark-gold.png"
+        "backgroundImage": "./assets/logo/adaptive-icon-background.png",
+        "foregroundImage": "./assets/logo/adaptive-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/logo/logo-mark-gold.png"
+      "favicon": "./assets/logo/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -37,11 +38,11 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0B0910",
-          "image": "./assets/logo/logo-mark-gold.png",
-          "imageWidth": 120,
+          "image": "./assets/logo/adaptive-icon-foreground.png",
+          "imageWidth": 160,
           "android": {
-            "image": "./assets/logo/logo-mark-gold.png",
-            "imageWidth": 100
+            "image": "./assets/logo/adaptive-icon-foreground.png",
+            "imageWidth": 140
           }
         }
       ],
@@ -58,12 +59,16 @@
         }
       ],
       "expo-secure-store",
-      "./plugins/withBazaarBilling"
+      "./plugins/withBazaarBilling",
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": {}
+    "extra": {
+      "distribution": "bazaar",
+      "bazaarRsaKey": "MIHNMA0GCSqGSIb3DQEBAQUAA4G7ADCBtwKBrwDiPM2q4rwNENVlOGn0mhAdP3dak+ONWHK4VvoR0AWF8U78EyOtvc5qVCoDAHs7svpgFV/qUioL3L9Ph7rehf+j6hcXlUFXnvjzOWYxGKw/9z9bTrt0SXjX9pNNr63et9ZWz6ANbh5OY3y0XyihcRZyLeRB0BsLAovNcH9em7nMLyroxNNTGCWQfToDYyWhxN0M9Ocy1PbkJquuHowCPxtclK9OwRbyEO9lOGwbcrMCAwEAAQ=="
+    }
   }
 }
