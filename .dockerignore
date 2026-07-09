@@ -8,3 +8,11 @@ dist
 *.log
 Dockerfile
 .dockerignore
+
+# native build outputs & signing secrets — never send to the PWA build context
+android
+ios
+build-output
+keystore
+*.jks
+*.keystore
