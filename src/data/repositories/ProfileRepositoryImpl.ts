@@ -27,6 +27,20 @@ export class ProfileRepositoryImpl implements ProfileRepository {
     await this.http.request('/api/me/location', { method: 'PUT', body: { lat, lng } });
   }
 
+  async setTravelLocation(lat: number, lng: number): Promise<void> {
+    await this.http.request('/api/me/location', {
+      method: 'PUT',
+      body: { lat, lng, travel: true },
+    });
+  }
+
+  async clearTravel(lat: number, lng: number): Promise<void> {
+    await this.http.request('/api/me/location', {
+      method: 'PUT',
+      body: { lat, lng, clear_travel: true },
+    });
+  }
+
   async getPhotos(): Promise<Photo[]> {
     const d = await this.http.request<{ photos: PhotoDTO[] }>('/api/me/photos');
     return (d?.photos ?? []).map(toPhoto);

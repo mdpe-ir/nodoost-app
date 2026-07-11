@@ -8,6 +8,9 @@ export interface Candidate {
   tier?: number;
   photoUrl?: string;
   interests?: string[];
+  /** وضعیتِ فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد. */
+  isOnline?: boolean;
+  lastActiveMin?: number;
 }
 
 /** یک نشانگرِ کاربر روی نقشه (فازی‌شده، مگر با رضایت صریح کاربر). */
@@ -21,7 +24,13 @@ export interface MapUser {
   distanceM?: number;
   isMatch?: boolean;
   tier?: number;
+  /** وضعیتِ فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد. */
+  isOnline?: boolean;
+  lastActiveMin?: number;
 }
+
+/** فیلترِ فعالیت در اطراف/نقشه: «1h/today» از برنزی، «online» از نقره‌ای. */
+export type ActiveFilter = '' | 'online' | '1h' | 'today';
 
 export type SwipeAction = 'like' | 'super' | 'pass';
 
@@ -47,6 +56,20 @@ export interface LikesOverview {
   likers: Liker[];
 }
 
+/** بازدیدکننده‌ی پروفایل. */
+export interface Viewer extends Liker {
+  viewedAt?: string;
+}
+
+/** پاسخِ بازدیدهای پروفایل — فهرست از طلایی، آمارِ کل از الماس. */
+export interface ViewersOverview {
+  count: number;
+  revealed: boolean;
+  viewers: Viewer[];
+  /** مجموعِ دفعاتِ بازدید — فقط برای الماس. */
+  totalViews?: number;
+}
+
 /** پروفایلِ عمومیِ یک کاربرِ دیگر — برای صفحه‌ی نمایشِ پروفایل. */
 export interface PeerProfile {
   id: number;
@@ -60,6 +83,9 @@ export interface PeerProfile {
   isMatch?: boolean;
   /** اگر مچ شده‌اند، برای رفتنِ مستقیم به گفتگو. */
   matchId?: number;
+  /** وضعیتِ فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد. */
+  isOnline?: boolean;
+  lastActiveMin?: number;
   interests: string[];
   /** فقط عکس‌های تأییدشده. */
   photos: string[];

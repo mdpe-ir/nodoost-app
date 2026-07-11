@@ -29,6 +29,15 @@ import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
+/** برچسبِ آخرین فعالیت — «آنلاین» تا ۵ دقیقه، بعد دقیقه/ساعت/روز. */
+const faLastActive = (isOnline?: boolean, min?: number): string => {
+  if (isOnline) return 'آنلاین';
+  if (min == null) return 'اخیراً فعال';
+  if (min < 60) return `فعال ${faNum(Math.max(1, min))} دقیقه پیش`;
+  if (min < 60 * 24) return `فعال ${faNum(Math.floor(min / 60))} ساعت پیش`;
+  return `فعال ${faNum(Math.floor(min / (60 * 24)))} روز پیش`;
+};
+
 /** پروفایلِ عمومیِ یک کاربرِ دیگر — عکس‌ها، معرفی، علاقه‌مندی‌ها و کنشِ پسند. */
 export function PeerProfileScreen({ userId }: { userId: number }) {
   const vm = usePeerProfileViewModel(userId);
@@ -133,6 +142,13 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
             <View style={styles.metaItem}>
               <Icon name="map" size={13} tint="gold" />
               <Text style={styles.metaText}>{faDistance(p.distanceM)}</Text>
+            </View>
+          ) : null}
+          {/* آخرین فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد */}
+          {p.isOnline != null ? (
+            <View style={styles.metaItem}>
+              <View style={[styles.presenceDot, p.isOnline && styles.presenceDotOn]} />
+              <Text style={styles.metaText}>{faLastActive(p.isOnline, p.lastActiveMin)}</Text>
             </View>
           ) : null}
           {p.isMatch ? (
@@ -319,6 +335,8 @@ const styles = StyleSheet.create({
   },
   metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs },
   metaItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
+  presenceDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.ink3 },
+  presenceDotOn: { backgroundColor: '#5BD08F' },
   metaText: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink2 },
   matchTag: {
     backgroundColor: colors.roseFaint,

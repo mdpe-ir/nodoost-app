@@ -20,4 +20,6 @@ export interface Message {
   senderId: number;
   body: string;
   createdAt?: string;
+  /** زمانِ خوانده‌شدن — سرور فقط روی پیام‌های خودم و برای سطحِ طلایی+ می‌فرستد. */
+  readAt?: string;
 }

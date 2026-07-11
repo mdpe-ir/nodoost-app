@@ -12,13 +12,14 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import Constants from 'expo-constants';
 import { ScreenContainer, ScreenHeader, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
 import { ProfileSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { tierName } from '@/presentation/components/TierBadge';
+import { tierPerks, maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faPrice } from '@/core/utils/faNum';
@@ -26,7 +27,6 @@ import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradien
 
 const COLS = 3;
 const GRID_GAP = 2;
-const MAX_PHOTOS = 6;
 
 type Tab = 'photos' | 'about' | 'plans' | 'settings';
 const TABS: { key: Tab; label: string }[] = [
@@ -38,6 +38,16 @@ const TABS: { key: Tab; label: string }[] = [
 /** زبانه‌ی معتبر از پارامترِ مسیر (مثلاً ‎/profile?tab=plans از دکمه‌های ارتقا). */
 const asTab = (v: unknown): Tab | null =>
   typeof v === 'string' && TABS.some((t) => t.key === v) ? (v as Tab) : null;
+
+/** شهرهای حالتِ سفر (الماس) — مختصاتِ مرکزِ شهر. */
+const TRAVEL_CITIES: { name: string; lat: number; lng: number }[] = [
+  { name: 'تهران', lat: 35.6892, lng: 51.389 },
+  { name: 'مشهد', lat: 36.2605, lng: 59.6168 },
+  { name: 'اصفهان', lat: 32.6539, lng: 51.666 },
+  { name: 'شیراز', lat: 29.5918, lng: 52.5837 },
+  { name: 'تبریز', lat: 38.0962, lng: 46.2738 },
+  { name: 'کرج', lat: 35.8327, lng: 50.9916 },
+];
 
 const faShortDate = (iso?: string): string => {
   if (!iso) return '';
@@ -59,6 +69,65 @@ function Stat({ value, label, onPress }: { value: string; label: string; onPress
     <Pressable onPress={onPress} style={({ pressed }) => [styles.statPress, pressed && styles.pressed]}>
       {inner}
     </Pressable>
+  );
+}
+
+/**
+ * ردیفِ تنظیمِ حریمِ خصوصیِ سطح‌دار — با سطحِ کافی سوییچ است، وگرنه قفل و
+ * دعوت به ارتقا.
+ */
+function PrivacyRow({
+  icon,
+  title,
+  hint,
+  requiredTier,
+  requiredName,
+  userTier,
+  value,
+  saving,
+  onChange,
+  onUpgrade,
+}: {
+  icon: React.ComponentProps<typeof Icon>['name'];
+  title: string;
+  hint: string;
+  requiredTier: number;
+  requiredName: string;
+  userTier: number;
+  value: boolean;
+  saving: boolean;
+  onChange: (v: boolean) => void;
+  onUpgrade: () => void;
+}) {
+  const unlocked = userTier >= requiredTier;
+  if (!unlocked) {
+    return (
+      <Pressable style={styles.rowInner} onPress={onUpgrade} accessibilityRole="button">
+        <View style={styles.rowChip}><Icon name="lock" size={18} tint="gold" /></View>
+        <View style={styles.rowBody}>
+          <Text style={styles.rowTitle}>{title}</Text>
+          <Text style={styles.rowHint}>{`ویژه‌ی سطحِ ${requiredName} — برای فعال‌سازی ارتقا بده`}</Text>
+        </View>
+        <Icon name="chevron-prev" size={16} tint="gold" />
+      </Pressable>
+    );
+  }
+  return (
+    <View style={styles.rowInner}>
+      <View style={styles.rowChip}><Icon name={icon} size={18} tint="gold" /></View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.rowHint}>{hint}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        disabled={saving}
+        trackColor={{ false: colors.line, true: colors.goldSoft }}
+        thumbColor={value ? colors.gold : colors.ink3}
+        accessibilityLabel={title}
+      />
+    </View>
   );
 }
 
@@ -96,6 +165,10 @@ export function ProfileScreen() {
   const version = Constants.expoConfig?.version;
   const userTier = user?.tier ?? 1;
   const activeTierName = tierName(userTier) || 'رایگان';
+  // سقفِ عکس بر اساسِ سطحِ مؤثر — هم‌آهنگ با بک‌اند (عادی۳ … الماس۱۵).
+  const maxPhotos = maxPhotosForTier(userTier);
+  // عکس‌های ردشده در سقف حساب نمی‌شوند (مطابقِ سرور).
+  const countedPhotos = vm.photos.filter((p) => p.status !== 'rejected').length;
   const isTrial = user?.subscriptionStatus === 'trial' || user?.subscriptionProvider === 'trial';
   const expiry = faShortDate(user?.subscriptionUntil);
   const rejected = vm.photos.filter((p) => p.status === 'rejected' && p.rejectionReason);
@@ -126,7 +199,8 @@ export function ProfileScreen() {
             <View style={styles.stats}>
               <Stat value={faNum(vm.photos.length)} label="عکس" onPress={() => setTab('photos')} />
               <Stat value={activeTierName} label="سطح" onPress={() => setTab('plans')} />
-              <Stat value={user?.isPlus ? 'پلاس' : 'رایگان'} label="عضویت" onPress={() => setTab('plans')} />
+              {/* «as Href»: تایپِ مسیرها تولیدی است و تا اجرای بعدیِ expo start مسیرِ تازه را نمی‌شناسد. */}
+              <Stat value={faNum(vm.viewersCount)} label="بازدید" onPress={() => router.push('/viewers' as Href)} />
             </View>
           </View>
 
@@ -236,7 +310,7 @@ export function ProfileScreen() {
                   </Pressable>
                 );
               })}
-              {vm.photos.length < MAX_PHOTOS ? (
+              {countedPhotos < maxPhotos ? (
                 <Pressable
                   style={({ pressed }) => [styles.tile, styles.addTile, { width: tile, height: tile }, pressed && styles.addTilePressed]}
                   onPress={vm.addPhoto}
@@ -247,11 +321,23 @@ export function ProfileScreen() {
                   <Icon name="plus" size={24} tint="gold" />
                   <Text style={styles.addTileText}>افزودن</Text>
                 </Pressable>
+              ) : userTier < 5 ? (
+                // سقفِ سطحِ فعلی پر شده — کاشیِ قفل، دعوت به ارتقا.
+                <Pressable
+                  style={({ pressed }) => [styles.tile, styles.addTile, styles.lockTile, { width: tile, height: tile }, pressed && styles.addTilePressed]}
+                  onPress={() => setTab('plans')}
+                  accessibilityRole="button"
+                  accessibilityLabel="افزایشِ سقفِ عکس با ارتقای سطح"
+                >
+                  <Icon name="lock" size={22} tint="gold" />
+                  <Text style={styles.addTileText}>عکسِ بیشتر با ارتقا</Text>
+                </Pressable>
               ) : null}
             </View>
             <View style={styles.padded}>
               <Text style={styles.caption}>
-                عکس‌های تازه بلافاصله نمایش داده می‌شوند. اگر عکسی خلاف قوانین باشد، دلیلِ رد آن را همین‌جا می‌بینی.
+                {faNum(countedPhotos)} از {faNum(maxPhotos)} عکسِ سطحِ {activeTierName} استفاده شده.
+                {' '}عکس‌های تازه بلافاصله نمایش داده می‌شوند. اگر عکسی خلاف قوانین باشد، دلیلِ رد آن را همین‌جا می‌بینی.
               </Text>
               {rejected.map((photo) => (
                 <View key={`reason-${photo.id}`} style={styles.rejectionRow}>
@@ -307,24 +393,31 @@ export function ProfileScreen() {
                 {isTrial ? 'اشتراکِ آزمایشی' : 'اشتراکِ فعال'}{expiry ? ` · تا ${expiry}` : ''}
               </Text>
             ) : null}
+            <Button
+              label="مقایسه‌ی کاملِ سطح‌ها"
+              variant="ghost"
+              icon="diamond-fill"
+              onPress={() => router.push('/plans')}
+              style={styles.plansCta}
+            />
             <View style={styles.tiers}>
               {!user?.isPlus ? (
                 <View style={[styles.tierCard, styles.tierCardCurrent]}>
-                  <View style={styles.tierInfo}>
+                  <View style={styles.tierCardHead}>
                     <View style={styles.tierNameRow}>
                       <Text style={styles.tierName}>رایگان</Text>
                       <View style={styles.currentTag}><Text style={styles.currentTagText}>پلنِ فعلی</Text></View>
                     </View>
                     <Text style={styles.tierPrice}>بدونِ پرداخت</Text>
                   </View>
-                  <Icon name="check" size={20} tint="gold" />
                 </View>
               ) : null}
               {vm.tiers.map((t) => {
                 const current = user?.isPlus && t.level === userTier;
+                const perks = tierPerks(t).slice(0, 3);
                 return (
                   <View key={t.id} style={[styles.tierCard, current && styles.tierCardCurrent]}>
-                    <View style={styles.tierInfo}>
+                    <View style={styles.tierCardHead}>
                       <View style={styles.tierNameRow}>
                         <Text style={styles.tierName}>{t.name}</Text>
                         {current ? (
@@ -333,10 +426,29 @@ export function ProfileScreen() {
                       </View>
                       {t.priceToman != null ? <Text style={styles.tierPrice}>{faPrice(t.priceToman)} تومان</Text> : null}
                     </View>
+                    {perks.length ? (
+                      <View style={styles.tierPerks}>
+                        {perks.map((p, i) => (
+                          <View key={i} style={styles.tierPerkRow}>
+                            <Icon name="check" size={13} tint="gold" />
+                            <Text style={styles.tierPerkText} numberOfLines={1}>{p}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
                     {!current ? (
-                      <Button label="خرید" size="sm" onPress={() => vm.buy(t.id)} style={styles.buyBtn} />
+                      <Button
+                        label="خرید"
+                        size="sm"
+                        onPress={() => vm.buy(t.id, t.bazaarSku)}
+                        loading={vm.busy}
+                        style={styles.buyBtn}
+                      />
                     ) : (
-                      <Icon name="check" size={20} tint="gold" />
+                      <View style={styles.tierActiveRow}>
+                        <Icon name="check" size={16} tint="gold" />
+                        <Text style={styles.tierActiveText}>فعال است</Text>
+                      </View>
                     )}
                   </View>
                 );
@@ -364,6 +476,95 @@ export function ProfileScreen() {
                 />
               </View>
             </View>
+
+            {/* — حریمِ خصوصیِ ویژه: پنهان‌سازیِ آنلاین/فاصله (طلایی+) و ناشناس (الماس) — */}
+            <Text style={styles.groupLabel}>حریمِ خصوصیِ ویژه</Text>
+            <View style={styles.group}>
+              <PrivacyRow
+                icon="moon"
+                title="پنهان‌کردنِ وضعیتِ آنلاین"
+                hint="کسی نبیند کِی آنلاین بوده‌ای"
+                requiredTier={4}
+                requiredName="طلایی"
+                userTier={userTier}
+                value={user?.prefs?.hideOnline ?? false}
+                saving={vm.privacySaving}
+                onChange={(v) => vm.updatePrefs({ hideOnline: v })}
+                onUpgrade={() => setTab('plans')}
+              />
+              <View style={styles.rowDivider} />
+              <PrivacyRow
+                icon="map"
+                title="پنهان‌کردنِ فاصله"
+                hint="فاصله‌ات از دیگران نمایش داده نشود"
+                requiredTier={4}
+                requiredName="طلایی"
+                userTier={userTier}
+                value={user?.prefs?.hideDistance ?? false}
+                saving={vm.privacySaving}
+                onChange={(v) => vm.updatePrefs({ hideDistance: v })}
+                onUpgrade={() => setTab('plans')}
+              />
+              <View style={styles.rowDivider} />
+              <PrivacyRow
+                icon="shield"
+                title="حالتِ ناشناس"
+                hint="از کاوش، اطراف و نقشه حذف می‌شوی؛ بازدیدت هم ثبت نمی‌شود"
+                requiredTier={5}
+                requiredName="الماس"
+                userTier={userTier}
+                value={user?.prefs?.incognito ?? false}
+                saving={vm.privacySaving}
+                onChange={(v) => vm.updatePrefs({ incognito: v })}
+                onUpgrade={() => setTab('plans')}
+              />
+            </View>
+
+            {/* — حالتِ سفر (الماس): جست‌وجو در شهرِ دلخواه — */}
+            <Text style={styles.groupLabel}>حالتِ سفر</Text>
+            <View style={styles.group}>
+              {userTier < 5 ? (
+                <Pressable style={styles.rowInner} onPress={() => setTab('plans')} accessibilityRole="button">
+                  <View style={styles.rowChip}><Icon name="lock" size={18} tint="gold" /></View>
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>جست‌وجو در شهرِ دلخواه</Text>
+                    <Text style={styles.rowHint}>ویژه‌ی سطحِ الماس — برای فعال‌سازی ارتقا بده</Text>
+                  </View>
+                  <Icon name="chevron-prev" size={16} tint="gold" />
+                </Pressable>
+              ) : user?.prefs?.travelMode ? (
+                <View style={styles.travelBox}>
+                  <Text style={styles.rowTitle}>حالتِ سفر فعال است ✈️</Text>
+                  <Text style={styles.rowHint}>در شهرِ انتخابی دیده می‌شوی و همان‌جا جست‌وجو می‌کنی.</Text>
+                  <Button
+                    label="بازگشت به موقعیتِ واقعی"
+                    size="sm"
+                    variant="ghost"
+                    onPress={vm.stopTravel}
+                    loading={vm.travelBusy}
+                  />
+                </View>
+              ) : (
+                <View style={styles.travelBox}>
+                  <Text style={styles.rowHint}>یک شهر انتخاب کن تا موقعیتت موقتاً آن‌جا باشد:</Text>
+                  <View style={styles.travelCities}>
+                    {TRAVEL_CITIES.map((c) => (
+                      <Pressable
+                        key={c.name}
+                        style={({ pressed }) => [styles.cityChip, pressed && styles.pressed]}
+                        onPress={() => vm.startTravel(c.lat, c.lng)}
+                        disabled={vm.travelBusy}
+                        accessibilityRole="button"
+                        accessibilityLabel={`سفر به ${c.name}`}
+                      >
+                        <Text style={styles.cityChipText}>{c.name}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+
             <Button label="خروج از حساب" variant="danger" onPress={vm.logout} style={styles.logout} />
             {version ? <Text style={styles.version}>نودوست · نسخه‌ی {faNum(version)}</Text> : null}
           </View>
@@ -545,7 +746,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   addTilePressed: { backgroundColor: colors.goldFaint },
-  addTileText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
+  addTileText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2, textAlign: 'center', writingDirection: 'rtl' },
+  lockTile: { borderStyle: 'solid', opacity: 0.85, paddingHorizontal: spacing.xs },
 
   caption: {
     fontFamily: fonts.regular,
@@ -605,6 +807,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.lg,
   },
+  groupLabel: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.xl,
+    marginBottom: -spacing.sm,
+  },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
+  travelBox: { paddingVertical: spacing.md, gap: spacing.md, alignItems: 'stretch' },
+  travelCities: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.sm },
+  cityChip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+  },
+  cityChipText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
   rowInner: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   rowChip: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   rowBody: { flex: 1, alignItems: 'flex-end', gap: 2 },
@@ -620,11 +843,9 @@ const styles = StyleSheet.create({
 
   // — پلن‌ها —
   statusLine: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.gold2, textAlign: 'center', marginTop: spacing.lg },
-  tiers: { gap: spacing.sm, marginTop: spacing.lg },
+  plansCta: { marginTop: spacing.lg },
+  tiers: { gap: spacing.sm, marginTop: spacing.md },
   tierCard: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
@@ -632,8 +853,13 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
   },
+  tierCardHead: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   tierCardCurrent: { borderColor: colors.goldSoft, backgroundColor: colors.surface2 },
-  tierInfo: { flex: 1, alignItems: 'flex-end', gap: 2 },
+  tierPerks: { gap: 6 },
+  tierPerkRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
+  tierPerkText: { flex: 1, fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink, textAlign: 'right', writingDirection: 'rtl' },
+  tierActiveRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
+  tierActiveText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold },
   tierNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
   tierName: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.gold2 },
   currentTag: {

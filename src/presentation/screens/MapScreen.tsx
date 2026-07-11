@@ -218,8 +218,24 @@ export function MapView() {
                   </Text>
                   {selected.tier ? <TierBadge tier={selected.tier} height={18} /> : null}
                 </View>
-                {faDistance(selected.distanceM) ? (
-                  <Text style={styles.sheetDist}>{faDistance(selected.distanceM)}</Text>
+                {faDistance(selected.distanceM) || selected.isOnline != null ? (
+                  <Text style={styles.sheetDist}>
+                    {[
+                      faDistance(selected.distanceM),
+                      // «آخرین فعالیت» — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد.
+                      selected.isOnline
+                        ? 'آنلاین'
+                        : selected.lastActiveMin != null
+                          ? selected.lastActiveMin < 60
+                            ? `فعال ${faNum(Math.max(1, selected.lastActiveMin))} دقیقه پیش`
+                            : selected.lastActiveMin < 60 * 24
+                              ? `فعال ${faNum(Math.floor(selected.lastActiveMin / 60))} ساعت پیش`
+                              : `فعال ${faNum(Math.floor(selected.lastActiveMin / (60 * 24)))} روز پیش`
+                          : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
                 ) : null}
                 {selected.isMatch ? <Text style={styles.sheetMatch}>با هم مَچ شده‌اید</Text> : null}
               </View>

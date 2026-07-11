@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
@@ -13,6 +14,7 @@ import { Button } from '@/presentation/components/Button';
 import { Chip } from '@/presentation/components/Chip';
 import { Icon } from '@/presentation/components/Icon';
 import { useRandomViewModel } from '@/presentation/hooks/useRandomViewModel';
+import { useSession } from '@/presentation/providers/SessionProvider';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 
 const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
@@ -23,7 +25,10 @@ const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
 
 export function RandomScreen() {
   const vm = useRandomViewModel();
+  const { user } = useSession();
   const waiting = vm.state === 'waiting';
+  // فیلترِ جنسیت فقط برای برنزی به بالا — سرور هم برای سطحِ ۱ آن را نادیده می‌گیرد.
+  const canFilter = (user?.tier ?? 1) >= 2;
 
   const scale = useSharedValue(1);
   const ring = useSharedValue(0);
@@ -69,17 +74,22 @@ export function RandomScreen() {
       {!waiting ? (
         <>
           <Text style={styles.label}>ترجیحِ جنسیتِ هم‌صحبت</Text>
-          <View style={styles.row}>
+          <View style={[styles.row, !canFilter && styles.rowLocked]}>
             {OPTIONS.map((o) => (
               <Chip
                 key={o.key || 'any'}
-                label={o.label}
-                active={vm.gender === o.key}
-                onPress={() => vm.setGender(o.key)}
+                label={canFilter || !o.key ? o.label : `${o.label} · قفل`}
+                active={canFilter ? vm.gender === o.key : !o.key}
+                onPress={() =>
+                  canFilter || !o.key ? vm.setGender(o.key) : router.push('/profile?tab=plans')
+                }
                 style={styles.chip}
               />
             ))}
           </View>
+          {!canFilter ? (
+            <Text style={styles.lockHint}>فیلترِ جنسیت از سطحِ برنزی باز می‌شود — برای فعال‌سازی سطحت را ارتقا بده.</Text>
+          ) : null}
           <Button label="شروعِ گفتگوی تصادفی" icon="lightning-fill" onPress={vm.join} style={styles.action} />
         </>
       ) : (
@@ -138,7 +148,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   row: { flexDirection: 'row-reverse', gap: spacing.sm },
+  rowLocked: { opacity: 0.6 },
   chip: { flex: 1 },
+  lockHint: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink3,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.sm,
+  },
   action: { marginTop: spacing.xl, marginBottom: spacing.md },
   error: {
     fontFamily: fonts.regular,

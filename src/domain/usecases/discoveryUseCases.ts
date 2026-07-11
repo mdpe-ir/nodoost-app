@@ -1,12 +1,13 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { SwipeAction } from '@/domain/entities';
+import type { SwipeAction, ActiveFilter } from '@/domain/entities';
 
 export const makeGetCandidates = (r: DiscoveryRepository) => () => r.getCandidates();
 export const makeGetExplore =
-  (r: DiscoveryRepository) => (page?: number, limit?: number, tier?: number) =>
-    r.getExplore(page, limit, tier);
+  (r: DiscoveryRepository) => (page?: number, limit?: number, tier?: number, active?: ActiveFilter) =>
+    r.getExplore(page, limit, tier, active);
 export const makeGetNearbyMapUsers =
-  (r: DiscoveryRepository) => (radiusM?: number) => r.getNearbyMapUsers(radiusM);
+  (r: DiscoveryRepository) => (radiusM?: number, active?: ActiveFilter) =>
+    r.getNearbyMapUsers(radiusM, active);
 export const makeGetPeerProfile =
   (r: DiscoveryRepository) => (userId: number) => r.getProfile(userId);
 export const makeSwipe =

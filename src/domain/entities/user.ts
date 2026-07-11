@@ -39,6 +39,14 @@ export interface UserPreferences {
   showOnMap: boolean;
   /** نمایش نقطه‌ی دقیق؛ پیش‌فرض خاموش است. */
   showExactLocationOnMap: boolean;
+  /** پنهان‌کردنِ وضعیتِ آنلاین — فقط با سطحِ طلایی+ اثر می‌کند. */
+  hideOnline?: boolean;
+  /** پنهان‌کردنِ فاصله — فقط با سطحِ طلایی+ اثر می‌کند. */
+  hideDistance?: boolean;
+  /** حالتِ ناشناس (حذف از کاوش/اطراف/نقشه) — فقط با الماس اثر می‌کند. */
+  incognito?: boolean;
+  /** حالتِ سفر فعال است؟ (فقط‌خواندنی؛ با /me/location تغییر می‌کند.) */
+  travelMode?: boolean;
 }
 
 export interface ProfileDraft {

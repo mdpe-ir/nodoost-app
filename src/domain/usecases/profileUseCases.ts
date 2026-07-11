@@ -6,6 +6,10 @@ export const makeUpdateProfile = (r: ProfileRepository) => (draft: ProfileDraft)
   r.updateProfile(draft);
 export const makeSetLocation = (r: ProfileRepository) => (lat: number, lng: number) =>
   r.setLocation(lat, lng);
+export const makeSetTravelLocation = (r: ProfileRepository) => (lat: number, lng: number) =>
+  r.setTravelLocation(lat, lng);
+export const makeClearTravel = (r: ProfileRepository) => (lat: number, lng: number) =>
+  r.clearTravel(lat, lng);
 export const makeGetPhotos = (r: ProfileRepository) => () => r.getPhotos();
 export const makeAddPhoto = (r: ProfileRepository) => (uri: string) => r.addPhoto(uri);
 export const makeDeletePhoto = (r: ProfileRepository) => (id: number) => r.deletePhoto(id);
@@ -19,6 +23,8 @@ export type ProfileUseCases = {
   getMe: ReturnType<typeof makeGetMe>;
   updateProfile: ReturnType<typeof makeUpdateProfile>;
   setLocation: ReturnType<typeof makeSetLocation>;
+  setTravelLocation: ReturnType<typeof makeSetTravelLocation>;
+  clearTravel: ReturnType<typeof makeClearTravel>;
   getPhotos: ReturnType<typeof makeGetPhotos>;
   addPhoto: ReturnType<typeof makeAddPhoto>;
   deletePhoto: ReturnType<typeof makeDeletePhoto>;

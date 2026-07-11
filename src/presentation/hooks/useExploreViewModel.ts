@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
+import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
-import type { Candidate, MatchResult } from '@/domain/entities';
+import type { Candidate, MatchResult, ActiveFilter } from '@/domain/entities';
 
 const PAGE_SIZE = 24;
 
@@ -27,6 +28,9 @@ export function useExploreViewModel() {
   // فیلترِ سطحِ کاربران (۰ = همه). فقط سطح‌های در دسترسِ کاربر سمتِ UI باز است.
   const [tierFilter, setTierFilter] = useState(0);
   const tierFilterRef = useRef(0);
+  // فیلترِ فعالیت ('' = همه). «1h» از برنزی، «online» از نقره‌ای — سرور دوباره می‌سنجد.
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('');
+  const activeFilterRef = useRef<ActiveFilter>('');
   // شناسه‌هایی که کنش‌شان کرده‌ایم تا از گرید حذف شوند و دوباره برنگردند.
   const actedRef = useRef<Set<number>>(new Set());
 
@@ -37,7 +41,12 @@ export function useExploreViewModel() {
       else setRefreshing(true);
       setError(null);
       try {
-        const list = await uc.discovery.getExplore(p, PAGE_SIZE, tierFilterRef.current || undefined);
+        const list = await uc.discovery.getExplore(
+          p,
+          PAGE_SIZE,
+          tierFilterRef.current || undefined,
+          activeFilterRef.current || undefined
+        );
         const fresh = list.filter((c) => !actedRef.current.has(c.id));
         setItems((prev) => (mode === 'more' ? [...prev, ...fresh] : fresh));
         setPage(p);
@@ -99,10 +108,22 @@ export function useExploreViewModel() {
     loadPage(1, 'refresh');
   }, [refreshing, loadPage]);
 
+  // با بازگشت به تب یا بازکردنِ دوباره‌ی اپ، گرید را تازه کن.
+  useRefetchOnFocus(refresh);
+
   const setTier = useCallback(
     (t: number) => {
       tierFilterRef.current = t;
       setTierFilter(t);
+      loadPage(1, 'refresh');
+    },
+    [loadPage]
+  );
+
+  const setActive = useCallback(
+    (a: ActiveFilter) => {
+      activeFilterRef.current = a;
+      setActiveFilter(a);
       loadPage(1, 'refresh');
     },
     [loadPage]
@@ -144,6 +165,8 @@ export function useExploreViewModel() {
     locating,
     tierFilter,
     setTier,
+    activeFilter,
+    setActive,
     loadMore,
     refresh,
     reload: refresh,

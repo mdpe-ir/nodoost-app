@@ -171,7 +171,11 @@ export function ThreadScreen({
                     {msg.body}
                   </Text>
                   {lastOfGroup && time ? (
-                    <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>{time}</Text>
+                    <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
+                      {time}
+                      {/* رسیدِ خواندن — سرور فقط برای طلایی+ می‌فرستد. */}
+                      {mine && msg.readAt ? '  · خوانده شد' : ''}
+                    </Text>
                   ) : null}
                 </View>
               );

@@ -28,11 +28,29 @@ import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { useExploreViewModel } from '@/presentation/hooks/useExploreViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
-import type { Candidate } from '@/domain/entities';
+import type { Candidate, ActiveFilter } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
 
 const GAP = spacing.sm;
 const COLS = 2;
+
+/** گزینه‌های فیلترِ فعالیت + کمینه‌سطحِ لازم (سرور هم دوباره می‌سنجد). */
+const ACTIVE_OPTIONS: { key: ActiveFilter; label: string; minTier: number }[] = [
+  { key: '', label: 'همه', minTier: 1 },
+  { key: 'online', label: 'آنلاین', minTier: 3 },
+  { key: '1h', label: 'یک ساعتِ اخیر', minTier: 2 },
+  { key: 'today', label: 'امروز', minTier: 2 },
+];
+
+/** برچسبِ آخرین فعالیت برای برگه‌ی پیش‌نمایش. */
+const faLastActive = (isOnline?: boolean, min?: number): string | null => {
+  if (isOnline == null) return null;
+  if (isOnline) return 'آنلاین';
+  if (min == null) return null;
+  if (min < 60) return `فعال ${faNum(Math.max(1, min))} دقیقه پیش`;
+  if (min < 60 * 24) return `فعال ${faNum(Math.floor(min / 60))} ساعت پیش`;
+  return `فعال ${faNum(Math.floor(min / (60 * 24)))} روز پیش`;
+};
 
 /**
  * نمای شبکه‌ی چهره‌های نزدیک — داخلِ صفحه‌ی «اطراف» رندر می‌شود
@@ -72,6 +90,7 @@ export function ExploreView() {
             <TierBadge tier={item.tier} height={20} />
           </View>
         ) : null}
+        {item.isOnline ? <View style={styles.onlineDot} accessibilityLabel="آنلاین" /> : null}
         <View style={styles.cellMeta}>
           <Text style={styles.cellName} numberOfLines={1}>
             {item.name}
@@ -99,6 +118,30 @@ export function ExploreView() {
           onPress={vm.enableLocation}
         />
       ) : null}
+
+      {/* فیلترِ فعالیت؛ «یک ساعتِ اخیر/امروز» از برنزی، «آنلاین» از نقره‌ای. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        {ACTIVE_OPTIONS.map((o) => {
+          const locked = myTier < o.minTier;
+          return (
+            <Chip
+              key={o.key || 'all'}
+              label={locked ? `${o.label} · قفل` : o.label}
+              active={vm.activeFilter === o.key}
+              onPress={() => {
+                if (locked) router.push('/profile?tab=plans');
+                else vm.setActive(vm.activeFilter === o.key && o.key !== '' ? '' : o.key);
+              }}
+              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
+            />
+          );
+        })}
+      </ScrollView>
 
       {/* فیلترِ سطحِ کاربران؛ گزینه‌های خارج از دسترس قفل‌اند و به صفحه‌ی عضویت می‌برند. */}
       <ScrollView
@@ -189,8 +232,12 @@ export function ExploreView() {
                 </Text>
                 {vm.selected.tier ? <TierBadge tier={vm.selected.tier} height={20} /> : null}
               </View>
-              {faDistance(vm.selected.distanceM) ? (
-                <Text style={styles.sheetDist}>{faDistance(vm.selected.distanceM)}</Text>
+              {faDistance(vm.selected.distanceM) || faLastActive(vm.selected.isOnline, vm.selected.lastActiveMin) ? (
+                <Text style={styles.sheetDist}>
+                  {[faDistance(vm.selected.distanceM), faLastActive(vm.selected.isOnline, vm.selected.lastActiveMin)]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
               ) : null}
               {vm.selected.bio ? (
                 <Text style={styles.sheetBio} numberOfLines={3}>
@@ -275,6 +322,17 @@ const styles = StyleSheet.create({
   cellImg: { width: '100%', height: '100%' },
   cellFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
   cellBadge: { position: 'absolute', top: 8, right: 8 },
+  onlineDot: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#5BD08F',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.35)',
+  },
   cellMeta: { position: 'absolute', right: 10, left: 10, bottom: 10 },
   cellName: {
     fontFamily: fonts.bold,

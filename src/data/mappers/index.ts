@@ -4,6 +4,7 @@ import type {
   Candidate,
   MapUser,
   Liker,
+  Viewer,
   PeerProfile,
   Conversation,
   Message,
@@ -19,6 +20,7 @@ import type {
   CandidateDTO,
   MapUserDTO,
   LikerDTO,
+  ViewerDTO,
   PeerProfileDTO,
   ConversationDTO,
   MessageDTO,
@@ -60,6 +62,10 @@ export const toUser = (d: UserDTO): User => ({
   prefs: {
     showOnMap: d.prefs?.show_on_map ?? true,
     showExactLocationOnMap: d.prefs?.show_exact_location_on_map ?? false,
+    hideOnline: d.prefs?.hide_online ?? false,
+    hideDistance: d.prefs?.hide_distance ?? false,
+    incognito: d.prefs?.incognito ?? false,
+    travelMode: d.prefs?.travel_mode ?? false,
   },
 });
 
@@ -73,6 +79,9 @@ export const fromProfileDraft = (draft: ProfileDraft) => ({
     ? {
         show_on_map: draft.prefs.showOnMap,
         show_exact_location_on_map: draft.prefs.showExactLocationOnMap,
+        hide_online: draft.prefs.hideOnline,
+        hide_distance: draft.prefs.hideDistance,
+        incognito: draft.prefs.incognito,
       }
     : undefined,
 });
@@ -86,6 +95,8 @@ export const toCandidate = (d: CandidateDTO): Candidate => ({
   tier: d.tier,
   photoUrl: undefIfNull(d.photo_url),
   interests: d.interests,
+  isOnline: d.is_online,
+  lastActiveMin: d.last_active_min ?? undefined,
 });
 
 export const toMapUser = (d: MapUserDTO): MapUser => ({
@@ -98,6 +109,8 @@ export const toMapUser = (d: MapUserDTO): MapUser => ({
   distanceM: d.distance_m,
   isMatch: d.is_match ?? false,
   tier: d.tier,
+  isOnline: d.is_online,
+  lastActiveMin: d.last_active_min ?? undefined,
 });
 
 export const toLiker = (d: LikerDTO): Liker => ({
@@ -106,6 +119,11 @@ export const toLiker = (d: LikerDTO): Liker => ({
   age: d.age,
   photoUrl: undefIfNull(d.photo_url),
   tier: d.tier,
+});
+
+export const toViewer = (d: ViewerDTO): Viewer => ({
+  ...toLiker(d),
+  viewedAt: d.viewed_at,
 });
 
 export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
@@ -119,6 +137,8 @@ export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
   distanceM: d.distance_m ?? undefined,
   isMatch: d.is_match ?? false,
   matchId: d.match_id ?? undefined,
+  isOnline: d.is_online,
+  lastActiveMin: d.last_active_min ?? undefined,
   interests: d.interests ?? [],
   photos: d.photos ?? [],
   photoIds: d.photo_ids ?? [],
@@ -143,6 +163,7 @@ export const toMessage = (d: MessageDTO): Message => ({
   senderId: d.sender_id,
   body: d.body,
   createdAt: d.created_at,
+  readAt: undefIfNull(d.read_at),
 });
 
 export const toTier = (d: TierDTO): Tier => {
@@ -153,6 +174,17 @@ export const toTier = (d: TierDTO): Tier => {
     name: d.name,
     amountRial,
     priceToman: d.price_toman ?? (amountRial != null ? Math.round(amountRial / 10) : undefined),
+    bazaarSku: d.bazaar_sku || undefined,
+    days: d.days,
+    perks: Array.isArray(d.perks) ? d.perks : [],
+    dailySwipeLimit: d.daily_swipe_limit ?? null,
+    dailyConversationLimit: d.daily_conversation_limit ?? null,
+    dailyRandomLimit: d.daily_random_limit ?? null,
+    superLikesPerDay: d.super_likes_per_day ?? 0,
+    canSeeLikes: Boolean(d.can_see_likes),
+    canFilterRandomGender: Boolean(d.can_filter_random_gender),
+    maxRadiusKm: d.max_radius_km ?? 0,
+    boostPerMonth: d.boost_per_month ?? 0,
   };
 };
 

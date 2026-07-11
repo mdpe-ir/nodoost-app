@@ -1,3 +1,21 @@
+diff --git a/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/PaymentActivity.kt b/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/PaymentActivity.kt
+index 11810a7..15e4d35 100644
+--- a/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/PaymentActivity.kt
++++ b/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/PaymentActivity.kt
+@@ -15,7 +15,12 @@ class PaymentActivity : ComponentActivity() {
+ 
+     val callback: PurchaseCallback.() -> Unit = {
+       purchaseSucceed { purchaseEntity ->
+-        promise.resolve(purchaseEntity.originalJson)
++        // Return the exact signed payload AND its signature so the server can verify
++        // it with the RSA public key (no OAuth). originalJson must stay byte-identical.
++        val result = com.facebook.react.bridge.Arguments.createMap()
++        result.putString("originalJson", purchaseEntity.originalJson)
++        result.putString("dataSignature", purchaseEntity.dataSignature)
++        promise.resolve(result)
+         finish()
+       }
+       purchaseCanceled {
 diff --git a/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/ReactNativePoolakeyModule.kt b/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/ReactNativePoolakeyModule.kt
 index a9aa802..0e1710d 100644
 --- a/node_modules/@cafebazaar/react-native-poolakey/android/src/main/java/com/cafebazaar/reactnativepoolakey/ReactNativePoolakeyModule.kt

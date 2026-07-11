@@ -19,6 +19,8 @@ export interface SwipeCardHandle {
 interface Props {
   candidate: Candidate;
   onSwipe: (dir: 'like' | 'pass') => void;
+  /** تک‌ضربه روی کارت → بازکردنِ پروفایلِ کامل (که پیام و پسند آن‌جاست). */
+  onOpenProfile?: () => void;
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  * جهتِ ژست عمداً قراردادِ جهانیِ اپ‌های دوست‌یابی است: راست = پسند، چپ = رد.
  */
 export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard(
-  { candidate, onSwipe },
+  { candidate, onSwipe, onOpenProfile },
   ref
 ) {
   const pos = useRef(new Animated.ValueXY()).current;
@@ -44,11 +46,19 @@ export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard(
 
   const responder = useRef(
     PanResponder.create({
+      // تک‌ضربه هم گرفته می‌شود (grant روی start) تا بازکردنِ پروفایل ممکن شود؛
+      // اما مسئولیت فقط با حرکتِ افقیِ محسوس به کشیدن تبدیل می‌شود.
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 6,
       onPanResponderMove: Animated.event([null, { dx: pos.x, dy: pos.y }], {
         useNativeDriver: false,
       }),
       onPanResponderRelease: (_, g) => {
+        // جابه‌جاییِ ناچیز = تک‌ضربه → بازکردنِ پروفایل
+        if (Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6) {
+          onOpenProfile?.();
+          return;
+        }
         if (g.dx > THRESHOLD) {
           Animated.timing(pos, {
             toValue: { x: width * 1.4, y: g.dy },
@@ -123,6 +133,12 @@ export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard(
             {candidate.age ? `، ${faNum(candidate.age)}` : ''}
           </Text>
           {candidate.tier ? <TierBadge tier={candidate.tier} /> : null}
+          {candidate.isOnline ? (
+            <View style={styles.onlinePill}>
+              <View style={styles.onlineDot} />
+              <Text style={styles.onlineText}>آنلاین</Text>
+            </View>
+          ) : null}
         </View>
         {km != null ? (
           <View style={styles.metaRow}>
@@ -179,6 +195,17 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginTop: 2 },
+  onlinePill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#5BD08F' },
+  onlineText: { fontFamily: fonts.medium, fontSize: 11, color: '#5BD08F' },
   metaIcon: { opacity: 0.85 },
   meta: {
     fontFamily: fonts.regular,

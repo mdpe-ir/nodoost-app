@@ -8,17 +8,19 @@ import Constants from 'expo-constants';
  * وب/PWA این کار کرش می‌کند. برای همین با `require`ِ تنبل و فقط روی اندروید بارگذاری
  * می‌شود تا بیلدِ وب هرگز کدِ نیتیو را اجرا نکند. روی وب `isAvailable` = false می‌ماند.
  */
+/**
+ * نتیجه‌ی خرید که سرور با آن امضا را اعتبارسنجی می‌کند: خودِ دادهٔ امضاشده
+ * (`originalJson`، باید بایت‌به‌بایت دست‌نخورده بماند) و امضای آن (`dataSignature`).
+ */
 export interface BazaarPurchaseResult {
-  productId: string;
-  purchaseToken: string;
-  orderId?: string;
+  originalJson: string;
+  dataSignature: string;
 }
 
 interface PoolakeyModule {
   connect(rsaKey: string | null): Promise<unknown>;
   disconnect(): Promise<void>;
-  purchaseProduct(sku: string): Promise<BazaarPurchaseResult>;
-  getPurchasedProducts(): Promise<BazaarPurchaseResult[]>;
+  purchaseProduct(sku: string): Promise<{ originalJson?: string; dataSignature?: string }>;
 }
 
 /** کلیدِ عمومیِ RSAِ برنامه از پنلِ بازار (تبِ «پرداختِ درون‌برنامه‌ای»). */
@@ -66,23 +68,12 @@ export const bazaarBilling = {
     connected = false;
   },
 
-  /** جریانِ خریدِ یک SKU را باز می‌کند و پس از موفقیت نتیجه‌ی خرید را برمی‌گرداند. */
+  /** جریانِ خریدِ یک SKU را باز می‌کند و پس از موفقیت دادهٔ امضاشده + امضا را برمی‌گرداند. */
   async purchase(sku: string): Promise<BazaarPurchaseResult> {
     const p = load();
     if (!p) throw new Error('bazaar-billing-unavailable');
     const r = await p.purchaseProduct(sku);
-    return { productId: r.productId, purchaseToken: r.purchaseToken, orderId: r.orderId };
-  },
-
-  /** خریدهای پیشینِ کاربر (برای بازیابیِ اشتراک). */
-  async queryPurchases(): Promise<BazaarPurchaseResult[]> {
-    const p = load();
-    if (!p) return [];
-    const list = await p.getPurchasedProducts();
-    return list.map((r) => ({
-      productId: r.productId,
-      purchaseToken: r.purchaseToken,
-      orderId: r.orderId,
-    }));
+    if (!r?.originalJson || !r?.dataSignature) throw new Error('bazaar-purchase-unsigned');
+    return { originalJson: r.originalJson, dataSignature: r.dataSignature };
   },
 };

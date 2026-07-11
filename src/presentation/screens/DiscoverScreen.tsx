@@ -15,6 +15,10 @@ export function DiscoverScreen() {
   const vm = useDiscoverViewModel();
   const cardRef = useRef<SwipeCardHandle>(null);
 
+  // بازکردنِ پروفایلِ کامل — همان‌جا دکمه‌های «ارسالِ پیام» و «پسند» هست.
+  const openProfile = (id: number | string) =>
+    router.push({ pathname: '/user/[id]', params: { id: String(id) } });
+
   if (vm.loading) {
     return (
       <ScreenContainer flush style={styles.wrap}>
@@ -45,7 +49,13 @@ export function DiscoverScreen() {
             {/* دو لایه‌ی پشتی برای حسِ واقعیِ دسته‌کارت */}
             <View style={[styles.behind, styles.behindFar]} />
             <View style={styles.behind} />
-            <SwipeCard ref={cardRef} key={vm.current.id} candidate={vm.current} onSwipe={vm.swipe} />
+            <SwipeCard
+              ref={cardRef}
+              key={vm.current.id}
+              candidate={vm.current}
+              onSwipe={vm.swipe}
+              onOpenProfile={() => openProfile(vm.current!.id)}
+            />
           </>
         ) : (
           <View style={styles.empty}>
@@ -73,6 +83,13 @@ export function DiscoverScreen() {
             variant="surface"
             onPress={() => cardRef.current?.swipe('pass')}
             accessibilityLabel="رد"
+          />
+          <IconButton
+            icon="tab-profile"
+            size={54}
+            variant="ghost"
+            onPress={() => openProfile(vm.current!.id)}
+            accessibilityLabel="دیدنِ پروفایل و پیام"
           />
           <IconButton
             icon="heart-fill"
@@ -129,7 +146,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.xl + 4,
+    gap: spacing.xl,
     paddingBottom: spacing.lg,
   },
 });

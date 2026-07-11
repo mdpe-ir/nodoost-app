@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
+import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import type { Candidate, MatchResult } from '@/domain/entities';
@@ -74,6 +75,9 @@ export function useDiscoverViewModel() {
       alive = false;
     };
   }, [uc, load, captureLocation]);
+
+  // با بازگشت به تب یا بازکردنِ دوباره‌ی اپ، بی‌صدا کارت‌های تازه بگیر.
+  useRefetchOnFocus(useCallback(() => load(true), [load]));
 
   const current = cards[index];
 

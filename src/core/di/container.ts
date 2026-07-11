@@ -48,6 +48,8 @@ export function createContainer() {
       getMe: profile.makeGetMe(profileRepo),
       updateProfile: profile.makeUpdateProfile(profileRepo),
       setLocation: profile.makeSetLocation(profileRepo),
+      setTravelLocation: profile.makeSetTravelLocation(profileRepo),
+      clearTravel: profile.makeClearTravel(profileRepo),
       getPhotos: profile.makeGetPhotos(profileRepo),
       addPhoto: profile.makeAddPhoto(profileRepo),
       deletePhoto: profile.makeDeletePhoto(profileRepo),
@@ -65,6 +67,7 @@ export function createContainer() {
     likes: {
       getLikes: likes.makeGetLikes(likesRepo),
       getSentLikes: likes.makeGetSentLikes(likesRepo),
+      getViewers: likes.makeGetViewers(likesRepo),
     },
     chat: {
       getConversations: chat.makeGetConversations(chatRepo),

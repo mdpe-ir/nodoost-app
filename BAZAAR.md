@@ -16,7 +16,8 @@
 ## ۱) پیش‌نیازِ کنسولِ توسعه‌دهنده‌ی بازار
 1. برنامه‌ای با پکیج `com.nodoost.app` بساز.
 2. تبِ «پرداختِ درون‌برنامه‌ای»:
-   - **کلیدِ RSA عمومی** را کپی کن → می‌شود `EXPO_PUBLIC_BAZAAR_RSA_KEY`.
+   - **کلیدِ RSA عمومی** را کپی کن. هم در `app.json` → `extra.bazaarRsaKey` (بررسیِ محلیِ
+     Poolakey) و هم در پنلِ ادمین (اعتبارسنجیِ سمتِ سرور) استفاده می‌شود.
    - برای **هر تایر یک محصولِ درون‌برنامه‌ای** بساز که **شناسه‌ی محصول (SKU)** آن
      دقیقاً برابرِ **`code`ِ همان تایر** در دیتابیس باشد. بک‌اند در
      [`planFor`](../nodoost-backend/internal/payments/payments.go) محصول را با همین
@@ -24,21 +25,24 @@
      > نکته: بک‌اند از اندپوینتِ `inapp` بازار اعتبارسنجی می‌کند، پس تایرها باید
      > **محصولِ درون‌برنامه‌ای** (نه Subscriptionِ بازار) باشند؛ کلاینت هم
      > `purchaseProduct` صدا می‌زند.
-3. برای بک‌اند: از بخشِ Pardakht/OAuth، `client_id`, `client_secret`, `refresh_token`
-   را بگیر.
+> **دیگر به `client_id` / `client_secret` / `refresh_token` نیازی نیست.** بک‌اند خریدها را
+> با **امضای RSA** اعتبارسنجی می‌کند (`data_signature` روی `original_json` — همان مدلِ
+> Google Play IAB)، پس OAuthِ Pardakht لازم نیست.
 
-## ۲) متغیرهای محیطیِ بک‌اند (کدش آماده است، فقط مقدار می‌خواهد)
+## ۲) پیکربندیِ بک‌اند — همه از پنلِ ادمین (بدونِ ری‌دیپلوی)
+همهٔ تنظیماتِ بازار در جدولِ `app_settings` است و از پنلِ ادمین (منوی «کافه‌بازار»)
+ویرایش می‌شود؛ مقدارهای اولیه با مهاجرتِ `0009_bazaar_settings.sql` seed شده‌اند:
 ```
-BAZAAR_PACKAGE_NAME=com.nodoost.app
-BAZAAR_CLIENT_ID=...
-BAZAAR_CLIENT_SECRET=...
-BAZAAR_REFRESH_TOKEN=...
-# دروازه‌ی به‌روزرسانی (اختیاری؛ خالی = غیرفعال):
-MIN_ANDROID_VERSION=1.0.4
-LATEST_ANDROID_VERSION=1.0.4
-# ANDROID_STORE_URL پیش‌فرض روی صفحه‌ی بازارِ اپ است.
+bazaar_package_name  = com.nodoost.app
+bazaar_rsa_key       = <کلیدِ عمومیِ RSA از پنلِ بازار>
+android_store_url    = https://cafebazaar.ir/app/com.nodoost.app
+min_android_version  = 1.0.4   # خالی = دروازهٔ به‌روزرسانیِ اجباری غیرفعال
+latest_version       = 1.0.4
 ```
-اندپوینت‌ها از قبل وصل‌اند: `POST /api/payments/bazaar/verify` و `GET /api/config`.
+متغیرهای محیطی (`BAZAAR_PACKAGE_NAME`, `BAZAAR_RSA_KEY`, `MIN_ANDROID_VERSION`, …) فقط
+**fallback** هستند اگر کلید در `app_settings` نباشد.
+اندپوینت‌ها: `POST /api/payments/bazaar/verify` (امضا)، `GET /api/config`، و
+`GET|PUT /api/admin/config/bazaar` (پنل).
 
 ## ۳) ساختِ APKِ بازار (محلی: prebuild + Gradle)
 ```bash

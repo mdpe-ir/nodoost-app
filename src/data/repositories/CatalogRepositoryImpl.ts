@@ -21,14 +21,14 @@ export class CatalogRepositoryImpl implements CatalogRepository {
   }
 
   async verifyBazaarPurchase(
-    productId: string,
-    purchaseToken: string
+    originalJson: string,
+    dataSignature: string
   ): Promise<{ subscriptionUntil?: string }> {
     const d = await this.http.request<{ subscription_until?: string }>(
       '/api/payments/bazaar/verify',
       {
         method: 'POST',
-        body: { product_id: productId, purchase_token: purchaseToken },
+        body: { original_json: originalJson, data_signature: dataSignature },
       }
     );
     return { subscriptionUntil: d?.subscription_until };

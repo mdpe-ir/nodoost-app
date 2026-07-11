@@ -3,9 +3,12 @@ import type { Tier } from '@/domain/entities';
 export interface CatalogRepository {
   getTiers(): Promise<Tier[]>;
   startZarinpalPayment(plan: string): Promise<{ payUrl: string }>;
-  /** اعتبارسنجیِ خریدِ درون‌برنامه‌ایِ کافه‌بازار سمتِ سرور و فعال‌سازیِ اشتراک. */
+  /**
+   * اعتبارسنجیِ خریدِ درون‌برنامه‌ایِ کافه‌بازار سمتِ سرور (با امضای RSA) و فعال‌سازیِ اشتراک.
+   * `originalJson` دادهٔ امضاشدهٔ خرید و `dataSignature` امضای آن است.
+   */
   verifyBazaarPurchase(
-    productId: string,
-    purchaseToken: string
+    originalJson: string,
+    dataSignature: string
   ): Promise<{ subscriptionUntil?: string }>;
 }

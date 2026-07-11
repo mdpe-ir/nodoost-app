@@ -2,12 +2,16 @@ import React from 'react';
 import { View, Text, Modal, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Button } from './Button';
+import { Icon } from './Icon';
 import { TierBadge, tierName } from './TierBadge';
+import { usePlansViewModel } from '../hooks/usePlansViewModel';
+import { tierPerks } from '../tiers/tierFeatures';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '../../core/theme';
 
 /**
  * پنجره‌ی قفلِ سطح — وقتی طرفِ مقابل سطحِ بالاتری دارد و شروعِ گفتگو بسته است.
- * کاربر می‌فهمد چرا پیام قفل است و کدام سطح بازش می‌کند (محرکِ اصلیِ خرید اشتراک).
+ * حالا یک paywallِ زمینه‌ای است: دقیقاً می‌گوید ارتقا به کدام سطح چه چیزی باز
+ * می‌کند و همان‌جا دکمه‌ی خرید دارد (محرکِ اصلیِ فروشِ اشتراک).
  */
 export function TierLockModal({
   visible,
@@ -18,6 +22,10 @@ export function TierLockModal({
   requiredTier: number;
   onClose: () => void;
 }) {
+  const vm = usePlansViewModel();
+  const target = vm.tiers.find((t) => t.level === requiredTier);
+  const perks = target ? tierPerks(target).slice(0, 4) : [];
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -29,16 +37,41 @@ export function TierLockModal({
           <Text style={styles.hint}>
             {`این کاربر سطحِ ${tierName(requiredTier)} دارد. برای شروعِ گفتگو باید حسابت را به سطحِ ${tierName(requiredTier)} یا بالاتر ارتقا بدهی. اگر او پیام بدهد، پاسخ‌دادن برایت آزاد است.`}
           </Text>
+
+          {perks.length ? (
+            <View style={styles.perks}>
+              <Text style={styles.perksTitle}>{`با ارتقا به ${tierName(requiredTier)} باز می‌شود:`}</Text>
+              {perks.map((p, i) => (
+                <View key={i} style={styles.perkRow}>
+                  <Icon name="check" size={14} tint="gold" />
+                  <Text style={styles.perkText}>{p}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
           <View style={styles.actions}>
-            <Button
-              label="مشاهده‌ی سطح‌های اشتراک"
-              onPress={() => {
-                onClose();
-                router.push('/profile?tab=plans');
-              }}
-              style={styles.btn}
-            />
-            <Button label="بعداً" variant="outline" onPress={onClose} style={styles.btn} />
+            {target ? (
+              <Button
+                label={`ارتقا به ${target.name}`}
+                icon="diamond-fill"
+                loading={vm.purchasing === target.id}
+                onPress={() => vm.buy(target.id, target.bazaarSku)}
+                style={styles.btnFull}
+              />
+            ) : null}
+            <View style={styles.actionRow}>
+              <Button
+                label="همه‌ی سطح‌ها"
+                variant="ghost"
+                onPress={() => {
+                  onClose();
+                  router.push('/plans');
+                }}
+                style={styles.btn}
+              />
+              <Button label="بعداً" variant="outline" onPress={onClose} style={styles.btn} />
+            </View>
           </View>
         </View>
       </View>
@@ -73,6 +106,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl',
   },
-  actions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.lg },
+  perks: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface2,
+  },
+  perksTitle: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.gold2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  perkRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
+  perkText: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  actions: { marginTop: spacing.lg, gap: spacing.sm },
+  actionRow: { flexDirection: 'row-reverse', gap: spacing.sm },
+  btnFull: { width: '100%' },
   btn: { flex: 1 },
 });

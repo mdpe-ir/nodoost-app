@@ -2,10 +2,13 @@ export type { Gender, AccountStatus, Photo, User, UserPreferences, ProfileDraft 
 export type {
   Candidate,
   MapUser,
+  ActiveFilter,
   SwipeAction,
   MatchResult,
   Liker,
   LikesOverview,
+  Viewer,
+  ViewersOverview,
   PeerProfile,
   RandomMatch,
   RandomFilters,

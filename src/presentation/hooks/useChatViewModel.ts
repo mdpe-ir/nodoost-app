@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
+import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import type { Conversation } from '@/domain/entities';
 
 /** ویومدلِ فهرستِ گفتگوها — با خطا و کشیدن‌برای‌تازه‌سازی. */
@@ -38,6 +39,9 @@ export function useChatViewModel() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // با بازگشت به تب یا بازکردنِ دوباره‌ی اپ، فهرستِ گفتگوها را بی‌صدا تازه کن.
+  useRefetchOnFocus(refresh);
 
   return { items, loading, refreshing, error, reload: load, refresh };
 }

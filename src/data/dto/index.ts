@@ -30,6 +30,10 @@ export interface UserDTO {
   prefs?: {
     show_on_map?: boolean;
     show_exact_location_on_map?: boolean;
+    hide_online?: boolean;
+    hide_distance?: boolean;
+    incognito?: boolean;
+    travel_mode?: boolean;
     [key: string]: unknown;
   };
 }
@@ -43,6 +47,9 @@ export interface CandidateDTO {
   tier?: number;
   photo_url?: string | null;
   interests?: string[];
+  /** فقط برای بیننده‌ی نقره‌ای+ و اگر طرف پنهانش نکرده باشد. */
+  is_online?: boolean;
+  last_active_min?: number | null;
 }
 
 export interface PeerProfileDTO {
@@ -56,6 +63,9 @@ export interface PeerProfileDTO {
   distance_m?: number | null;
   is_match?: boolean;
   match_id?: number | null;
+  /** فقط برای بیننده‌ی نقره‌ای+ و اگر طرف پنهانش نکرده باشد. */
+  is_online?: boolean;
+  last_active_min?: number | null;
   interests?: string[];
   photos?: string[];
   photo_ids?: number[];
@@ -69,6 +79,11 @@ export interface LikerDTO {
   tier?: number;
 }
 
+/** بازدیدکننده‌ی پروفایل — همان liker به‌علاوه‌ی زمانِ بازدید. */
+export interface ViewerDTO extends LikerDTO {
+  viewed_at?: string;
+}
+
 export interface MapUserDTO {
   id: number;
   name: string | null;
@@ -79,6 +94,9 @@ export interface MapUserDTO {
   distance_m?: number;
   is_match?: boolean;
   tier?: number;
+  /** فقط برای بیننده‌ی نقره‌ای+ و اگر طرف پنهانش نکرده باشد. */
+  is_online?: boolean;
+  last_active_min?: number | null;
 }
 
 export interface ConversationDTO {
@@ -100,16 +118,29 @@ export interface MessageDTO {
   sender_id: number;
   body: string;
   created_at?: string;
+  /** رسیدِ خواندن — فقط روی پیام‌های خودم و از سطحِ طلایی برمی‌گردد. */
+  read_at?: string | null;
 }
 
 export interface TierDTO {
   id?: string;
   code?: string;
+  bazaar_sku?: string;
   level: number;
   name: string;
   price_toman?: number;
   amount_rial?: number;
   price_rial?: number;
+  days?: number;
+  perks?: string[] | null;
+  daily_swipe_limit?: number | null;
+  daily_conversation_limit?: number | null;
+  daily_random_limit?: number | null;
+  super_likes_per_day?: number;
+  can_see_likes?: boolean;
+  can_filter_random_gender?: boolean;
+  max_radius_km?: number;
+  boost_per_month?: number;
 }
 
 export interface AuthDTO {

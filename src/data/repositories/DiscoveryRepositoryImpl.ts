@@ -1,5 +1,5 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { Candidate, MapUser, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
+import type { Candidate, MapUser, ActiveFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
 import type { CandidateDTO, MapUserDTO, PeerProfileDTO } from '@/data/dto';
 import { toCandidate, toMapUser, toPeerProfile } from '@/data/mappers';
@@ -15,17 +15,19 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     return (d?.results ?? []).map(toCandidate);
   }
 
-  async getExplore(page = 1, limit = 24, tier?: number): Promise<Candidate[]> {
+  async getExplore(page = 1, limit = 24, tier?: number, active?: ActiveFilter): Promise<Candidate[]> {
     const tierParam = tier ? `&tier=${encodeURIComponent(tier)}` : '';
+    const activeParam = active ? `&active=${encodeURIComponent(active)}` : '';
     const d = await this.http.request<{ results: CandidateDTO[] }>(
-      `/api/explore?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}${tierParam}`
+      `/api/explore?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}${tierParam}${activeParam}`
     );
     return (d?.results ?? []).map(toCandidate);
   }
 
-  async getNearbyMapUsers(radiusM = 25000): Promise<MapUser[]> {
+  async getNearbyMapUsers(radiusM = 25000, active?: ActiveFilter): Promise<MapUser[]> {
+    const activeParam = active ? `&active=${encodeURIComponent(active)}` : '';
     const d = await this.http.request<{ results: MapUserDTO[] }>(
-      `/api/map/nearby?radius_m=${encodeURIComponent(radiusM)}`
+      `/api/map/nearby?radius_m=${encodeURIComponent(radiusM)}${activeParam}`
     );
     return (d?.results ?? []).map(toMapUser);
   }
