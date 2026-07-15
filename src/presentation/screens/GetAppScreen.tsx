@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
@@ -47,17 +47,7 @@ export function GetAppScreen() {
           <ScreenHeader
             title={title}
             subtitle={subtitle}
-            action={
-              <Pressable
-                onPress={() => (router.canGoBack() ? router.back() : router.replace('/discover'))}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel="بازگشت"
-                style={({ pressed }) => [styles.back, pressed && styles.pressed]}
-              >
-                <Icon name="chevron-next" size={22} tint="gold" />
-              </Pressable>
-            }
+            onBack={() => (router.canGoBack() ? router.back() : router.replace('/discover'))}
           />
 
           <View style={styles.hero}>
@@ -96,8 +86,6 @@ export function GetAppScreen() {
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.xxl },
   padded: { paddingHorizontal: 18 },
-  back: { padding: spacing.xs },
-  pressed: { opacity: 0.6 },
   hero: { alignItems: 'center', marginTop: spacing.md, marginBottom: spacing.lg },
   icon: { width: 84, height: 84, borderRadius: radius.xl, marginBottom: spacing.md },
   lead: {

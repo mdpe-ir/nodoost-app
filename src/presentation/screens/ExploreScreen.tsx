@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { Scrim } from '@/presentation/components/Scrim';
 import { TierBadge, tierName } from '@/presentation/components/TierBadge';
 import { Chip } from '@/presentation/components/Chip';
+import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { GridSkeleton } from '@/presentation/components/Skeleton';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
@@ -64,6 +65,8 @@ export function ExploreView() {
   // فیلترِ سطح از برنزی به بالا؛ فقط سطح‌هایی که کاربر به آن‌ها دسترسیِ پیام دارد.
   const myTier = user?.tier ?? 1;
   const canFilterTier = myTier >= 2;
+  // پنجره‌ی paywall برای فیلترهای قفل — به‌جای پرتاب به تبِ عضویت.
+  const [lock, setLock] = useState<{ tier: number; title: string; message: string } | null>(null);
 
   const renderItem = ({ item }: { item: Candidate }) => (
     <Animated.View entering={FadeIn.duration(220)}>
@@ -134,7 +137,12 @@ export function ExploreView() {
               label={locked ? `${o.label} · قفل` : o.label}
               active={vm.activeFilter === o.key}
               onPress={() => {
-                if (locked) router.push('/profile?tab=plans');
+                if (locked)
+                  setLock({
+                    tier: o.minTier,
+                    title: 'این فیلتر قفل است',
+                    message: `فیلترِ «${o.label}» از سطحِ ${tierName(o.minTier)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
+                  });
                 else vm.setActive(vm.activeFilter === o.key && o.key !== '' ? '' : o.key);
               }}
               style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
@@ -159,7 +167,14 @@ export function ExploreView() {
               label={locked ? `${tierName(lvl)} · قفل` : tierName(lvl)}
               active={vm.tierFilter === lvl}
               onPress={() => {
-                if (locked) router.push('/profile?tab=plans');
+                if (locked)
+                  setLock({
+                    tier: Math.max(2, lvl),
+                    title: 'فیلترِ سطح قفل است',
+                    message: canFilterTier
+                      ? `برای فیلترِ کاربرانِ سطحِ ${tierName(lvl)} باید خودت هم به این سطح برسی.`
+                      : `فیلترِ سطحِ کاربران از سطحِ ${tierName(2)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
+                  });
                 else vm.setTier(vm.tierFilter === lvl ? 0 : lvl);
               }}
               style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
@@ -297,6 +312,14 @@ export function ExploreView() {
           onDismiss={vm.dismissMatch}
         />
       ) : null}
+
+      <TierLockModal
+        visible={lock != null}
+        requiredTier={lock?.tier ?? 2}
+        title={lock?.title}
+        message={lock?.message}
+        onClose={() => setLock(null)}
+      />
     </View>
   );
 }
@@ -304,10 +327,33 @@ export function ExploreView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: PAGE_PADDING },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  filterScroll: { flexGrow: 0, marginBottom: spacing.sm },
-  filterRow: { flexDirection: 'row-reverse', gap: spacing.sm, paddingVertical: 2 },
-  filterChip: { minHeight: 38, paddingHorizontal: 14 },
-  filterChipLocked: { opacity: 0.45 },
+  // ردیف‌های فیلتر تا لبه‌ی صفحه اسکرول می‌شوند (marginِ افقیِ منفی، برابرِ padding صفحه)
+  // و ارتفاعِ ثابت دارند تا روی برخی مرورگرهای PWA — که ScrollViewِ افقی را صفر-ارتفاع
+  // می‌کنند — ناپدید نشوند.
+  filterScroll: {
+    flexGrow: 0,
+    height: 50,
+    marginBottom: spacing.sm,
+    marginHorizontal: -PAGE_PADDING,
+  },
+  // nowrap تا چیپ‌ها به‌جای شکستن به سطرِ دوم («دو ستونی»)، افقی اسکرول شوند؛
+  // padding افقی چیپ‌ها را از لبه تو می‌برد ولی اسکرول تا لبه ادامه دارد.
+  filterRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: PAGE_PADDING,
+  },
+  // pill مدرن با ارتفاعِ یکنواخت؛ flexShrink:0 تا زیرِ react-native-web فشرده نشوند.
+  filterChip: {
+    height: 40,
+    minHeight: 0,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    flexShrink: 0,
+  },
+  filterChipLocked: { opacity: 0.5 },
   list: { paddingBottom: spacing.xl },
   row: { flexDirection: 'row-reverse', gap: GAP, marginBottom: GAP },
   footer: { paddingVertical: spacing.lg },

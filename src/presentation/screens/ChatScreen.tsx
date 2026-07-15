@@ -45,6 +45,11 @@ export function ChatScreen() {
           data={vm.items}
           keyExtractor={(c) => String(c.matchId)}
           showsVerticalScrollIndicator={false}
+          onEndReached={vm.loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            vm.loadingMore && vm.hasMore ? <RowsSkeleton count={3} /> : null
+          }
           refreshControl={
             <RefreshControl refreshing={vm.refreshing} onRefresh={vm.refresh} tintColor={colors.gold} />
           }

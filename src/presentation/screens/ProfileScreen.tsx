@@ -8,6 +8,7 @@ import {
   ScrollView,
   Modal,
   StyleSheet,
+  ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -23,6 +24,7 @@ import { tierPerks, maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faPrice } from '@/core/utils/faNum';
+import { faJalali, daysUntil } from '@/core/utils/time';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradients } from '@/core/theme';
 
 const COLS = 3;
@@ -48,13 +50,6 @@ const TRAVEL_CITIES: { name: string; lat: number; lng: number }[] = [
   { name: 'تبریز', lat: 38.0962, lng: 46.2738 },
   { name: 'کرج', lat: 35.8327, lng: 50.9916 },
 ];
-
-const faShortDate = (iso?: string): string => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
-};
 
 /** یک ستونِ آماری در ردیفِ بالای پروفایل — سبکِ اینستاگرام. */
 function Stat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
@@ -119,14 +114,19 @@ function PrivacyRow({
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowHint}>{hint}</Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        disabled={saving}
-        trackColor={{ false: colors.line, true: colors.goldSoft }}
-        thumbColor={value ? colors.gold : colors.ink3}
-        accessibilityLabel={title}
-      />
+      {saving ? (
+        <View style={styles.rowSwitch}>
+          <ActivityIndicator size="small" color={colors.gold} />
+        </View>
+      ) : (
+        <Switch
+          value={value}
+          onValueChange={onChange}
+          trackColor={{ false: colors.line, true: colors.goldSoft }}
+          thumbColor={value ? colors.gold : colors.ink3}
+          accessibilityLabel={title}
+        />
+      )}
     </View>
   );
 }
@@ -170,7 +170,9 @@ export function ProfileScreen() {
   // عکس‌های ردشده در سقف حساب نمی‌شوند (مطابقِ سرور).
   const countedPhotos = vm.photos.filter((p) => p.status !== 'rejected').length;
   const isTrial = user?.subscriptionStatus === 'trial' || user?.subscriptionProvider === 'trial';
-  const expiry = faShortDate(user?.subscriptionUntil);
+  // تاریخِ پایانِ اشتراک به‌صورتِ شمسی + روزهای باقی‌مانده.
+  const expiry = faJalali(user?.subscriptionUntil);
+  const remainingDays = daysUntil(user?.subscriptionUntil);
   const rejected = vm.photos.filter((p) => p.status === 'rejected' && p.rejectionReason);
 
   return (
@@ -390,7 +392,9 @@ export function ProfileScreen() {
           <View style={styles.padded}>
             {user?.isPlus ? (
               <Text style={styles.statusLine}>
-                {isTrial ? 'اشتراکِ آزمایشی' : 'اشتراکِ فعال'}{expiry ? ` · تا ${expiry}` : ''}
+                {isTrial ? 'اشتراکِ آزمایشی' : 'اشتراکِ فعال'}
+                {expiry ? ` · تا ${expiry}` : ''}
+                {remainingDays > 0 ? ` · ${faNum(remainingDays)} روزِ باقی‌مانده` : ''}
               </Text>
             ) : null}
             <Button
@@ -466,14 +470,19 @@ export function ProfileScreen() {
                   <Text style={styles.rowTitle}>نمایشِ موقعیتِ دقیق</Text>
                   <Text style={styles.rowHint}>پیش‌فرض فقط یک نقطه‌ی تقریبی است</Text>
                 </View>
-                <Switch
-                  value={user?.prefs?.showExactLocationOnMap ?? false}
-                  onValueChange={vm.updateMapPrivacy}
-                  disabled={vm.privacySaving}
-                  trackColor={{ false: colors.line, true: colors.goldSoft }}
-                  thumbColor={user?.prefs?.showExactLocationOnMap ? colors.gold : colors.ink3}
-                  accessibilityLabel="نمایش موقعیت دقیق روی نقشه"
-                />
+                {vm.savingPref === 'showExactLocationOnMap' ? (
+                  <View style={styles.rowSwitch}>
+                    <ActivityIndicator size="small" color={colors.gold} />
+                  </View>
+                ) : (
+                  <Switch
+                    value={user?.prefs?.showExactLocationOnMap ?? false}
+                    onValueChange={vm.updateMapPrivacy}
+                    trackColor={{ false: colors.line, true: colors.goldSoft }}
+                    thumbColor={user?.prefs?.showExactLocationOnMap ? colors.gold : colors.ink3}
+                    accessibilityLabel="نمایش موقعیت دقیق روی نقشه"
+                  />
+                )}
               </View>
             </View>
 
@@ -488,7 +497,7 @@ export function ProfileScreen() {
                 requiredName="طلایی"
                 userTier={userTier}
                 value={user?.prefs?.hideOnline ?? false}
-                saving={vm.privacySaving}
+                saving={vm.savingPref === 'hideOnline'}
                 onChange={(v) => vm.updatePrefs({ hideOnline: v })}
                 onUpgrade={() => setTab('plans')}
               />
@@ -501,7 +510,7 @@ export function ProfileScreen() {
                 requiredName="طلایی"
                 userTier={userTier}
                 value={user?.prefs?.hideDistance ?? false}
-                saving={vm.privacySaving}
+                saving={vm.savingPref === 'hideDistance'}
                 onChange={(v) => vm.updatePrefs({ hideDistance: v })}
                 onUpgrade={() => setTab('plans')}
               />
@@ -514,7 +523,7 @@ export function ProfileScreen() {
                 requiredName="الماس"
                 userTier={userTier}
                 value={user?.prefs?.incognito ?? false}
-                saving={vm.privacySaving}
+                saving={vm.savingPref === 'incognito'}
                 onChange={(v) => vm.updatePrefs({ incognito: v })}
                 onUpgrade={() => setTab('plans')}
               />
@@ -831,6 +840,8 @@ const styles = StyleSheet.create({
   rowInner: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   rowChip: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   rowBody: { flex: 1, alignItems: 'flex-end', gap: 2 },
+  // هم‌اندازه با Switch تا هنگامِ نمایشِ لودر چیدمان نپرد.
+  rowSwitch: { width: 51, height: 31, alignItems: 'center', justifyContent: 'center' },
   rowTitle: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.ink, textAlign: 'right' },
   rowHint: {
     fontFamily: fonts.regular,

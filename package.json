@@ -1,7 +1,7 @@
 {
   "name": "nodoost-rn",
   "main": "expo-router/entry",
-  "version": "1.0.4",
+  "version": "1.2.0",
   "dependencies": {
     "@cafebazaar/react-native-poolakey": "^3.1.2",
     "@expo-google-fonts/vazirmatn": "^0.4.1",

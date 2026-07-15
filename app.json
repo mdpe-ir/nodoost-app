@@ -2,7 +2,7 @@
   "expo": {
     "name": "نودوست",
     "slug": "nodoost",
-    "version": "1.0.4",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/logo/app-icon.png",
     "scheme": "nodoost",
@@ -12,6 +12,8 @@
       "policy": "appVersion"
     },
     "updates": {
+      "enabled": true,
+      "url": "https://nodoost-bakcend.darkube.ir/api/updates/manifest",
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD"
     },
@@ -21,6 +23,7 @@
     },
     "android": {
       "package": "com.nodoost.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
         "backgroundImage": "./assets/logo/adaptive-icon-background.png",
@@ -60,7 +63,8 @@
       ],
       "expo-secure-store",
       "./plugins/withBazaarBilling",
-      "./plugins/withReleaseSigning"
+      "./plugins/withReleaseSigning",
+      "./plugins/withFetchySdk"
     ],
     "experiments": {
       "typedRoutes": true,

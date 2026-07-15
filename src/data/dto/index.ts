@@ -93,10 +93,20 @@ export interface MapUserDTO {
   lng: number;
   distance_m?: number;
   is_match?: boolean;
+  verified?: boolean;
   tier?: number;
   /** فقط برای بیننده‌ی نقره‌ای+ و اگر طرف پنهانش نکرده باشد. */
   is_online?: boolean;
   last_active_min?: number | null;
+}
+
+/** پاسخِ ‎/api/map/nearby‎ — نشانگرها + متادیتای شعاعِ سطحِ کاربر. */
+export interface MapNearbyDTO {
+  results: MapUserDTO[];
+  /** سقفِ شعاعِ سطحِ کاربر (کیلومتر). */
+  max_radius_km?: number;
+  /** شعاعِ اعمال‌شده (متر). */
+  radius_m?: number;
 }
 
 export interface ConversationDTO {

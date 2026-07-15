@@ -17,8 +17,10 @@ import { UpdateGateProvider } from '@/presentation/providers/UpdateGateProvider'
 import { RemoteConfigProvider } from '@/presentation/providers/RemoteConfigProvider';
 import { AndroidAppGateProvider } from '@/presentation/providers/AndroidAppGateProvider';
 import { isProfileComplete } from '@/domain/policies/profile';
+import { requestNotificationPermission } from '@/core/notifications/notificationPermission';
 import { Loading } from '@/presentation/components/Loading';
 import { AnimatedSplash } from '@/presentation/components/AnimatedSplash';
+import { CelebrationModal } from '@/presentation/components/CelebrationModal';
 import { colors } from '@/core/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -91,6 +93,11 @@ export default function RootLayout() {
     if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
+  // مجوزِ اعلانِ Fetchy را یک‌بار در startup از کاربرِ اندروید ۱۳+ بگیر.
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
   if (!fontsLoaded) return null;
 
   return (
@@ -104,6 +111,7 @@ export default function RootLayout() {
                   <AndroidAppGateProvider>
                     <StatusBar style="light" />
                     <AuthGate />
+                    <CelebrationModal />
                     {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
                   </AndroidAppGateProvider>
                 </UpdateGateProvider>

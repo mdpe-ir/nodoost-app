@@ -7,6 +7,8 @@ import {
   RefreshControl,
   StyleSheet,
   useWindowDimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -19,6 +21,7 @@ import { Scrim } from '@/presentation/components/Scrim';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { TierBadge } from '@/presentation/components/TierBadge';
+import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { useLikesViewModel } from '@/presentation/hooks/useLikesViewModel';
 import { faNum } from '@/core/utils/faNum';
@@ -76,6 +79,7 @@ function LikerTile({ liker, w, h }: { liker: Liker; w: number; h: number }) {
 export function LikesScreen() {
   const vm = useLikesViewModel();
   const [tab, setTab] = useState<Tab>('received');
+  const [showPaywall, setShowPaywall] = useState(false);
   const { width } = useWindowDimensions();
   const tileW = (width - PAGE_PADDING * 2 - GAP * (COLS - 1)) / COLS;
   const tileH = tileW * 1.28;
@@ -109,12 +113,24 @@ export function LikesScreen() {
   const count = vm.data?.count ?? 0;
   const revealed = vm.data?.revealed ?? false;
 
+  // نزدیکِ انتهای فهرست که رسیدیم، صفحه‌ی بعدیِ همان تب را می‌گیریم.
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    if (layoutMeasurement.height + contentOffset.y < contentSize.height - 400) return;
+    if (tab === 'received') vm.loadMoreReceived();
+    else vm.loadMoreSent();
+  };
+
+  const canPageMore = tab === 'received' ? vm.receivedHasMore : vm.sentHasMore;
+
   return (
     <ScreenContainer>
       <StackHeader title="پسندها" />
       <SegmentedControl options={TABS} value={tab} onChange={setTab} />
       <ScrollView
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={160}
         refreshControl={
           <RefreshControl refreshing={vm.refreshing} onRefresh={vm.refresh} tintColor={colors.gold} />
         }
@@ -141,7 +157,7 @@ export function LikesScreen() {
                   <Text style={styles.bannerText}>
                     با عضویتِ طلایی، چهره‌ی همه‌ی کسانی که تو را پسندیده‌اند آشکار می‌شود.
                   </Text>
-                  <Button label="ارتقای عضویت" size="md" onPress={() => router.push('/profile?tab=plans')} />
+                  <Button label="ارتقای عضویت" size="md" onPress={() => setShowPaywall(true)} />
                 </View>
               ) : null}
               <View style={styles.grid}>
@@ -172,7 +188,7 @@ export function LikesScreen() {
           </View>
         ) : (
           <>
-            <Text style={styles.countLine}>{faNum(vm.sent.length)} نفر را پسندیده‌ای</Text>
+            <Text style={styles.countLine}>{faNum(vm.sentTotal || vm.sent.length)} نفر را پسندیده‌ای</Text>
             <View style={styles.grid}>
               {vm.sent.map((liker) => (
                 <LikerTile key={liker.id} liker={liker} w={tileW} h={tileH} />
@@ -180,7 +196,18 @@ export function LikesScreen() {
             </View>
           </>
         )}
+
+        {/* هنگامِ بارگذاریِ صفحه‌ی بعد، اسکلتِ کاشی نشان بده. */}
+        {vm.loadingMore && canPageMore ? <GridSkeleton count={3} /> : null}
       </ScrollView>
+
+      <TierLockModal
+        visible={showPaywall}
+        requiredTier={4}
+        title="دیدنِ پسندکننده‌ها قفل است"
+        message="با عضویتِ طلایی، چهره‌ی همه‌ی کسانی که تو را پسندیده‌اند آشکار می‌شود."
+        onClose={() => setShowPaywall(false)}
+      />
     </ScreenContainer>
   );
 }

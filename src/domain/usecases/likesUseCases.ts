@@ -1,7 +1,7 @@
 import type { LikesRepository } from '@/domain/repositories/LikesRepository';
 
-export const makeGetLikes = (r: LikesRepository) => () => r.getOverview();
-export const makeGetSentLikes = (r: LikesRepository) => () => r.getSent();
+export const makeGetLikes = (r: LikesRepository) => (page?: number) => r.getOverview(page);
+export const makeGetSentLikes = (r: LikesRepository) => (page?: number) => r.getSent(page);
 export const makeGetViewers = (r: LikesRepository) => () => r.getViewers();
 
 export type LikesUseCases = {

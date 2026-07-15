@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { ApiError } from '@/core/http/ApiError';
 import type { Message } from '@/domain/entities';
+
+/** اندازه‌ی صفحه‌ی تاریخچه‌ی پیام. */
+const PAGE = 30;
 
 /** پیامِ فارسیِ خطاهای سطح/سقفِ گفتگو؛ برای بقیه‌ی خطاها undefined. */
 function limitErrorMessage(e: unknown): string | undefined {
@@ -19,24 +22,44 @@ function limitErrorMessage(e: unknown): string | undefined {
   }
 }
 
+/** دو فهرستِ پیام را با کلیدِ id یکی می‌کند و صعودی مرتب می‌کند (تکراری‌ها حذف). */
+function mergeAsc(a: Message[], b: Message[]): Message[] {
+  const map = new Map<number, Message>();
+  for (const m of a) if (m.id != null) map.set(m.id, m);
+  for (const m of b) if (m.id != null) map.set(m.id, m);
+  return Array.from(map.values()).sort((x, y) => (x.id ?? 0) - (y.id ?? 0));
+}
+
 /**
- * ویومدلِ یک گفتگو: بارگذاریِ پیام‌ها + ارسال. هر چند ثانیه بی‌صدا تازه‌سازی
- * می‌کند تا پیام‌های طرفِ مقابل هم دیده شوند (جایگزینِ ساده‌ی WebSocket).
+ * ویومدلِ یک گفتگو: بارگذاریِ پیام‌ها + ارسال + بارگذاریِ گذشته (صفحه‌بندی).
+ * هر چند ثانیه بی‌صدا آخرین صفحه را می‌گیرد و با پیام‌های موجود ادغام می‌کند تا
+ * هم پیام‌های تازه‌ی طرفِ مقابل بیایند و هم پیام‌های قدیمیِ بارگذاری‌شده حفظ شوند.
  */
 export function useThreadViewModel(matchId: number) {
   const uc = useCases();
   const { user } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
+  const olderInFlight = useRef(false);
 
+  // بارگذاری/تازه‌سازیِ آخرین صفحه. در حالتِ silent با فهرستِ فعلی ادغام می‌کند
+  // تا پیام‌های قدیمیِ بارگذاری‌شده و موقعیتِ اسکرول از بین نرود.
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
       try {
-        setMessages(await uc.chat.getMessages(matchId));
+        const latest = await uc.chat.getMessages(matchId, { limit: PAGE });
+        if (silent) {
+          setMessages((prev) => mergeAsc(prev, latest));
+        } else {
+          setMessages(latest);
+          setHasMore(latest.length >= PAGE);
+        }
       } catch {
         /* خطا را در نمایش نادیده می‌گیریم تا تجربه قطع نشود */
       } finally {
@@ -52,6 +75,25 @@ export function useThreadViewModel(matchId: number) {
     const timer = setInterval(() => load(true), 4000);
     return () => clearInterval(timer);
   }, [load, matchId]);
+
+  /** صفحه‌ی قدیمی‌ترِ بعدی را می‌گیرد و بالای فهرست می‌افزاید. */
+  const loadOlder = useCallback(async () => {
+    if (olderInFlight.current || !hasMore) return;
+    const oldestId = messages[0]?.id;
+    if (oldestId == null) return;
+    olderInFlight.current = true;
+    setLoadingOlder(true);
+    try {
+      const older = await uc.chat.getMessages(matchId, { before: oldestId, limit: PAGE });
+      setHasMore(older.length >= PAGE);
+      if (older.length > 0) setMessages((prev) => mergeAsc(older, prev));
+    } catch {
+      /* دوباره تلاش می‌شود */
+    } finally {
+      olderInFlight.current = false;
+      setLoadingOlder(false);
+    }
+  }, [uc, matchId, hasMore, messages]);
 
   const send = useCallback(async () => {
     const body = draft.trim();
@@ -73,6 +115,9 @@ export function useThreadViewModel(matchId: number) {
   return {
     messages,
     loading,
+    loadingOlder,
+    hasMore,
+    loadOlder,
     draft,
     setDraft,
     send,

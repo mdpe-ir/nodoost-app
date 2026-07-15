@@ -35,8 +35,18 @@ export EXPO_PUBLIC_BAZAAR_RSA_KEY="$(node -p "require('./app.json').expo.extra.b
 export EXPO_NO_DOTENV=1
 
 # ── شبکه‌ی Gradle: عبور از پروکسیِ SOCKS5 محلیِ کاربر ──────────────────────
-SOCKS_HOST="${SOCKS_HOST:-127.0.0.1}"
-SOCKS_PORT="${SOCKS_PORT:-2080}"
+SOCKS_HOST="${SOCKS_HOST-127.0.0.1}"
+SOCKS_PORT="${SOCKS_PORT-2080}"
+SOCKS_ARGS=()
+if [[ -n "$SOCKS_HOST" ]]; then
+  SOCKS_ARGS=(-DsocksProxyHost="$SOCKS_HOST" -DsocksProxyPort="$SOCKS_PORT")
+fi
+# اگر همه‌ی dependencyها cache شده‌اند، با GRADLE_OFFLINE=1 بدونِ شبکه build کن.
+GRADLE_EXTRA=()
+if [[ -n "${GRADLE_OFFLINE:-}" ]]; then
+  GRADLE_EXTRA+=(--offline)
+  SOCKS_ARGS=()
+fi
 
 # ── ABIهای دستگاه‌های واقعیِ بازار (نه x86 امولاتور) ───────────────────────
 ABIS="${ABIS:-arm64-v8a,armeabi-v7a}"
@@ -90,6 +100,8 @@ npx expo prebuild -p android --clean
 # کم است و OOMِ Metaspace می‌دهد. بعد از prebuild override کن (کلیدِ آخر برنده است).
 # چون prebuild --clean هر بار gradle.properties را از نو می‌سازد، اینجا دوباره اضافه می‌شود.
 printf '\n# override by build-bazaar-apk.sh — release build needs more metaspace\norg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8\n' >> android/gradle.properties
+# تایم‌اوتِ HTTP تا اگر شبکه/پروکسی لنگ زد، build سریع fail شود نه اینکه ساعت‌ها هنگ کند.
+printf '\n# fail fast on flaky network instead of hanging\nsystemProp.org.gradle.internal.http.connectionTimeout=30000\nsystemProp.org.gradle.internal.http.socketTimeout=60000\n' >> android/gradle.properties
 
 # ── build: APKِ release امضاشده ────────────────────────────────────────────
 # lint/lintVitalRelease حذف می‌شوند (سنگین و منبعِ OOM؛ نسخه‌ی debug هم -x lint داشت).
@@ -101,7 +113,7 @@ echo "==> gradle assembleRelease  (ABIs: $ABIS,  API: $EXPO_PUBLIC_API_BASE_URL)
     -PNODOOST_RELEASE_STORE_PASSWORD="$STORE_PASSWORD" \
     -PNODOOST_RELEASE_KEY_ALIAS="$KEY_ALIAS" \
     -PNODOOST_RELEASE_KEY_PASSWORD="$KEY_PASSWORD" \
-    -DsocksProxyHost="$SOCKS_HOST" -DsocksProxyPort="$SOCKS_PORT" \
+    "${SOCKS_ARGS[@]}" "${GRADLE_EXTRA[@]}" \
     --console=plain )
 
 # ── جمع‌آوریِ خروجی ────────────────────────────────────────────────────────

@@ -7,13 +7,18 @@ import React, {
   useState,
 } from 'react';
 import { Platform } from 'react-native';
+import { router } from 'expo-router';
 import { InstallModal } from '@/presentation/components/InstallModal';
 
 /**
  * مدیریتِ نصبِ PWA (فقط وب). یک منبعِ حقیقتِ واحد برای دکمه‌ی هدر و مودالِ پیشنهادِ نصب.
  * روی نیتیو کاملاً بی‌اثر است (فقط children را رندر می‌کند).
  *
- * منطقِ نمایشِ خودکارِ مودال (انتخابِ N):
+ * اندروید استثناست: چون نسخه‌ی نیتیوِ اندروید داریم، به‌جای پیشنهادِ نصبِ PWA کاربر را به
+ * صفحه‌ی نصبِ اپِ نیتیو (`/get-app`) می‌فرستیم — نه مودالِ PWA و نه promptِ مرورگر.
+ * PWA فقط برای iOS/دسکتاپ (که اپِ نیتیو ندارند) پیشنهاد می‌شود.
+ *
+ * منطقِ نمایشِ خودکارِ مودال (فقط iOS/دسکتاپ):
  *  - اولین پیشنهاد در «دومین» بازدید (نه بارِ اول — تازه‌واردها را نمی‌رنجانیم).
  *  - سپس هر ۳ بازدیدِ یک‌بار دوباره پیشنهاد می‌دهیم.
  *  - «بعداً» ⇒ ۳ روز خاموش · «دیگر نشان نده» ⇒ برای همیشه خاموش.
@@ -70,6 +75,11 @@ function detectIOSSafari(): boolean {
   return iOS && !otherBrowser;
 }
 
+function detectAndroid(): boolean {
+  if (!isWeb || typeof navigator === 'undefined') return false;
+  return /android/i.test(navigator.userAgent || '');
+}
+
 function readLS(key: string): string | null {
   try {
     return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
@@ -93,13 +103,18 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
   // خواندنِ محیط یک‌بار در نخستین رندر (روی نیتیو false برمی‌گردد).
   const [isStandalone] = useState(detectStandalone);
   const [isIOS] = useState(detectIOSSafari);
+  const [isAndroid] = useState(detectAndroid);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const canInstall = isWeb && !installed && !isStandalone && (canPrompt || isIOS);
+  // روی اندروید همیشه دکمه را نشان می‌دهیم (به نصبِ اپِ نیتیو می‌رود)؛ روی iOS/دسکتاپ فقط
+  // وقتی PWA واقعاً قابلِ نصب است.
+  const canInstall = isWeb && !isStandalone && (isAndroid || (!installed && (canPrompt || isIOS)));
 
   const maybeAutoShow = useCallback(() => {
     if (autoShownRef.current) return;
     if (typeof window === 'undefined') return;
+    // اندروید پیشنهادِ نصبِ PWA نمی‌گیرد؛ به اپِ نیتیو هدایت می‌شود (AndroidAppGate / دکمه‌ی هدر).
+    if (isAndroid) return;
     if (installed || detectStandalone()) return;
     if (readLS(KEY_NEVER) === '1') return;
 
@@ -115,7 +130,7 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
 
     autoShownRef.current = true;
     setModalVisible(true);
-  }, [installed]);
+  }, [installed, isAndroid]);
 
   // راه‌اندازیِ اولیه (یک‌بار در هر بارگذاری)
   useEffect(() => {
@@ -153,6 +168,11 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const requestInstall = useCallback(async () => {
+    // اندروید: نسخه‌ی نیتیو داریم ⇒ به‌جای نصبِ PWA کاربر را به صفحه‌ی نصبِ اپ می‌بریم.
+    if (isAndroid) {
+      router.push('/get-app');
+      return;
+    }
     const deferred = deferredRef.current;
     if (deferred) {
       try {
@@ -169,7 +189,7 @@ export function PwaInstallProvider({ children }: { children: React.ReactNode }) 
     }
     // iOS یا وقتی prompt در دسترس نیست ⇒ راهنمای دستی را باز کن
     setModalVisible(true);
-  }, []);
+  }, [isAndroid]);
 
   const openModal = useCallback(() => setModalVisible(true), []);
 

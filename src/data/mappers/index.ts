@@ -108,6 +108,7 @@ export const toMapUser = (d: MapUserDTO): MapUser => ({
   lng: d.lng,
   distanceM: d.distance_m,
   isMatch: d.is_match ?? false,
+  verified: d.verified,
   tier: d.tier,
   isOnline: d.is_online,
   lastActiveMin: d.last_active_min ?? undefined,

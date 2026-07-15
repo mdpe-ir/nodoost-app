@@ -27,10 +27,19 @@ export class HttpClient {
       const token = await this.tokens.getAccess();
       if (token) headers.Authorization = `Bearer ${token}`;
     }
+    // این API کاملاً پویاست (کاوش، نزدیک‌ها، چت …). بدونِ این هدرها، لایه‌ی
+    // کشِ OkHttp روی اندروید، وب‌ویو یا CDN می‌تواند پاسخِ کهنه بدهد — نشانه‌اش
+    // «کاوش با بازکردنِ اپ به‌روز نمی‌شود». پس هر GET همیشه از سرور تازه گرفته می‌شود.
+    if (method === 'GET') {
+      headers['Cache-Control'] = 'no-cache';
+      headers['Pragma'] = 'no-cache';
+    }
 
     const res = await fetch(this.baseUrl + path, {
       method,
       headers,
+      // روی وب/وب‌ویو کشِ HTTP را دور می‌زند؛ روی نیتیو بی‌اثر ولی بی‌خطر است.
+      cache: method === 'GET' ? 'no-store' : undefined,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
 

@@ -1,15 +1,26 @@
 import React from 'react';
-import { View, Text, Pressable, Linking, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Linking, Platform, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Icon } from '@/presentation/components/Icon';
 import type { InstallMethod, InstallMethodKey } from '@/core/config/installConfig';
 import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
+
+const PKG = 'com.nodoost.app';
 
 /** توضیحِ کوتاهِ هر روش، برای زیرِ عنوان. */
 const METHOD_HINT: Record<string, string> = {
   bazaar: 'نصب از طریقِ کافه‌بازار',
   myket: 'نصب از طریقِ مایکت',
   direct: 'دانلودِ مستقیمِ فایلِ نصب (APK)',
+};
+
+/**
+ * دیپ‌لینکِ اپِ فروشگاه؛ فقط روی نیتیو امتحان می‌شود تا مستقیم صفحه‌ی برنامه در خودِ
+ * اپِ فروشگاه باز شود (به‌جای صفحه‌ی وب). اگر اپِ فروشگاه نصب نباشد، به `url` برمی‌گردیم.
+ */
+const METHOD_DEEP_LINK: Partial<Record<InstallMethodKey, string>> = {
+  bazaar: `bazaar://details?id=${PKG}`,
+  myket: `myket://details?id=${PKG}`,
 };
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -21,8 +32,20 @@ const METHOD_LOGO: Record<InstallMethodKey, number> = {
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-function openMethod(url: string) {
-  Linking.openURL(url).catch(() => {
+async function openMethod(m: InstallMethod) {
+  // روی نیتیو اول دیپ‌لینکِ اپِ فروشگاه را امتحان کن؛ روی وب یا نبودِ اپ، آدرسِ عادی.
+  const deep = Platform.OS !== 'web' ? METHOD_DEEP_LINK[m.key] : undefined;
+  if (deep) {
+    try {
+      if (await Linking.canOpenURL(deep)) {
+        await Linking.openURL(deep);
+        return;
+      }
+    } catch {
+      /* fallback به url */
+    }
+  }
+  Linking.openURL(m.url).catch(() => {
     /* آدرسِ نامعتبر یا مرورگرِ بدونِ اجازه — بی‌خیال */
   });
 }
@@ -47,7 +70,7 @@ export function InstallMethods({ methods }: { methods: InstallMethod[] }) {
       {methods.map((m) => (
         <Pressable
           key={m.key}
-          onPress={() => openMethod(m.url)}
+          onPress={() => openMethod(m)}
           accessibilityRole="button"
           accessibilityLabel={`${m.label} — ${METHOD_HINT[m.key] ?? ''}`}
           style={({ pressed }) => [styles.card, pressed && styles.pressed]}

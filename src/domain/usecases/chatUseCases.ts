@@ -1,8 +1,10 @@
-import type { ChatRepository } from '@/domain/repositories/ChatRepository';
+import type { ChatRepository, MessagePageOptions } from '@/domain/repositories/ChatRepository';
 
-export const makeGetConversations = (r: ChatRepository) => () => r.getConversations();
-export const makeGetMessages = (r: ChatRepository) => (matchId: number) =>
-  r.getMessages(matchId);
+export const makeGetConversations = (r: ChatRepository) => (page?: number) =>
+  r.getConversations(page);
+export const makeGetMessages =
+  (r: ChatRepository) => (matchId: number, opts?: MessagePageOptions) =>
+    r.getMessages(matchId, opts);
 export const makeStartDirect =
   (r: ChatRepository) => (userId: number) => r.startDirect(userId);
 export const makeSendMessage =

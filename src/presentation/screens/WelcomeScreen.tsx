@@ -182,24 +182,24 @@ export function WelcomeScreen() {
       </View>
 
       <View style={styles.footer}>
-        {/* row-reverse: «قبلی» در راست، «بعدی» در چپ — جهتِ درستِ RTL */}
-        <View style={styles.footRow}>
-          {index > 0 ? (
-            <Button
-              label="قبلی"
-              variant="outline"
-              onPress={prev}
-              icon="chevron-next"
-              style={styles.prevBtn}
-            />
-          ) : null}
-          <Button
-            label={isLast ? 'بزن بریم' : 'بعدی'}
-            onPress={next}
-            icon={isLast ? undefined : 'chevron-prev'}
-            style={styles.nextBtn}
-          />
-        </View>
+        {/* «بعدی» تمام‌عرض در بالا، «قبلی» به‌صورتِ دکمه‌ی متنی در پایین */}
+        <Button
+          label={isLast ? 'بزن بریم' : 'بعدی'}
+          onPress={next}
+          icon={isLast ? undefined : 'chevron-prev'}
+          style={styles.nextBtn}
+        />
+        {index > 0 ? (
+          <Pressable
+            onPress={prev}
+            hitSlop={8}
+            style={({ pressed }) => [styles.prevBtn, pressed && styles.pressedDim]}
+            accessibilityRole="button"
+            accessibilityLabel="اسلایدِ قبلی"
+          >
+            <Text style={styles.prevText}>قبلی</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.surface2 },
   dotOn: { width: 22, backgroundColor: colors.gold },
   footer: { paddingHorizontal: 22, paddingBottom: spacing.lg },
-  footRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  prevBtn: { flex: 1 },
-  nextBtn: { flex: 1.4 },
+  nextBtn: { width: '100%' },
+  prevBtn: { alignSelf: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
+  prevText: { fontFamily: fonts.medium, fontSize: fontSizes.md, color: colors.ink3 },
 });

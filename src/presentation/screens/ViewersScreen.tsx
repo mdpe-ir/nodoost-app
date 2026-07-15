@@ -18,6 +18,7 @@ import { Scrim } from '@/presentation/components/Scrim';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { TierBadge } from '@/presentation/components/TierBadge';
+import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { useCases } from '@/core/di/DIProvider';
 import { faNum } from '@/core/utils/faNum';
@@ -34,6 +35,7 @@ export function ViewersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const { width } = useWindowDimensions();
   const tileW = (width - PAGE_PADDING * 2 - GAP * (COLS - 1)) / COLS;
   const tileH = tileW * 1.28;
@@ -130,7 +132,7 @@ export function ViewersScreen() {
                 <Text style={styles.bannerText}>
                   با عضویتِ طلایی، چهره‌ی همه‌ی بازدیدکنندگانِ پروفایلت آشکار می‌شود.
                 </Text>
-                <Button label="ارتقای عضویت" size="md" onPress={() => router.push('/profile?tab=plans')} />
+                <Button label="ارتقای عضویت" size="md" onPress={() => setShowPaywall(true)} />
               </View>
             ) : null}
             <View style={styles.grid}>
@@ -152,6 +154,14 @@ export function ViewersScreen() {
           </>
         )}
       </ScrollView>
+
+      <TierLockModal
+        visible={showPaywall}
+        requiredTier={4}
+        title="دیدنِ بازدیدکننده‌ها قفل است"
+        message="با عضویتِ طلایی، چهره‌ی همه‌ی بازدیدکنندگانِ پروفایلت آشکار می‌شود."
+        onClose={() => setShowPaywall(false)}
+      />
     </ScreenContainer>
   );
 }

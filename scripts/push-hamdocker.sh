@@ -6,23 +6,25 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REGISTRY="${HAMDOCKER_REGISTRY:-registry.hamdocker.ir}"
 NAMESPACE="${HAMDOCKER_NAMESPACE:-spelladss}"
+DOCKER_CONFIG_DIR="${HAMDOCKER_CONFIG_DIR:-$HOME/.docker/hamdocker-spellads}"
 VERSION="${1:-$(date +%Y%m%d-%H%M%S)}"
 # آدرسِ API در زمانِ build درون‌ریزی می‌شود (روی وب متغیرِ محیطیِ زمانِ اجرا وجود ندارد).
 API_BASE_URL="${EXPO_PUBLIC_API_BASE_URL:-https://nodoost-bakcend.darkube.ir}"
 IMAGE="$REGISTRY/$NAMESPACE/nodoost-app"
+DOCKER=(docker --config "$DOCKER_CONFIG_DIR")
 
 if [[ -n "${HAMDOCKER_USERNAME:-}" && -n "${HAMDOCKER_PASSWORD:-}" ]]; then
-  echo "$HAMDOCKER_PASSWORD" | docker login "$REGISTRY" --username "$HAMDOCKER_USERNAME" --password-stdin
+  echo "$HAMDOCKER_PASSWORD" | "${DOCKER[@]}" login "$REGISTRY" --username "$HAMDOCKER_USERNAME" --password-stdin
 fi
 
 echo "==> Building $IMAGE:$VERSION (API=$API_BASE_URL)"
-docker build \
+"${DOCKER[@]}" build \
   --build-arg "EXPO_PUBLIC_API_BASE_URL=$API_BASE_URL" \
   -t "$IMAGE:$VERSION" -t "$IMAGE:latest" "$ROOT_DIR"
 
 echo "==> Pushing $IMAGE:$VERSION"
-docker push "$IMAGE:$VERSION"
-docker push "$IMAGE:latest"
+"${DOCKER[@]}" push "$IMAGE:$VERSION"
+"${DOCKER[@]}" push "$IMAGE:latest"
 
 echo
 echo "Push complete: $IMAGE:$VERSION (+ latest)"

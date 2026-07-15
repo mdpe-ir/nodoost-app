@@ -23,6 +23,8 @@ export interface MapUser {
   lng: number;
   distanceM?: number;
   isMatch?: boolean;
+  /** پروفایلِ تأییدشده («چهره‌نما»). */
+  verified?: boolean;
   tier?: number;
   /** وضعیتِ فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد. */
   isOnline?: boolean;
@@ -31,6 +33,21 @@ export interface MapUser {
 
 /** فیلترِ فعالیت در اطراف/نقشه: «1h/today» از برنزی، «online» از نقره‌ای. */
 export type ActiveFilter = '' | 'online' | '1h' | 'today';
+
+/** پارامترهای پرس‌وجوی نقشه — شعاع (متر) و فیلترهای عضویتی. */
+export interface MapQuery {
+  radiusM?: number;
+  active?: ActiveFilter;
+  /** «چهره‌نما»: فقط پروفایل‌های تأییدشده. */
+  verified?: boolean;
+}
+
+/** نتیجه‌ی نقشه — نشانگرها به‌همراهِ سقفِ شعاعِ سطحِ کاربر (کیلومتر). */
+export interface MapUsersResult {
+  users: MapUser[];
+  /** سقفِ شعاعِ جست‌وجو برای سطحِ کاربر (کیلومتر) — سرور مرجعِ آن است. */
+  maxRadiusKm: number;
+}
 
 export type SwipeAction = 'like' | 'super' | 'pass';
 
@@ -49,11 +66,15 @@ export interface Liker {
   tier?: number;
 }
 
-/** پاسخِ بخشِ پسندها (تعداد + آشکار/قفل + فهرست). */
+/** پاسخِ بخشِ پسندها (تعداد + آشکار/قفل + فهرستِ صفحه‌بندی‌شده). */
 export interface LikesOverview {
   count: number;
   revealed: boolean;
   likers: Liker[];
+  /** شماره‌ی صفحه‌ی بارگذاری‌شده‌ی جاری. */
+  page: number;
+  /** آیا صفحه‌ی بعدی هم هست. */
+  hasMore: boolean;
 }
 
 /** بازدیدکننده‌ی پروفایل. */

@@ -1,0 +1,15 @@
+{
+  "environment": "production",
+  "base_url": "https://fetchy.notifhub.com",
+  "pull": {
+    "enabled": true,
+    "api_key": "YOUR_FETCHY_API_KEY",
+    "worker_enabled": true,
+    "poll_interval_minutes": 15
+  },
+  "notification": {
+    "channel_id": "pn_notification_channel",
+    "channel_name": "نودوست",
+    "channel_description": "اعلان‌های نودوست"
+  }
+}

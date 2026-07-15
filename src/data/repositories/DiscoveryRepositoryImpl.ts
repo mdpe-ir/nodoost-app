@@ -1,7 +1,7 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { Candidate, MapUser, ActiveFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
+import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { CandidateDTO, MapUserDTO, PeerProfileDTO } from '@/data/dto';
+import type { CandidateDTO, MapNearbyDTO, PeerProfileDTO } from '@/data/dto';
 import { toCandidate, toMapUser, toPeerProfile } from '@/data/mappers';
 
 // نگاشتِ کنشِ سواایپِ دامنه به مقادیرِ موردِ انتظارِ بک‌اند (like | nope | super)
@@ -24,12 +24,18 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     return (d?.results ?? []).map(toCandidate);
   }
 
-  async getNearbyMapUsers(radiusM = 25000, active?: ActiveFilter): Promise<MapUser[]> {
-    const activeParam = active ? `&active=${encodeURIComponent(active)}` : '';
-    const d = await this.http.request<{ results: MapUserDTO[] }>(
-      `/api/map/nearby?radius_m=${encodeURIComponent(radiusM)}${activeParam}`
-    );
-    return (d?.results ?? []).map(toMapUser);
+  async getNearbyMapUsers(query: MapQuery = {}): Promise<MapUsersResult> {
+    const params = new URLSearchParams();
+    // شعاع اختیاری است؛ اگر ندهیم سرور سقفِ سطح را می‌گذارد و در پاسخ برمی‌گرداند.
+    if (query.radiusM != null) params.set('radius_m', String(Math.round(query.radiusM)));
+    if (query.active) params.set('active', query.active);
+    if (query.verified) params.set('verified', '1');
+    const qs = params.toString();
+    const d = await this.http.request<MapNearbyDTO>(`/api/map/nearby${qs ? `?${qs}` : ''}`);
+    return {
+      users: (d?.results ?? []).map(toMapUser),
+      maxRadiusKm: d?.max_radius_km ?? 0,
+    };
   }
 
   async getProfile(userId: number): Promise<PeerProfile> {

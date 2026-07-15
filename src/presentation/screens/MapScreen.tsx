@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
@@ -7,15 +7,31 @@ import { EmptyState } from '@/presentation/components/EmptyState';
 import { MapSkeleton } from '@/presentation/components/Skeleton';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Button } from '@/presentation/components/Button';
+import { Chip } from '@/presentation/components/Chip';
 import { IconButton } from '@/presentation/components/IconButton';
 import { LeafletWebView, type LeafletEvent } from '@/presentation/components/LeafletWebView';
 import { TierBadge } from '@/presentation/components/TierBadge';
 import { useCases } from '@/core/di/DIProvider';
 import { useMapViewModel } from '@/presentation/hooks/useMapViewModel';
+import { useSession } from '@/presentation/providers/SessionProvider';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
-import type { MapUser } from '@/domain/entities';
+import type { MapUser, ActiveFilter } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
+
+/** فیلترِ فعالیت + کمینه‌سطحِ لازم (سرور هم دوباره می‌سنجد) — آینه‌ی صفحه‌ی کاوش. */
+const ACTIVE_OPTIONS: { key: ActiveFilter; label: string; minTier: number }[] = [
+  { key: '', label: 'همه', minTier: 1 },
+  { key: 'online', label: 'آنلاین', minTier: 3 },
+  { key: '1h', label: 'یک ساعتِ اخیر', minTier: 2 },
+  { key: 'today', label: 'امروز', minTier: 2 },
+];
+
+/** نردبانِ گزینه‌های شعاع (کیلومتر)؛ گزینه‌های بالاتر از سقفِ سطح قفل‌اند. */
+const RADIUS_LADDER = [5, 10, 25, 50, 100, 200];
+
+/** کمینه‌سطحِ لازم برای فیلترِ «چهره‌نما» — برنزی به بالا (سرور مرجعِ نهایی است). */
+const VERIFIED_MIN_TIER = 2;
 
 // HTML ثابتِ نقشه‌ی Leaflet. نشانگرها بعداً با postMessage تزریق می‌شوند تا
 // نیازی به بازسازیِ WebView نباشد. تایل‌ها از OpenStreetMap با فیلترِ تیره.
@@ -27,6 +43,8 @@ const MAP_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- خوشه‌بندیِ نشانگرها: صدها پین را به چند خوشه جمع می‌کند تا UI کند نشود. -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; background: ${colors.bg}; }
     /* فیلترِ تیره روی کلِ لایه‌ی تایل‌ها اعمال می‌شود، نه تک‌تکِ تایل‌ها؛ وگرنه
@@ -41,6 +59,8 @@ const MAP_HTML = `<!DOCTYPE html>
     .pin .tail { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid ${colors.gold}; }
     .pin.match .tail { border-top-color: ${colors.rose}; }
     .pin .ph { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: ${colors.onGold}; font: 700 18px sans-serif; }
+    /* خوشه‌ی نشانگرها — حلقه‌ی طلایی با شمارِ فارسی، هم‌خوان با تم. */
+    .cluster { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: ${colors.gold}; color: ${colors.onGold}; font: 700 14px sans-serif; border: 3px solid rgba(255,255,255,0.25); box-shadow: 0 2px 8px rgba(0,0,0,0.5); box-sizing: border-box; }
   </style>
 </head>
 <body>
@@ -48,10 +68,36 @@ const MAP_HTML = `<!DOCTYPE html>
   <script>
     var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([35.7, 51.4], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-    var markers = [];
     var centered = false;
+    var circle = null;
     // رنگِ حلقه‌ی هر نشانگر از سطحِ عضویتِ کاربر می‌آید (مچ‌ها رز می‌مانند).
     var TIER_COLORS = { 1: '${colors.tierNormal}', 2: '${colors.tierBronze}', 3: '${colors.tierSilver}', 4: '${colors.tierGold}', 5: '${colors.tierDiamond}' };
+
+    // ارقامِ فارسی برای شمارِ خوشه‌ها.
+    function faDigits(n) {
+      return String(n).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.charAt(+d); });
+    }
+
+    // آیکونِ خوشه: اندازه با تعدادِ اعضا بزرگ‌تر می‌شود.
+    function clusterIcon(cluster) {
+      var n = cluster.getChildCount();
+      var size = n < 10 ? 36 : n < 100 ? 44 : 52;
+      return L.divIcon({
+        html: '<div class="cluster" style="width:' + size + 'px;height:' + size + 'px">' + faDigits(n) + '</div>',
+        className: '',
+        iconSize: [size, size],
+      });
+    }
+
+    // گروهِ خوشه‌بندی؛ به‌جای افزودنِ تک‌تکِ نشانگرها به نقشه، همه به این گروه می‌روند.
+    var cluster = L.markerClusterGroup({
+      chunkedLoading: true,
+      showCoverageOnHover: false,
+      spiderfyOnMaxZoom: true,
+      maxClusterRadius: 50,
+      iconCreateFunction: clusterIcon,
+    });
+    map.addLayer(cluster);
 
     function post(msg) {
       var s = JSON.stringify(msg);
@@ -60,8 +106,19 @@ const MAP_HTML = `<!DOCTYPE html>
     }
 
     function clearMarkers() {
-      markers.forEach(function (m) { map.removeLayer(m); });
-      markers = [];
+      cluster.clearLayers();
+    }
+
+    // دایره‌ی شعاعِ جست‌وجو دورِ کاربر — نمای بصریِ محدوده‌ی مجاز.
+    function drawRadius(data) {
+      if (circle) { map.removeLayer(circle); circle = null; }
+      if (data.me && data.radiusM > 0) {
+        circle = L.circle([data.me.lat, data.me.lng], {
+          radius: data.radiusM,
+          color: '${colors.gold}', weight: 1, opacity: 0.5,
+          fillColor: '${colors.gold}', fillOpacity: 0.06,
+        }).addTo(map);
+      }
     }
 
     function render(data) {
@@ -71,7 +128,9 @@ const MAP_HTML = `<!DOCTYPE html>
         map.setView([data.me.lat, data.me.lng], 13);
         centered = true;
       }
+      drawRadius(data);
       clearMarkers();
+      var batch = [];
       (data.users || []).forEach(function (u) {
         // حرفِ اول همیشه پس‌زمینه است؛ عکس رویش می‌نشیند و اگر لود نشد (onerror)
         // حذف می‌شود تا به‌جای عکسِ شکسته، حرفِ اول دیده شود.
@@ -87,10 +146,12 @@ const MAP_HTML = `<!DOCTYPE html>
           iconSize: [44, 52],
           iconAnchor: [22, 52],
         });
-        var mk = L.marker([u.lat, u.lng], { icon: icon }).addTo(map);
+        var mk = L.marker([u.lat, u.lng], { icon: icon });
         mk.on('click', function () { post({ type: 'marker', id: u.id }); });
-        markers.push(mk);
+        batch.push(mk);
       });
+      // افزودنِ دسته‌ای سریع‌تر از تک‌به‌تک است.
+      cluster.addLayers(batch);
     }
 
     document.addEventListener('message', function (e) { try { render(JSON.parse(e.data)); } catch (x) {} });
@@ -107,19 +168,36 @@ const MAP_HTML = `<!DOCTYPE html>
 export function MapView() {
   const uc = useCases();
   const vm = useMapViewModel();
+  const { user } = useSession();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<MapUser | null>(null);
   const [swiping, setSwiping] = useState(false);
+
+  // سطحِ مؤثرِ کاربر برای قفل/بازِ فیلترها (سرور دوباره می‌سنجد).
+  const myTier = user?.tier ?? 1;
+  // شعاعِ اعمال‌شده (متر) برای رسمِ دایره — انتخابی، وگرنه سقفِ سطح.
+  const radiusM = ((vm.radiusKm ?? vm.maxRadiusKm) || 0) * 1000;
+
+  // گزینه‌های شعاع: تا سقفِ سطح باز، بالاتر قفل (→ عضویت). سقف همیشه یک گزینه است.
+  const radiusOptions = useMemo(() => {
+    const cap = vm.maxRadiusKm;
+    if (!cap) return [] as { km: number; locked: boolean }[];
+    const below = RADIUS_LADDER.filter((k) => k < cap).map((km) => ({ km, locked: false }));
+    const above = RADIUS_LADDER.filter((k) => k > cap).map((km) => ({ km, locked: true }));
+    return [...below, { km: cap, locked: false }, ...above];
+  }, [vm.maxRadiusKm]);
+  const selectedRadiusKm = vm.radiusKm ?? vm.maxRadiusKm;
 
   const payload = useMemo(
     () =>
       JSON.stringify({
         me: vm.me,
+        radiusM,
         // آدرسِ عکس باید مطلق باشد؛ داخلِ WebView (که با html خام لود می‌شود) baseِ
         // آدرس ندارد، پس مسیرِ نسبیِ «/uploads/…» حل نمی‌شود و عکس نمایش داده نمی‌شود.
         users: vm.users.map((u) => ({ ...u, photoUrl: mediaUrl(u.photoUrl) })),
       }),
-    [vm.me, vm.users]
+    [vm.me, vm.users, radiusM]
   );
 
   // تپِ نشانگر: کارتِ کاربر را باز کن. تزریقِ داده و رویدادِ ready داخلِ
@@ -171,6 +249,67 @@ export function MapView() {
 
   return (
     <View style={styles.wrap}>
+      {/* فیلترِ فعالیت + «چهره‌نما»؛ گزینه‌های خارج از دسترس قفل‌اند و به عضویت می‌برند. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        {ACTIVE_OPTIONS.map((o) => {
+          const locked = myTier < o.minTier;
+          return (
+            <Chip
+              key={o.key || 'all'}
+              label={locked ? `${o.label} · قفل` : o.label}
+              active={vm.active === o.key}
+              onPress={() => {
+                if (locked) router.push('/profile?tab=plans');
+                else vm.setActive(vm.active === o.key && o.key !== '' ? '' : o.key);
+              }}
+              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
+            />
+          );
+        })}
+        {(() => {
+          const locked = myTier < VERIFIED_MIN_TIER;
+          return (
+            <Chip
+              label={locked ? 'چهره‌نما · قفل' : 'چهره‌نما'}
+              active={vm.verified}
+              onPress={() => {
+                if (locked) router.push('/profile?tab=plans');
+                else vm.setVerified(!vm.verified);
+              }}
+              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
+            />
+          );
+        })()}
+      </ScrollView>
+
+      {/* شعاعِ جست‌وجو؛ تا سقفِ سطح باز، بالاتر قفل. */}
+      {radiusOptions.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+          style={styles.filterScroll}
+        >
+          {radiusOptions.map((o) => (
+            <Chip
+              key={o.km}
+              label={o.locked ? `${faNum(o.km)} کیلومتر · قفل` : `${faNum(o.km)} کیلومتر`}
+              active={!o.locked && selectedRadiusKm === o.km}
+              onPress={() => {
+                if (o.locked) router.push('/profile?tab=plans');
+                else vm.setRadiusKm(o.km);
+              }}
+              style={o.locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
+
       <View style={styles.mapArea}>
         <LeafletWebView html={MAP_HTML} payload={payload} onEvent={onEvent} />
 
@@ -280,6 +419,10 @@ export function MapView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  filterScroll: { flexGrow: 0, marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
+  filterRow: { flexDirection: 'row-reverse', gap: spacing.sm, paddingVertical: 2 },
+  filterChip: { minHeight: 38, paddingHorizontal: 14 },
+  filterChipLocked: { opacity: 0.45 },
   mapArea: { flex: 1, overflow: 'hidden', borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
   badge: {
     position: 'absolute',

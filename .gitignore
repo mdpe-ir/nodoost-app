@@ -18,6 +18,9 @@ android/
 keystore/
 build-output/
 
+# کانفیگِ واقعیِ Fetchy حاویِ api_key است — کامیت نکن (نمونه: fetchy-config.sample.json)
+plugins/fetchy-config.json
+
 # Logs and caches
 *.log
 npm-debug.log*

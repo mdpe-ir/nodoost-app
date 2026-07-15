@@ -30,6 +30,8 @@ export function useProfileViewModel() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
+  // کلیدِ تنظیمی که همین حالا در حالِ ذخیره است — تا فقط رویِ همان ردیف لودر نشان دهیم.
+  const [savingPref, setSavingPref] = useState<string | null>(null);
 
   useEffect(() => {
     setDraftName(user?.name ?? '');
@@ -56,8 +58,9 @@ export function useProfileViewModel() {
   }, [draftName, draftBio, uc, refreshUser]);
 
   /** به‌روزرسانیِ هر زیرمجموعه‌ای از تنظیماتِ حریمِ خصوصی (سرور prefs را merge می‌کند). */
-  const updatePrefs = useCallback(async (partial: Partial<UserPreferences>) => {
+  const updatePrefs = useCallback(async (partial: Partial<UserPreferences>, key?: string) => {
     setPrivacySaving(true);
+    setSavingPref(key ?? Object.keys(partial)[0] ?? null);
     setSaveError(false);
     try {
       await uc.profile.updateProfile({ prefs: partial });
@@ -66,15 +69,19 @@ export function useProfileViewModel() {
       setSaveError(true);
     } finally {
       setPrivacySaving(false);
+      setSavingPref(null);
     }
   }, [uc, refreshUser]);
 
   const updateMapPrivacy = useCallback(
     (showExactLocationOnMap: boolean) =>
-      updatePrefs({
-        showOnMap: user?.prefs?.showOnMap ?? true,
-        showExactLocationOnMap,
-      }),
+      updatePrefs(
+        {
+          showOnMap: user?.prefs?.showOnMap ?? true,
+          showExactLocationOnMap,
+        },
+        'showExactLocationOnMap'
+      ),
     [updatePrefs, user]
   );
 
@@ -231,6 +238,7 @@ export function useProfileViewModel() {
     saveError,
     saveProfile,
     privacySaving,
+    savingPref,
     updateMapPrivacy,
     updatePrefs,
     travelBusy,

@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
-import { BubblesSkeleton } from '@/presentation/components/Skeleton';
+import { BubblesSkeleton, Skeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
@@ -76,7 +76,16 @@ export function ThreadScreen({
   const vm = useThreadViewModel(matchId);
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList>(null);
+  // هنگامِ افزودنِ پیام‌های قدیمی به بالای فهرست، نباید به انتها بپریم.
+  const prependingRef = useRef(false);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
+
+  // رسیدن به بالای فهرست → بارگذاریِ صفحه‌ی قدیمی‌ترِ بعدی (با حفظِ موقعیتِ اسکرول).
+  const onStartReached = () => {
+    if (!vm.hasMore || vm.loadingOlder) return;
+    prependingRef.current = true;
+    vm.loadOlder();
+  };
   const canSend = !!vm.draft.trim() && !vm.sending;
   // قانونِ سطح: تا وقتی گفتگو پیامی ندارد، فقط هم‌سطح یا بالاتر می‌تواند شروع کند.
   // اگر طرفِ مقابل سطحِ بالاتری دارد، ورودی قفل می‌شود تا او پیامِ اول را بدهد.
@@ -145,7 +154,26 @@ export function ThreadScreen({
             data={rows}
             keyExtractor={(r) => r.key}
             contentContainerStyle={styles.list}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={() => {
+              // در حالتِ افزودنِ پیام‌های قدیمی به بالا، جای اسکرول را نگه می‌داریم؛
+              // فقط برای پیام‌های تازه/بارِ اول به انتها می‌رویم.
+              if (prependingRef.current) {
+                prependingRef.current = false;
+                return;
+              }
+              listRef.current?.scrollToEnd({ animated: false });
+            }}
+            maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+            onStartReached={onStartReached}
+            onStartReachedThreshold={0.2}
+            ListHeaderComponent={
+              vm.loadingOlder ? (
+                <View style={styles.olderLoading}>
+                  <Skeleton width={160} height={38} br={radius.lg} style={{ alignSelf: 'flex-start' }} />
+                  <Skeleton width={200} height={38} br={radius.lg} style={{ alignSelf: 'flex-end', marginTop: 8 }} />
+                </View>
+              ) : null
+            }
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
               if (item.type === 'sep') {
@@ -261,6 +289,7 @@ const styles = StyleSheet.create({
   },
   emptyWrap: { flex: 1, justifyContent: 'center' },
   list: { padding: spacing.lg, paddingBottom: spacing.sm },
+  olderLoading: { paddingBottom: spacing.md },
   sepWrap: {
     alignSelf: 'center',
     marginVertical: spacing.md,

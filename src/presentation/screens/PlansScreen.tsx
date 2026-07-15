@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { Button } from '@/presentation/components/Button';
@@ -36,17 +36,7 @@ export function PlansScreen() {
           <ScreenHeader
             title="سطح‌های اشتراک"
             subtitle="با هر پلن چه چیزی برایت باز می‌شود"
-            action={
-              <Pressable
-                onPress={() => (router.canGoBack() ? router.back() : router.replace('/discover'))}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel="بازگشت"
-                style={({ pressed }) => [styles.back, pressed && styles.pressed]}
-              >
-                <Icon name="chevron-next" size={22} tint="gold" />
-              </Pressable>
-            }
+            onBack={() => (router.canGoBack() ? router.back() : router.replace('/discover'))}
           />
         </View>
 
@@ -158,10 +148,19 @@ function PlanCard({
 /** جدولِ مقایسه: ردیف = امکان، ستون = سطح. افقی اسکرول می‌شود اگر جا نشود. */
 function ComparisonTable({ tiers, userTier }: { tiers: Tier[]; userTier: number }) {
   const cols = tiers.map((t) => ({ tier: t, feats: tierFeatures(t) }));
+  // چیدمان راست‌به‌چپ است؛ ابتدای جدول (ستونِ عنوان + پایین‌ترین سطح) سمتِ راست
+  // قرار می‌گیرد، پس در بازشدن باید به انتهای اسکرول (راست) برویم تا از راست شروع شود.
+  const scrollRef = useRef<ScrollView>(null);
   return (
     <View style={styles.tableSection}>
       <Text style={styles.tableTitle}>مقایسه‌ی سطح‌ها</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScroll}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tableScroll}
+        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+      >
         <View>
           {/* سرستون: نامِ سطح‌ها */}
           <View style={styles.tRow}>
@@ -217,8 +216,6 @@ const CELL_W = 90;
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.xxl },
   padded: { paddingHorizontal: 18 },
-  back: { padding: spacing.xs },
-  pressed: { opacity: 0.6 },
   lead: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.sm,

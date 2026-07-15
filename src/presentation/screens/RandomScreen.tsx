@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
@@ -13,6 +12,7 @@ import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenC
 import { Button } from '@/presentation/components/Button';
 import { Chip } from '@/presentation/components/Chip';
 import { Icon } from '@/presentation/components/Icon';
+import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { useRandomViewModel } from '@/presentation/hooks/useRandomViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
@@ -29,6 +29,7 @@ export function RandomScreen() {
   const waiting = vm.state === 'waiting';
   // فیلترِ جنسیت فقط برای برنزی به بالا — سرور هم برای سطحِ ۱ آن را نادیده می‌گیرد.
   const canFilter = (user?.tier ?? 1) >= 2;
+  const [genderLock, setGenderLock] = useState(false);
 
   const scale = useSharedValue(1);
   const ring = useSharedValue(0);
@@ -81,7 +82,7 @@ export function RandomScreen() {
                 label={canFilter || !o.key ? o.label : `${o.label} · قفل`}
                 active={canFilter ? vm.gender === o.key : !o.key}
                 onPress={() =>
-                  canFilter || !o.key ? vm.setGender(o.key) : router.push('/profile?tab=plans')
+                  canFilter || !o.key ? vm.setGender(o.key) : setGenderLock(true)
                 }
                 style={styles.chip}
               />
@@ -96,6 +97,14 @@ export function RandomScreen() {
         <Button label="لغو" onPress={vm.leave} variant="outline" style={styles.action} />
       )}
       {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
+
+      <TierLockModal
+        visible={genderLock}
+        requiredTier={2}
+        title="فیلترِ جنسیت قفل است"
+        message="انتخابِ جنسیتِ هم‌صحبت از سطحِ برنزی باز می‌شود. برای استفاده، حسابت را ارتقا بده."
+        onClose={() => setGenderLock(false)}
+      />
     </ScreenContainer>
   );
 }

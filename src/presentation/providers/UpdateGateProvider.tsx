@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, View, StyleSheet, Linking } from 'react-native';
+import { Platform, View, ScrollView, StyleSheet, Linking } from 'react-native';
 import * as Application from 'expo-application';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { env } from '@/core/config/env';
 import { colors, spacing } from '@/core/theme';
 import { AppText } from '@/presentation/components/AppText';
 import { Button } from '@/presentation/components/Button';
+import { InstallMethods } from '@/presentation/components/InstallMethods';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import { usableMethods } from '@/core/config/installConfig';
 
 /**
  * دروازه‌ی به‌روزرسانیِ اجباری (فقط نیتیو).
  *
  * وب/PWA خودکار آخرین نسخه را می‌گیرد، پس آن‌جا کاری نمی‌کند. روی اندروید، نسخه‌ی
  * نصب‌شده را با `min_android_version` از `GET /api/config` مقایسه می‌کند؛ اگر پایین‌تر
- * بود صفحه‌ی مسدودکننده با دکمه‌ی «به‌روزرسانی از بازار» نشان می‌دهد.
+ * بود صفحه‌ی مسدودکننده نشان می‌دهد که همه‌ی روش‌های نصبِ فعالِ پنلِ ادمین (کافه‌بازار /
+ * مایکت / دانلودِ مستقیم) را برای به‌روزرسانی پیش می‌گذارد. اگر هیچ روشی تنظیم نشده باشد،
+ * به دکمه‌ی پیش‌فرضِ «به‌روزرسانی از بازار» برمی‌گردد.
  *
  * سیاست: fail-open — اگر درخواست شکست خورد یا فیلدها نبود، کاربر مسدود نمی‌شود.
  */
@@ -51,6 +56,7 @@ async function openStore(storeUrl: string) {
 }
 
 export function UpdateGateProvider({ children }: { children: React.ReactNode }) {
+  const { install } = useRemoteConfig();
   const [blocked, setBlocked] = useState(false);
   const [storeUrl, setStoreUrl] = useState(DEFAULT_STORE_URL);
 
@@ -80,28 +86,41 @@ export function UpdateGateProvider({ children }: { children: React.ReactNode }) 
 
   if (!blocked) return <>{children}</>;
 
+  const methods = usableMethods(install);
+
   return (
     <SafeAreaView style={styles.root}>
-      <View style={styles.card}>
-        <AppText variant="title" align="center">
-          نسخه‌ی جدید در دسترس است
-        </AppText>
-        <AppText variant="body" align="center" style={styles.body}>
-          برای ادامه‌ی استفاده از نودوست، لطفاً برنامه را از کافه‌بازار به‌روزرسانی کنید.
-        </AppText>
-        <Button
-          label="به‌روزرسانی از بازار"
-          onPress={() => openStore(storeUrl)}
-          style={styles.btn}
-        />
-      </View>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          <AppText variant="title" align="center">
+            نسخه‌ی جدید در دسترس است
+          </AppText>
+          <AppText variant="body" align="center" style={styles.body}>
+            برای ادامه‌ی استفاده از نودوست، لطفاً برنامه را به‌روزرسانی کنید. از یکی از راه‌های
+            زیر جدیدترین نسخه را نصب کن.
+          </AppText>
+          {methods.length > 0 ? (
+            <View style={styles.methods}>
+              <InstallMethods methods={methods} />
+            </View>
+          ) : (
+            <Button
+              label="به‌روزرسانی از بازار"
+              onPress={() => openStore(storeUrl)}
+              style={styles.btn}
+            />
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg, justifyContent: 'center', padding: spacing.xl },
+  root: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
   card: { gap: spacing.md, alignItems: 'stretch' },
   body: { marginTop: spacing.xs, opacity: 0.7 },
+  methods: { alignSelf: 'stretch', marginTop: spacing.md },
   btn: { marginTop: spacing.lg },
 });
