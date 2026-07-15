@@ -1,15 +1,7 @@
 import React, { useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -31,104 +23,109 @@ export function LoginScreen() {
       <View style={[styles.blob, styles.blobGold]} />
       <View style={[styles.blob, styles.blobRose]} />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 28 },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View entering={FadeInDown.duration(560)} style={styles.hero}>
-            <View style={styles.markWrap}>
-              <Image
-                source={require('../../../assets/images/logo-glow.png')}
-                style={styles.glow}
-                contentFit="contain"
-              />
-              <View style={[styles.mark, shadow.gold]}>
-                <LinearGradient
-                  colors={gradients.gold}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-                <Image
-                  source={require('../../../assets/logo/logo-mark-white.png')}
-                  style={styles.markImg}
-                  contentFit="contain"
-                />
-              </View>
-            </View>
+      {/*
+       * KeyboardAwareScrollView (نه نسخه‌ی خودِ RN): چون اپ edge-to-edge است،
+       * adjustResize کار نمی‌کند و KeyboardAvoidingView روی اندروید بی‌اثر بود —
+       * کیبورد روی فیلد می‌افتاد و صفحه اسکرول نمی‌شد. این کامپوننت ارتفاعِ کیبورد
+       * را مستقیم می‌خواند و تا فیلدِ فوکوس‌شده اسکرول می‌کند.
+       */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 28 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bottomOffset={spacing.xl}
+      >
+        <Animated.View entering={FadeInDown.duration(560)} style={styles.hero}>
+          <View style={styles.markWrap}>
             <Image
-              source={require('../../../assets/logo/wordmark-on-dark.png')}
-              style={styles.wordmark}
+              source={require('../../../assets/images/logo-glow.png')}
+              style={styles.glow}
               contentFit="contain"
             />
-            <Text style={styles.tagline}>دوست‌یابیِ لوکس، نزدیکِ تو</Text>
-          </Animated.View>
+            <View style={[styles.mark, shadow.gold]}>
+              <LinearGradient
+                colors={gradients.gold}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Image
+                source={require('../../../assets/logo/logo-mark-white.png')}
+                style={styles.markImg}
+                contentFit="contain"
+              />
+            </View>
+          </View>
+          <Image
+            source={require('../../../assets/logo/wordmark-on-dark.png')}
+            style={styles.wordmark}
+            contentFit="contain"
+          />
+          <Text style={styles.tagline}>دوست‌یابیِ لوکس، نزدیکِ تو</Text>
+        </Animated.View>
 
-          <Animated.View entering={FadeInUp.delay(180).duration(560)} style={[styles.card, shadow.card]}>
-            {vm.step === 'phone' ? (
-              <>
-                <Text style={styles.cardTitle}>ورود یا ثبت‌نام</Text>
-                <Text style={styles.cardSub}>شماره‌ات را وارد کن تا کدِ تأیید برایت بفرستیم.</Text>
+        <Animated.View entering={FadeInUp.delay(180).duration(560)} style={[styles.card, shadow.card]}>
+          {vm.step === 'phone' ? (
+            <>
+              <Text style={styles.cardTitle}>ورود یا ثبت‌نام</Text>
+              <Text style={styles.cardSub}>شماره‌ات را وارد کن تا کدِ تأیید برایت بفرستیم.</Text>
 
-                <Text style={styles.label}>شماره‌ی موبایل</Text>
-                <View style={styles.inputRow}>
-                  <Icon name="phone" size={18} tint="gold" />
-                  <TextInput
-                    style={styles.input}
-                    value={vm.phone}
-                    onChangeText={vm.setPhone}
-                    keyboardType="phone-pad"
-                    placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
-                    placeholderTextColor={colors.ink3}
-                    textAlign="right"
-                    maxLength={13}
-                  />
-                </View>
-
-                {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
-                <Button label="ارسالِ کدِ تأیید" onPress={vm.sendOtp} loading={vm.loading} style={styles.cta} />
-              </>
-            ) : (
-              <>
-                <Text style={styles.cardTitle}>کدِ تأیید</Text>
-                <Text style={styles.cardSub}>کدِ ارسال‌شده به {faNum(vm.phone)} را وارد کن.</Text>
-
-                <CodeBoxes value={vm.code} onChange={vm.setCode} />
-
-                {vm.debugCode ? <Text style={styles.debug}>کدِ آزمایشی: {faNum(vm.debugCode)}</Text> : null}
-                {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
-
-                <Button
-                  label="ورود"
-                  onPress={vm.verify}
-                  loading={vm.loading}
-                  disabled={vm.code.trim().length < CODE_LEN}
-                  style={styles.cta}
+              <Text style={styles.label}>شماره‌ی موبایل</Text>
+              <View style={styles.inputRow}>
+                <Icon name="phone" size={18} tint="gold" />
+                <TextInput
+                  style={styles.input}
+                  value={vm.phone}
+                  onChangeText={vm.setPhone}
+                  keyboardType="phone-pad"
+                  placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
+                  placeholderTextColor={colors.ink3}
+                  textAlign="right"
+                  maxLength={13}
                 />
-                <View style={styles.codeFooter}>
-                  <Pressable onPress={vm.back} style={styles.footerBtn} accessibilityRole="button">
-                    <Text style={styles.footerBtnText}>تغییرِ شماره</Text>
-                  </Pressable>
-                  {vm.resendIn > 0 ? (
-                    <Text style={styles.resendWait}>ارسالِ دوباره تا {faNum(vm.resendIn)} ثانیه</Text>
-                  ) : (
-                    <Pressable onPress={vm.sendOtp} style={styles.footerBtn} accessibilityRole="button">
-                      <Text style={styles.footerBtnText}>ارسالِ دوباره‌ی کد</Text>
-                    </Pressable>
-                  )}
-                </View>
-              </>
-            )}
-          </Animated.View>
+              </View>
 
-          <Text style={styles.terms}>با ادامه، شرایطِ استفاده و حریمِ خصوصیِ نودوست را می‌پذیری.</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
+              <Button label="ارسالِ کدِ تأیید" onPress={vm.sendOtp} loading={vm.loading} style={styles.cta} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.cardTitle}>کدِ تأیید</Text>
+              <Text style={styles.cardSub}>کدِ ارسال‌شده به {faNum(vm.phone)} را وارد کن.</Text>
+
+              <CodeBoxes value={vm.code} onChange={vm.setCode} />
+
+              {vm.debugCode ? <Text style={styles.debug}>کدِ آزمایشی: {faNum(vm.debugCode)}</Text> : null}
+              {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
+
+              <Button
+                label="ورود"
+                onPress={vm.verify}
+                loading={vm.loading}
+                disabled={vm.code.trim().length < CODE_LEN}
+                style={styles.cta}
+              />
+              <View style={styles.codeFooter}>
+                <Pressable onPress={vm.back} style={styles.footerBtn} accessibilityRole="button">
+                  <Text style={styles.footerBtnText}>تغییرِ شماره</Text>
+                </Pressable>
+                {vm.resendIn > 0 ? (
+                  <Text style={styles.resendWait}>ارسالِ دوباره تا {faNum(vm.resendIn)} ثانیه</Text>
+                ) : (
+                  <Pressable onPress={vm.sendOtp} style={styles.footerBtn} accessibilityRole="button">
+                    <Text style={styles.footerBtnText}>ارسالِ دوباره‌ی کد</Text>
+                  </Pressable>
+                )}
+              </View>
+            </>
+          )}
+        </Animated.View>
+
+        <Text style={styles.terms}>با ادامه، شرایطِ استفاده و حریمِ خصوصیِ نودوست را می‌پذیری.</Text>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -167,7 +164,6 @@ function CodeBoxes({ value, onChange }: { value: string; onChange: (v: string) =
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, justifyContent: 'center' },
 
   blob: { position: 'absolute', width: 340, height: 340, borderRadius: 170 },

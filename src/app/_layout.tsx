@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
   useFonts,
   Vazirmatn_400Regular,
@@ -102,24 +103,33 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <DIProvider>
-        <SessionProvider>
-          <RemoteConfigProvider>
-            <WelcomeProvider>
-              <PwaInstallProvider>
-                <UpdateGateProvider>
-                  <AndroidAppGateProvider>
-                    <StatusBar style="light" />
-                    <AuthGate />
-                    <CelebrationModal />
-                    {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
-                  </AndroidAppGateProvider>
-                </UpdateGateProvider>
-              </PwaInstallProvider>
-            </WelcomeProvider>
-          </RemoteConfigProvider>
-        </SessionProvider>
-      </DIProvider>
+      {/*
+       * اپ edge-to-edge است (gradle.properties → edgeToEdgeEnabled=true)؛ در این حالت
+       * اندروید `windowSoftInputMode=adjustResize` را نادیده می‌گیرد و پنجره با بازشدنِ
+       * کیبورد کوچک نمی‌شود. پس ارتفاعِ کیبورد را از این پرووایدر می‌گیریم.
+       * پرچم‌های statusBarTranslucent/navigationBarTranslucent را ندهید — با
+       * react-native-edge-to-edge نادیده گرفته می‌شوند و فقط WARN تولید می‌کنند.
+       */}
+      <KeyboardProvider>
+        <DIProvider>
+          <SessionProvider>
+            <RemoteConfigProvider>
+              <WelcomeProvider>
+                <PwaInstallProvider>
+                  <UpdateGateProvider>
+                    <AndroidAppGateProvider>
+                      <StatusBar style="light" />
+                      <AuthGate />
+                      <CelebrationModal />
+                      {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+                    </AndroidAppGateProvider>
+                  </UpdateGateProvider>
+                </PwaInstallProvider>
+              </WelcomeProvider>
+            </RemoteConfigProvider>
+          </SessionProvider>
+        </DIProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

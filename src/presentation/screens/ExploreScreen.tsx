@@ -206,6 +206,7 @@ export function ExploreView() {
           renderItem={renderItem}
           numColumns={COLS}
           columnWrapperStyle={styles.row}
+          style={styles.grid}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           onEndReachedThreshold={0.5}
@@ -327,11 +328,13 @@ export function ExploreView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: PAGE_PADDING },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // ردیف‌های فیلتر تا لبه‌ی صفحه اسکرول می‌شوند (marginِ افقیِ منفی، برابرِ padding صفحه)
-  // و ارتفاعِ ثابت دارند تا روی برخی مرورگرهای PWA — که ScrollViewِ افقی را صفر-ارتفاع
-  // می‌کنند — ناپدید نشوند.
+  // ردیف‌های فیلتر تا لبه‌ی صفحه اسکرول می‌شوند (marginِ افقیِ منفی، برابرِ padding صفحه).
+  // flexShrink:0 حیاتی است: زیرِ react-native-web ریشه‌ی ScrollView با flexShrink:1 و
+  // minHeight:0 می‌آید، پس سرریزِ شبکه (که flexBasis:auto دارد) بینِ هم‌نیاها پخش
+  // می‌شود و این ردیف‌ها را تا چند پیکسل له می‌کند — چیپ‌ها بریده دیده می‌شوند.
   filterScroll: {
     flexGrow: 0,
+    flexShrink: 0,
     height: 50,
     marginBottom: spacing.sm,
     marginHorizontal: -PAGE_PADDING,
@@ -354,6 +357,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   filterChipLocked: { opacity: 0.5 },
+  // flex:1 یعنی flexBasis:0 — وگرنه شبکه به اندازه‌ی کلِ محتوایش باز می‌شود و
+  // ردیف‌های فیلتر را از جا در می‌کند (همان الگوی mapArea در نمای نقشه).
+  grid: { flex: 1 },
   list: { paddingBottom: spacing.xl },
   row: { flexDirection: 'row-reverse', gap: GAP, marginBottom: GAP },
   footer: { paddingVertical: spacing.lg },

@@ -419,7 +419,9 @@ export function MapView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  filterScroll: { flexGrow: 0, marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
+  // flexShrink:0 — ریشه‌ی ScrollView زیرِ react-native-web با flexShrink:1/minHeight:0
+  // می‌آید و در برابرِ سرریزِ هم‌نیا له می‌شود؛ ردیفِ فیلتر نباید کوتاه شود.
+  filterScroll: { flexGrow: 0, flexShrink: 0, marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
   filterRow: { flexDirection: 'row-reverse', gap: spacing.sm, paddingVertical: 2 },
   filterChip: { minHeight: 38, paddingHorizontal: 14 },
   filterChipLocked: { opacity: 0.45 },

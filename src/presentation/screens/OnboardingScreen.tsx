@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
@@ -78,7 +71,12 @@ export function OnboardingScreen() {
 
   return (
     <ScreenContainer>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
+      {/*
+       * KeyboardAvoidingView از react-native-keyboard-controller — نسخه‌ی خودِ RN
+       * روی اندرویدِ edge-to-edge بی‌اثر است (adjustResize نادیده گرفته می‌شود).
+       * behavior="padding" روی هر دو پلتفرم: این نسخه ارتفاعِ کیبورد را مستقیم می‌خواند.
+       */}
+      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
         <View>
           {/* نوارِ پیشرفت راست‌به‌چپ پر می‌شود — هم‌جهت با خواندنِ فارسی */}
           <View style={styles.progress}>
