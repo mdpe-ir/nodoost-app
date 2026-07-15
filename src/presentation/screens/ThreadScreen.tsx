@@ -1,14 +1,6 @@
 import React, { useMemo, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  FlatList,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, Pressable, FlatList, StyleSheet, Platform } from 'react-native';
+import { KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -87,6 +79,12 @@ export function ThreadScreen({
     vm.loadOlder();
   };
   const canSend = !!vm.draft.trim() && !vm.sending;
+  // با کیبوردِ باز، خودِ کیبورد نوارِ ناوبری را پوشانده است؛ اگر insets.bottom را
+  // دوباره اضافه کنیم، نوارِ نوشتن یک فاصله‌ی بیهوده بالای کیبورد می‌گیرد.
+  const keyboardVisible = useKeyboardState((s) => s.isVisible);
+  const barBottomPad = keyboardVisible
+    ? spacing.md
+    : Math.max(spacing.md, insets.bottom + spacing.sm);
   // قانونِ سطح: تا وقتی گفتگو پیامی ندارد، فقط هم‌سطح یا بالاتر می‌تواند شروع کند.
   // اگر طرفِ مقابل سطحِ بالاتری دارد، ورودی قفل می‌شود تا او پیامِ اول را بدهد.
   const tierLocked = !vm.loading && vm.messages.length === 0 && !!peerTier && peerTier > vm.myTier;
@@ -129,9 +127,14 @@ export function ThreadScreen({
         </Pressable>
       </View>
 
+      {/*
+       * KeyboardAvoidingView از react-native-keyboard-controller — نسخه‌ی خودِ RN
+       * روی اندرویدِ edge-to-edge بی‌اثر بود (adjustResize نادیده گرفته می‌شود) و
+       * کیبورد روی نوارِ نوشتن می‌افتاد. behavior="padding" روی هر دو پلتفرم.
+       */}
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         keyboardVerticalOffset={insets.top + 64}
       >
         {vm.loading ? (
@@ -212,7 +215,7 @@ export function ThreadScreen({
         )}
 
         {tierLocked ? (
-          <View style={[styles.lockedBar, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+          <View style={[styles.lockedBar, { paddingBottom: barBottomPad }]}>
             <Text style={styles.lockedText}>
               {`این کاربر سطحِ ${tierName(peerTier!)} دارد. برای شروعِ گفتگو باید سطحِ حسابت را ارتقا بدهی.`}
             </Text>
@@ -223,7 +226,7 @@ export function ThreadScreen({
             />
           </View>
         ) : (
-        <View style={[styles.composer, { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.sm) }]}>
+        <View style={[styles.composer, { paddingBottom: barBottomPad }]}>
           {vm.sendError ? <Text style={styles.sendError}>{vm.sendError}</Text> : null}
           <TextInput
             style={styles.input}
