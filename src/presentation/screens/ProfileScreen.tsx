@@ -14,11 +14,11 @@ import {
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import Constants from 'expo-constants';
 import { ScreenContainer, ScreenHeader, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
 import { ProfileSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
+import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
 import { tierName } from '@/presentation/components/TierBadge';
 import { tierPerks, maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
@@ -162,7 +162,6 @@ export function ProfileScreen() {
   const user = vm.user;
   const primary = vm.photos.find((p) => p.isPrimary) ?? vm.photos[0];
   const heroUri = mediaUrl(primary?.url);
-  const version = Constants.expoConfig?.version;
   const userTier = user?.tier ?? 1;
   const activeTierName = tierName(userTier) || 'رایگان';
   // سقفِ عکس بر اساسِ سطحِ مؤثر — هم‌آهنگ با بک‌اند (عادی۳ … الماس۱۵).
@@ -574,8 +573,8 @@ export function ProfileScreen() {
               )}
             </View>
 
+            <AppVersionInfo />
             <Button label="خروج از حساب" variant="danger" onPress={vm.logout} style={styles.logout} />
-            {version ? <Text style={styles.version}>نودوست · نسخه‌ی {faNum(version)}</Text> : null}
           </View>
         ) : null}
         </View>
@@ -886,8 +885,6 @@ const styles = StyleSheet.create({
   buyBtn: { paddingHorizontal: spacing.xl },
 
   logout: { marginTop: spacing.xl },
-  version: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, textAlign: 'center', marginTop: spacing.lg },
-
   // — لایت‌باکس —
   viewerBackdrop: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
   viewerImage: { width: '100%', height: '100%' },

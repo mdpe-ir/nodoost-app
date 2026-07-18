@@ -14,7 +14,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 BACKEND_URL="${NODOOST_BACKEND_URL:-https://nodoost-bakcend.darkube.ir}"
+BACKEND_URL="${BACKEND_URL%/}"
 PLATFORM="${1:-android}"
+
+# فایلِ .env برای توسعه localhost است؛ OTA همیشه با بک‌اندِ production صادر می‌شود.
+export EXPO_PUBLIC_API_BASE_URL="$BACKEND_URL"
+export EXPO_NO_DOTENV=1
 
 if [[ -z "${NODOOST_ADMIN_KEY:-}" ]]; then
   echo "خطا: NODOOST_ADMIN_KEY تنظیم نشده (همان ADMIN_API_KEY بک‌اند)." >&2
@@ -23,7 +28,8 @@ fi
 
 # runtimeVersion = مقدارِ version در app.json (سیاستِ appVersion).
 RTV="$(python3 -c "import json;print(json.load(open('app.json'))['expo']['version'])")"
-echo "==> runtimeVersion = $RTV  (platform=$PLATFORM, backend=$BACKEND_URL)"
+echo "==> runtimeVersion = $RTV  (platform=$PLATFORM)"
+echo "==> API / OTA server = $BACKEND_URL"
 
 OUT_DIR="$(mktemp -d)"
 ZIP_FILE="$(mktemp -u).zip"
