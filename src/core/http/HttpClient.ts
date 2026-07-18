@@ -22,7 +22,10 @@ export class HttpClient {
   async request<T>(path: string, opts: RequestOptions = {}, retried = false): Promise<T> {
     const method = opts.method ?? 'GET';
     const useAuth = opts.auth !== false;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Client-Platform': Platform.OS,
+    };
     if (useAuth) {
       const token = await this.tokens.getAccess();
       if (token) headers.Authorization = `Bearer ${token}`;
@@ -72,7 +75,10 @@ export class HttpClient {
     }
     const res = await fetch(this.baseUrl + path, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: {
+        'X-Client-Platform': Platform.OS,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: form,
     });
     if (!res.ok) {
@@ -91,7 +97,10 @@ export class HttpClient {
     try {
       const res = await fetch(this.baseUrl + '/api/auth/refresh', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Platform': Platform.OS,
+        },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!res.ok) return false;
