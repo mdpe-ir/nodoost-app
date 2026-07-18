@@ -1,6 +1,18 @@
 import { Platform } from 'react-native';
+import * as Application from 'expo-application';
+import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import { ApiError } from './ApiError';
 import type { TokenStorage } from '@/core/storage/TokenStorage';
+
+const clientMetadataHeaders = (): Record<string, string> => ({
+  'X-Client-Platform': Platform.OS,
+  'X-Client-App-Version':
+    Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '',
+  'X-Client-Build-Version': Application.nativeBuildVersion ?? '',
+  'X-Client-Update-ID':
+    Updates.updateId ?? (Updates.isEmbeddedLaunch ? 'embedded' : ''),
+});
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -24,7 +36,7 @@ export class HttpClient {
     const useAuth = opts.auth !== false;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-Client-Platform': Platform.OS,
+      ...clientMetadataHeaders(),
     };
     if (useAuth) {
       const token = await this.tokens.getAccess();
@@ -76,7 +88,7 @@ export class HttpClient {
     const res = await fetch(this.baseUrl + path, {
       method: 'POST',
       headers: {
-        'X-Client-Platform': Platform.OS,
+        ...clientMetadataHeaders(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: form,
@@ -99,7 +111,7 @@ export class HttpClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Client-Platform': Platform.OS,
+          ...clientMetadataHeaders(),
         },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
