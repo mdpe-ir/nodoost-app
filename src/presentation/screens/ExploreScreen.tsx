@@ -66,7 +66,7 @@ export function ExploreView() {
   const myTier = user?.tier ?? 1;
   const canFilterTier = myTier >= 2;
   // پنجره‌ی paywall برای فیلترهای قفل — به‌جای پرتاب به تبِ عضویت.
-  const [lock, setLock] = useState<{ tier: number; title: string; message: string } | null>(null);
+  const [lock, setLock] = useState<{ tier: number; title: string; message: string; feature: string } | null>(null);
 
   const renderItem = ({ item }: { item: Candidate }) => (
     <Animated.View entering={FadeIn.duration(220)}>
@@ -142,6 +142,7 @@ export function ExploreView() {
                     tier: o.minTier,
                     title: 'این فیلتر قفل است',
                     message: `فیلترِ «${o.label}» از سطحِ ${tierName(o.minTier)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
+                    feature: `فیلترِ «${o.label}»`,
                   });
                 else vm.setActive(vm.activeFilter === o.key && o.key !== '' ? '' : o.key);
               }}
@@ -174,6 +175,7 @@ export function ExploreView() {
                     message: canFilterTier
                       ? `برای فیلترِ کاربرانِ سطحِ ${tierName(lvl)} باید خودت هم به این سطح برسی.`
                       : `فیلترِ سطحِ کاربران از سطحِ ${tierName(2)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
+                    feature: 'فیلترِ سطحِ کاربران',
                   });
                 else vm.setTier(vm.tierFilter === lvl ? 0 : lvl);
               }}
@@ -319,6 +321,7 @@ export function ExploreView() {
         requiredTier={lock?.tier ?? 2}
         title={lock?.title}
         message={lock?.message}
+        feature={lock?.feature}
         onClose={() => setLock(null)}
       />
     </View>

@@ -9,10 +9,12 @@ import { tierPerks } from '../tiers/tierFeatures';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '../../core/theme';
 
 /**
- * پنجره‌ی قفلِ سطح — یک paywallِ زمینه‌ای عمومی: دقیقاً می‌گوید کدام امکان به کدام
- * سطح نیاز دارد، آن سطح چه چیزی باز می‌کند و همان‌جا دکمه‌ی خرید دارد (محرکِ اصلیِ
- * فروشِ اشتراک). با `title`/`message` می‌توان زمینه را عوض کرد (فیلتر، پسندها، …)؛
- * پیش‌فرض برای «شروعِ گفتگو با کاربرِ بالاتر» است.
+ * پنجره‌ی قفلِ سطح — دروازه‌ی زمینه‌ایِ همه‌ی امکاناتِ قفل: دقیقاً می‌گوید کدام
+ * امکان به کدام سطح نیاز دارد و آن سطح چه چیزی باز می‌کند. خودِ خرید این‌جا
+ * انجام نمی‌شود؛ دکمه‌ی اصلی به ‎/plans?required&feature‎ می‌برد تا کاربر پیش از
+ * پرداخت، پلن‌ها را کنارِ هم ببیند (تنها سطحِ خرید در اپ همان صفحه است).
+ * با `title`/`message`/`feature` زمینه عوض می‌شود (فیلتر، پسندها، …)؛ پیش‌فرض
+ * «شروعِ گفتگو با کاربرِ بالاتر» است.
  */
 export function TierLockModal({
   visible,
@@ -20,12 +22,15 @@ export function TierLockModal({
   onClose,
   title,
   message,
+  feature,
 }: {
   visible: boolean;
   requiredTier: number;
   onClose: () => void;
   title?: string;
   message?: string;
+  /** نامِ کوتاهِ امکانِ قفل‌شده — در بنرِ صفحه‌ی سطح‌ها نشان داده می‌شود. */
+  feature?: string;
 }) {
   const vm = usePlansViewModel();
   const target = vm.tiers.find((t) => t.level === requiredTier);
@@ -34,6 +39,17 @@ export function TierLockModal({
   const body =
     message ??
     `این کاربر سطحِ ${tierName(requiredTier)} دارد. برای شروعِ گفتگو باید حسابت را به سطحِ ${tierName(requiredTier)} یا بالاتر ارتقا بدهی. اگر او پیام بدهد، پاسخ‌دادن برایت آزاد است.`;
+
+  const goToPlans = () => {
+    onClose();
+    router.push({
+      pathname: '/plans',
+      params: {
+        required: String(requiredTier),
+        feature: feature ?? (title ? undefined : 'شروعِ گفتگو با این کاربر'),
+      },
+    });
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -58,27 +74,13 @@ export function TierLockModal({
           ) : null}
 
           <View style={styles.actions}>
-            {target ? (
-              <Button
-                label={`ارتقا به ${target.name}`}
-                icon="diamond-fill"
-                loading={vm.purchasing === target.id}
-                onPress={() => vm.buy(target.id, target.bazaarSku)}
-                style={styles.btnFull}
-              />
-            ) : null}
-            <View style={styles.actionRow}>
-              <Button
-                label="همه‌ی سطح‌ها"
-                variant="ghost"
-                onPress={() => {
-                  onClose();
-                  router.push('/plans');
-                }}
-                style={styles.btn}
-              />
-              <Button label="بعداً" variant="outline" onPress={onClose} style={styles.btn} />
-            </View>
+            <Button
+              label={target ? `ارتقا به ${target.name}` : 'مشاهده‌ی سطح‌ها'}
+              icon="diamond-fill"
+              onPress={goToPlans}
+              style={styles.btnFull}
+            />
+            <Button label="بعداً" variant="outline" onPress={onClose} style={styles.btnFull} />
           </View>
         </View>
       </View>
@@ -140,7 +142,5 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   actions: { marginTop: spacing.lg, gap: spacing.sm },
-  actionRow: { flexDirection: 'row-reverse', gap: spacing.sm },
   btnFull: { width: '100%' },
-  btn: { flex: 1 },
 });

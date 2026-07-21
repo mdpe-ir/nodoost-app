@@ -222,7 +222,12 @@ export function ThreadScreen({
             <Button
               label="مشاهده‌ی سطح‌های اشتراک"
               size="sm"
-              onPress={() => router.push('/profile?tab=plans')}
+              onPress={() =>
+                router.push({
+                  pathname: '/plans',
+                  params: { required: String(peerTier ?? 2), feature: 'شروعِ گفتگو با این کاربر' },
+                })
+              }
             />
           </View>
         ) : (

@@ -36,7 +36,7 @@ function birthdateToAge(bd?: string): string {
 }
 
 /**
- * ویومدلِ تکمیلِ پروفایل (نام، جنسیت، سن، درباره + عکسِ اجباری).
+ * ویومدلِ تکمیلِ پروفایل (نام، جنسیت، سن، درباره، علاقه‌مندی‌ها + عکسِ اجباری).
  * فیلدهای موجودِ کاربر پیش‌پر می‌شوند تا کاربرِ ناقص فقط بخشِ کم‌داشته را کامل کند.
  */
 export function useOnboarding() {
@@ -46,6 +46,7 @@ export function useOnboarding() {
   const [gender, setGender] = useState<Gender | null>(user?.gender ?? null);
   const [age, setAge] = useState(birthdateToAge(user?.birthdate));
   const [bio, setBio] = useState(user?.bio ?? '');
+  const [interests, setInterests] = useState<string[]>(user?.interests ?? []);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +96,7 @@ export function useOnboarding() {
         gender,
         bio: bio.trim(),
         birthdate: ageToBirthdate(ageNum),
+        interests,
       });
       if (photoUri) await uc.profile.addPhoto(photoUri);
       await refreshUser();
@@ -104,7 +106,7 @@ export function useOnboarding() {
     } finally {
       setLoading(false);
     }
-  }, [name, gender, age, bio, photoUri, hasPhoto, uc, refreshUser]);
+  }, [name, gender, age, bio, interests, photoUri, hasPhoto, uc, refreshUser]);
 
   return {
     name,
@@ -115,6 +117,8 @@ export function useOnboarding() {
     setAge,
     bio,
     setBio,
+    interests,
+    setInterests,
     photoUri,
     pickPhoto,
     hasPhoto,

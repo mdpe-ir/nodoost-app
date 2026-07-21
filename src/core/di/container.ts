@@ -10,6 +10,8 @@ import { ChatRepositoryImpl } from '@/data/repositories/ChatRepositoryImpl';
 import { RandomRepositoryImpl } from '@/data/repositories/RandomRepositoryImpl';
 import { CatalogRepositoryImpl } from '@/data/repositories/CatalogRepositoryImpl';
 import { SafetyRepositoryImpl } from '@/data/repositories/SafetyRepositoryImpl';
+import { NotificationsRepositoryImpl } from '@/data/repositories/NotificationsRepositoryImpl';
+import { FollowRepositoryImpl } from '@/data/repositories/FollowRepositoryImpl';
 
 import * as auth from '@/domain/usecases/authUseCases';
 import * as profile from '@/domain/usecases/profileUseCases';
@@ -19,6 +21,8 @@ import * as chat from '@/domain/usecases/chatUseCases';
 import * as random from '@/domain/usecases/randomUseCases';
 import * as catalog from '@/domain/usecases/catalogUseCases';
 import * as safety from '@/domain/usecases/safetyUseCases';
+import * as notifications from '@/domain/usecases/notificationsUseCases';
+import * as follow from '@/domain/usecases/followUseCases';
 
 /**
  * Composition root: زیرساخت → repository → use case را یک‌بار می‌سازد.
@@ -36,6 +40,8 @@ export function createContainer() {
   const randomRepo = new RandomRepositoryImpl(http);
   const catalogRepo = new CatalogRepositoryImpl(http);
   const safetyRepo = new SafetyRepositoryImpl(http);
+  const notificationsRepo = new NotificationsRepositoryImpl(http);
+  const followRepo = new FollowRepositoryImpl(http);
 
   const useCases = {
     auth: {
@@ -62,6 +68,7 @@ export function createContainer() {
       getExplore: discovery.makeGetExplore(discoveryRepo),
       getNearbyMapUsers: discovery.makeGetNearbyMapUsers(discoveryRepo),
       swipe: discovery.makeSwipe(discoveryRepo),
+      unswipe: discovery.makeUnswipe(discoveryRepo),
       getPeerProfile: discovery.makeGetPeerProfile(discoveryRepo),
     },
     likes: {
@@ -87,6 +94,20 @@ export function createContainer() {
     safety: {
       block: safety.makeBlockUser(safetyRepo),
       report: safety.makeReportUser(safetyRepo),
+    },
+    notifications: {
+      list: notifications.makeGetNotifications(notificationsRepo),
+      markSeen: notifications.makeMarkNotificationsSeen(notificationsRepo),
+      markRead: notifications.makeMarkNotificationsRead(notificationsRepo),
+      markAllRead: notifications.makeMarkAllNotificationsRead(notificationsRepo),
+      getBadges: notifications.makeGetBadges(notificationsRepo),
+      getPrefs: notifications.makeGetNotificationPrefs(notificationsRepo),
+      updatePrefs: notifications.makeUpdateNotificationPrefs(notificationsRepo),
+    },
+    follow: {
+      follow: follow.makeFollow(followRepo),
+      unfollow: follow.makeUnfollow(followRepo),
+      getList: follow.makeGetFollowList(followRepo),
     },
   };
 

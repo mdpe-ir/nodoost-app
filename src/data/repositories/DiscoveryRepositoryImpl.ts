@@ -53,4 +53,8 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     });
     return { matchId: d?.matched && d.match_id ? d.match_id : undefined };
   }
+
+  async unswipe(targetId: number): Promise<void> {
+    await this.http.request(`/api/swipes/${encodeURIComponent(targetId)}`, { method: 'DELETE' });
+  }
 }

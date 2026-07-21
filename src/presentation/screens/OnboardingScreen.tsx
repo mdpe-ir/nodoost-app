@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -7,7 +7,9 @@ import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { Button } from '@/presentation/components/Button';
 import { Chip } from '@/presentation/components/Chip';
 import { Icon } from '@/presentation/components/Icon';
+import { InterestPicker } from '@/presentation/components/InterestPicker';
 import { useOnboarding } from '@/presentation/hooks/useOnboarding';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import type { Gender } from '@/domain/entities';
@@ -16,17 +18,18 @@ const GENDERS: { key: Gender; label: string }[] = [
   { key: 'f', label: 'زن' },
   { key: 'm', label: 'مرد' },
 ];
-const STEPS = 5;
+const STEPS = 6;
 const BIO_MAX = 160;
 
 export function OnboardingScreen() {
   const vm = useOnboarding();
+  const { interests: interestsCatalog } = useRemoteConfig();
   // از اولین گامِ ناقص شروع کن تا کاربرِ نیمه‌کامل مجبور به تکرارِ همه‌چیز نشود.
   const [step, setStep] = useState(() => {
     if (vm.name.trim().length < 2) return 0;
     if (!vm.gender) return 1;
     if (!vm.age) return 2;
-    if (!vm.hasPhoto) return 4; // درباره‌ات (گامِ ۳) اختیاری است
+    if (!vm.hasPhoto) return 5; // درباره‌ات (۳) و علاقه‌مندی‌ها (۴) اختیاری‌اند
     return 0;
   });
   const [local, setLocal] = useState('');
@@ -48,7 +51,7 @@ export function OnboardingScreen() {
         return;
       }
     }
-    if (step === 4 && !vm.hasPhoto) {
+    if (step === 5 && !vm.hasPhoto) {
       setLocal('یک عکس اضافه کن');
       return;
     }
@@ -59,12 +62,20 @@ export function OnboardingScreen() {
     vm.submit();
   }
 
-  const titles = ['اسمت چیه؟', 'خودت رو معرفی کن', 'چند سالته؟', 'یک جمله درباره‌ات', 'یک عکس اضافه کن'];
+  const titles = [
+    'اسمت چیه؟',
+    'خودت رو معرفی کن',
+    'چند سالته؟',
+    'یک جمله درباره‌ات',
+    'به چه چیزهایی علاقه داری؟',
+    'یک عکس اضافه کن',
+  ];
   const subs = [
     'این نامی است که دیگران می‌بینند.',
     'برای نمایشِ بهترِ پروفایلت لازم است.',
     'سن برای نمایش و پیشنهادِ افرادِ هم‌سن لازم است.',
     'اختیاری — اما کمک می‌کند بهتر دیده شوی.',
+    'اختیاری — اما با انتخابش افرادِ هم‌سلیقه‌ات را خیلی بهتر پیدا می‌کنیم.',
     'برای استفاده از اپ حداقل یک عکس معتبر لازم است؛ عکس تازه بلافاصله فعال می‌شود.',
   ];
   const err = local || vm.error;
@@ -148,6 +159,16 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 4 ? (
+            <ScrollView style={styles.interestsScroll} showsVerticalScrollIndicator={false}>
+              <InterestPicker
+                options={interestsCatalog}
+                value={vm.interests}
+                onChange={vm.setInterests}
+              />
+            </ScrollView>
+          ) : null}
+
+          {step === 5 ? (
             <View style={styles.photoStep}>
               <Pressable
                 style={({ pressed }) => [styles.photoTile, pressed && styles.photoTilePressed]}
@@ -247,6 +268,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   bio: { minHeight: 120, textAlignVertical: 'top' },
+  interestsScroll: { flexGrow: 0, maxHeight: 380 },
   bioCount: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.xs,

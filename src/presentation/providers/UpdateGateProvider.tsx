@@ -7,6 +7,7 @@ import { colors, spacing } from '@/core/theme';
 import { AppText } from '@/presentation/components/AppText';
 import { Button } from '@/presentation/components/Button';
 import { InstallMethods } from '@/presentation/components/InstallMethods';
+import { ReinstallNotice } from '@/presentation/components/ReinstallNotice';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { usableMethods } from '@/core/config/installConfig';
 
@@ -110,6 +111,9 @@ export function UpdateGateProvider({ children }: { children: React.ReactNode }) 
               style={styles.btn}
             />
           )}
+          <View style={styles.notice}>
+            <ReinstallNotice />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -123,4 +127,5 @@ const styles = StyleSheet.create({
   body: { marginTop: spacing.xs, opacity: 0.7 },
   methods: { alignSelf: 'stretch', marginTop: spacing.md },
   btn: { marginTop: spacing.lg },
+  notice: { marginTop: spacing.lg },
 });

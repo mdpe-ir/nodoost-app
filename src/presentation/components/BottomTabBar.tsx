@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Icon, type IconName } from './Icon';
+import { CountBadge } from './CountBadge';
+import { useBadges } from '@/presentation/providers/BadgesProvider';
 import { colors, fonts, gradients, radius, shadow } from '@/core/theme';
 
 // نگاشتِ نامِ مسیر به آیکنِ برند
@@ -38,6 +40,8 @@ interface TabBarProps {
  */
 export function BottomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  // نشانِ گفتگو = تعدادِ گفتگوهای دارای پیامِ خوانده‌نشده (نه تعدادِ پیام‌ها).
+  const { badges } = useBadges();
   return (
     <View style={[styles.wrap, { paddingBottom: insets.bottom + 10 }]}>
       <View style={[styles.bar, shadow.card]}>
@@ -90,12 +94,17 @@ export function BottomTabBar({ state, descriptors, navigation }: TabBarProps) {
               hitSlop={6}
             >
               {focused ? <Animated.View entering={FadeIn.duration(180)} style={styles.activeDot} /> : null}
-              <Icon
-                name={iconName}
-                size={23}
-                tint={focused ? 'gold' : 'white'}
-                style={focused ? undefined : styles.iconIdle}
-              />
+              <View>
+                <Icon
+                  name={iconName}
+                  size={23}
+                  tint={focused ? 'gold' : 'white'}
+                  style={focused ? undefined : styles.iconIdle}
+                />
+                {route.name === 'chat' ? (
+                  <CountBadge count={badges.unreadThreads} style={styles.tabBadge} />
+                ) : null}
+              </View>
               <Text style={[styles.label, focused && styles.labelActive]} numberOfLines={1}>
                 {label}
               </Text>
@@ -128,6 +137,8 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, height: BAR_HEIGHT },
   itemPressed: { opacity: 0.7 },
   iconIdle: { opacity: 0.45 },
+  // نوارِ تب سطحِ روشن‌تری دارد؛ قابِ نشان با آن هم‌رنگ می‌شود.
+  tabBadge: { top: -5, left: -8, borderColor: colors.surface },
   label: { fontFamily: fonts.medium, fontSize: 10.5, color: colors.ink3 },
   labelActive: { color: colors.gold2 },
   activeDot: {

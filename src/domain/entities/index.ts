@@ -15,6 +15,14 @@ export type {
   RandomMatch,
   RandomFilters,
 } from './discovery';
+export type {
+  NotificationKind,
+  NotificationActor,
+  AppNotification,
+  Badges,
+  NotificationPrefs,
+} from './notifications';
+export type { FollowState, FollowUser, FollowListKind } from './social';
 export type { Conversation, Message } from './chat';
 export type { Page } from './paging';
 export type { Tier } from './catalog';

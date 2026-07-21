@@ -16,6 +16,7 @@ export const colors = {
   goldSoft: 'rgba(218,184,119,0.35)',
   goldFaint: 'rgba(218,184,119,0.12)',
   rose: '#FF5C7A',
+  roseSoft: 'rgba(255,92,122,0.35)',
   roseFaint: 'rgba(255,92,122,0.14)',
   ok: '#5FC98A',
   onGold: '#2A1D12',

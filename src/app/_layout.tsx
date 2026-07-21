@@ -17,6 +17,9 @@ import { PwaInstallProvider } from '@/presentation/providers/PwaInstallProvider'
 import { UpdateGateProvider } from '@/presentation/providers/UpdateGateProvider';
 import { RemoteConfigProvider } from '@/presentation/providers/RemoteConfigProvider';
 import { AndroidAppGateProvider } from '@/presentation/providers/AndroidAppGateProvider';
+import { FetchyDeviceRegistration } from '@/presentation/providers/FetchyDeviceRegistration';
+import { LocationPrimerProvider } from '@/presentation/providers/LocationPrimerProvider';
+import { BadgesProvider } from '@/presentation/providers/BadgesProvider';
 import { isProfileComplete } from '@/domain/policies/profile';
 import { requestNotificationPermission } from '@/core/notifications/notificationPermission';
 import { Loading } from '@/presentation/components/Loading';
@@ -74,6 +77,9 @@ function AuthGate() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="likes" />
       <Stack.Screen name="viewers" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="notification-settings" />
+      <Stack.Screen name="followers" />
       <Stack.Screen name="plans" />
       <Stack.Screen name="get-app" />
       <Stack.Screen name="user/[id]" />
@@ -113,20 +119,25 @@ export default function RootLayout() {
       <KeyboardProvider>
         <DIProvider>
           <SessionProvider>
-            <RemoteConfigProvider>
-              <WelcomeProvider>
-                <PwaInstallProvider>
-                  <UpdateGateProvider>
-                    <AndroidAppGateProvider>
-                      <StatusBar style="light" />
-                      <AuthGate />
-                      <CelebrationModal />
-                      {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
-                    </AndroidAppGateProvider>
-                  </UpdateGateProvider>
-                </PwaInstallProvider>
-              </WelcomeProvider>
-            </RemoteConfigProvider>
+            <FetchyDeviceRegistration />
+            {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
+            <BadgesProvider>
+              <RemoteConfigProvider>
+                <WelcomeProvider>
+                  <PwaInstallProvider>
+                    <UpdateGateProvider>
+                      <AndroidAppGateProvider>
+                        <StatusBar style="light" />
+                        <AuthGate />
+                        <CelebrationModal />
+                        <LocationPrimerProvider />
+                        {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+                      </AndroidAppGateProvider>
+                    </UpdateGateProvider>
+                  </PwaInstallProvider>
+                </WelcomeProvider>
+              </RemoteConfigProvider>
+            </BadgesProvider>
           </SessionProvider>
         </DIProvider>
       </KeyboardProvider>

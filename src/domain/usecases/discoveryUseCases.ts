@@ -13,11 +13,14 @@ export const makeGetPeerProfile =
 export const makeSwipe =
   (r: DiscoveryRepository) => (targetId: number, action: SwipeAction) =>
     r.swipe(targetId, action);
+export const makeUnswipe =
+  (r: DiscoveryRepository) => (targetId: number) => r.unswipe(targetId);
 
 export type DiscoveryUseCases = {
   getCandidates: ReturnType<typeof makeGetCandidates>;
   getExplore: ReturnType<typeof makeGetExplore>;
   getNearbyMapUsers: ReturnType<typeof makeGetNearbyMapUsers>;
   swipe: ReturnType<typeof makeSwipe>;
+  unswipe: ReturnType<typeof makeUnswipe>;
   getPeerProfile: ReturnType<typeof makeGetPeerProfile>;
 };

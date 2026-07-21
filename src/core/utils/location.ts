@@ -11,6 +11,21 @@ export type LocationResult =
   | { ok: false; reason: 'denied' | 'unavailable' };
 
 /**
+ * وضعیتِ فعلیِ مجوز، بدونِ نشان دادنِ هیچ دیالوگی. برای تصمیم‌گیری پیش از پرسیدن
+ * لازم است: اگر `undetermined` باشد ارزشِ نشان دادنِ پیش‌پرسش را دارد، اگر
+ * `blocked` باشد فقط تنظیماتِ سیستم چاره است و اگر `granted` باشد نباید مزاحمِ کاربر شد.
+ */
+export async function getLocationPermission(): Promise<'granted' | 'undetermined' | 'blocked'> {
+  try {
+    const perm = await Location.getForegroundPermissionsAsync();
+    if (perm.granted) return 'granted';
+    return perm.canAskAgain ? 'undetermined' : 'blocked';
+  } catch {
+    return 'undetermined';
+  }
+}
+
+/**
  * مجوزِ موقعیت را می‌گیرد و مختصاتِ فعلی را برمی‌گرداند. منطقِ مشترکِ نقشه،
  * کاوش و اکسپلور اینجا یک‌جا جمع شده تا سه نسخه‌ی حقیقت نداشته باشیم.
  *

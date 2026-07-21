@@ -206,6 +206,7 @@ export function LikesScreen() {
         requiredTier={4}
         title="دیدنِ پسندکننده‌ها قفل است"
         message="با عضویتِ طلایی، چهره‌ی همه‌ی کسانی که تو را پسندیده‌اند آشکار می‌شود."
+        feature="دیدنِ پسندکننده‌ها"
         onClose={() => setShowPaywall(false)}
       />
     </ScreenContainer>

@@ -13,6 +13,13 @@ import type {
   MatchResult,
   ProfileDraft,
   Gender,
+  FollowState,
+  FollowUser,
+  AppNotification,
+  NotificationActor,
+  NotificationKind,
+  Badges,
+  NotificationPrefs,
 } from '@/domain/entities';
 import type {
   UserDTO,
@@ -27,6 +34,12 @@ import type {
   TierDTO,
   AuthDTO,
   MatchDTO,
+  FollowStateDTO,
+  FollowUserDTO,
+  NotificationDTO,
+  NotificationActorDTO,
+  BadgesDTO,
+  NotificationPrefsDTO,
 } from '@/data/dto';
 
 const undefIfNull = <T>(v: T | null | undefined): T | undefined =>
@@ -138,8 +151,13 @@ export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
   distanceM: d.distance_m ?? undefined,
   isMatch: d.is_match ?? false,
   matchId: d.match_id ?? undefined,
+  mySwipe: d.my_swipe ?? undefined,
   isOnline: d.is_online,
   lastActiveMin: d.last_active_min ?? undefined,
+  isFollowing: Boolean(d.is_following),
+  isFollowedBy: Boolean(d.is_followed_by),
+  followersCount: d.followers_count ?? 0,
+  followingCount: d.following_count ?? 0,
   interests: d.interests ?? [],
   photos: d.photos ?? [],
   photoIds: d.photo_ids ?? [],
@@ -199,3 +217,90 @@ export const toMatchResult = (d: MatchDTO | undefined): MatchResult => ({
   matchId: d?.match_id,
   peer: d?.peer ? toCandidate(d.peer) : undefined,
 });
+
+// — گرافِ دنبال‌کردن —
+
+export const toFollowState = (d: FollowStateDTO | null | undefined): FollowState => ({
+  isFollowing: Boolean(d?.is_following),
+  isFollowedBy: Boolean(d?.is_followed_by),
+  followersCount: d?.followers_count ?? 0,
+  followingCount: d?.following_count ?? 0,
+});
+
+export const toFollowUser = (d: FollowUserDTO): FollowUser => ({
+  id: d.id,
+  name: undefIfNull(d.name),
+  age: d.age,
+  photoUrl: undefIfNull(d.photo_url),
+  tier: d.tier,
+  verified: d.verified,
+  isFollowing: Boolean(d.is_following),
+});
+
+// — اعلان‌ها —
+
+const NOTIFICATION_KINDS: readonly NotificationKind[] = [
+  'follow',
+  'like',
+  'super_like',
+  'match',
+  'message',
+  'profile_view',
+  'system',
+];
+
+/** گونه‌ی ناشناخته‌ی سرور را به «system» می‌بریم تا اپ نشکند. */
+const toNotificationKind = (raw: string): NotificationKind =>
+  (NOTIFICATION_KINDS as readonly string[]).includes(raw) ? (raw as NotificationKind) : 'system';
+
+export const toNotificationActor = (d: NotificationActorDTO): NotificationActor => ({
+  id: d.id,
+  name: undefIfNull(d.name),
+  photoUrl: undefIfNull(d.photo_url),
+  tier: d.tier,
+});
+
+export const toNotification = (d: NotificationDTO): AppNotification => ({
+  id: d.id,
+  kind: toNotificationKind(d.kind),
+  // متنِ نمایشی همیشه از سرور می‌آید؛ این‌جا چیزی ساخته نمی‌شود.
+  title: d.title ?? '',
+  body: d.body ?? '',
+  actors: (d.actors ?? []).map(toNotificationActor),
+  count: d.count ?? 1,
+  locked: Boolean(d.locked),
+  entityId: d.entity_id ?? undefined,
+  linkUrl: undefIfNull(d.link_url),
+  seen: Boolean(d.seen),
+  read: Boolean(d.read),
+  createdAt: d.created_at,
+  updatedAt: d.updated_at ?? d.created_at,
+});
+
+export const toBadges = (d: BadgesDTO | null | undefined): Badges => ({
+  notifications: d?.notifications ?? 0,
+  unreadNotifications: d?.unread_notifications ?? 0,
+  unreadMessages: d?.unread_messages ?? 0,
+  unreadThreads: d?.unread_threads ?? 0,
+});
+
+export const toNotificationPrefs = (d: NotificationPrefsDTO | null | undefined): NotificationPrefs => ({
+  follows: d?.notif_follows ?? true,
+  likes: d?.notif_likes ?? true,
+  messages: d?.notif_messages ?? true,
+  matches: d?.notif_matches ?? true,
+  profileViews: d?.notif_profile_views ?? true,
+  system: d?.notif_system ?? true,
+});
+
+/** فقط کلیدهای داده‌شده را می‌فرستد (بدنه‌ی PUT جزئی است). */
+export const fromNotificationPrefs = (p: Partial<NotificationPrefs>): NotificationPrefsDTO => {
+  const dto: NotificationPrefsDTO = {};
+  if (p.follows !== undefined) dto.notif_follows = p.follows;
+  if (p.likes !== undefined) dto.notif_likes = p.likes;
+  if (p.messages !== undefined) dto.notif_messages = p.messages;
+  if (p.matches !== undefined) dto.notif_matches = p.matches;
+  if (p.profileViews !== undefined) dto.notif_profile_views = p.profileViews;
+  if (p.system !== undefined) dto.notif_system = p.system;
+  return dto;
+};

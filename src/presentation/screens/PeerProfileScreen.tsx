@@ -12,7 +12,7 @@ import {
   type NativeScrollEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { ScreenContainer, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
 import { StackHeader } from '@/presentation/components/StackHeader';
 import { PeerProfileSkeleton } from '@/presentation/components/Skeleton';
@@ -23,6 +23,7 @@ import { Scrim } from '@/presentation/components/Scrim';
 import { TierBadge } from '@/presentation/components/TierBadge';
 import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
+import { FollowButton } from '@/presentation/components/FollowButton';
 import { usePeerProfileViewModel } from '@/presentation/hooks/usePeerProfileViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { mediaUrl } from '@/core/http/mediaUrl';
@@ -37,6 +38,29 @@ const faLastActive = (isOnline?: boolean, min?: number): string => {
   if (min < 60 * 24) return `فعال ${faNum(Math.floor(min / 60))} ساعت پیش`;
   return `فعال ${faNum(Math.floor(min / (60 * 24)))} روز پیش`;
 };
+
+/** شمارنده‌ی قابلِ ضربه‌ی «دنبال‌کننده/دنبال‌شده». */
+function FollowStat({
+  value,
+  label,
+  onPress,
+}: {
+  value: number;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${faNum(value)}`}
+      style={({ pressed }) => [styles.followStat, pressed && styles.followStatPressed]}
+    >
+      <Text style={styles.followStatValue}>{faNum(value)}</Text>
+      <Text style={styles.followStatLabel}>{label}</Text>
+    </Pressable>
+  );
+}
 
 /** پروفایلِ عمومیِ یک کاربرِ دیگر — عکس‌ها، معرفی، علاقه‌مندی‌ها و کنشِ پسند. */
 export function PeerProfileScreen({ userId }: { userId: number }) {
@@ -86,6 +110,12 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
     const i = Math.round(e.nativeEvent.contentOffset.x / heroW);
     if (i !== photoIdx) setPhotoIdx(i);
   };
+
+  // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ تازه تا اجرای بعدیِ expo start شناخته نمی‌شود.
+  const openFollowList = (tab: 'followers' | 'following') =>
+    router.push(
+      `/followers?user=${p.id}&tab=${tab}&name=${encodeURIComponent(p.name ?? '')}` as Href
+    );
 
   return (
     <ScreenContainer>
@@ -159,6 +189,36 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           ) : null}
         </View>
 
+        {/* — گرافِ دنبال‌کردن: رایگان برای همه‌ی سطح‌ها، بدونِ هیچ قفلِ اشتراکی — */}
+        <View style={styles.followRow}>
+          <View style={styles.followCounts}>
+            <FollowStat
+              value={p.followersCount}
+              label="دنبال‌کننده"
+              onPress={() => openFollowList('followers')}
+            />
+            <View style={styles.followDivider} />
+            <FollowStat
+              value={p.followingCount}
+              label="دنبال‌شده"
+              onPress={() => openFollowList('following')}
+            />
+          </View>
+          <FollowButton
+            isFollowing={p.isFollowing}
+            busy={vm.followBusy}
+            onPress={vm.toggleFollow}
+            size="md"
+            style={styles.followBtn}
+          />
+        </View>
+        {p.isFollowedBy ? (
+          <View style={styles.followsYou}>
+            <Icon name="check" size={12} tint="gold" />
+            <Text style={styles.followsYouText}>شما را دنبال می‌کند</Text>
+          </View>
+        ) : null}
+
         {p.bio ? (
           <>
             <Text style={styles.section}>درباره‌اش</Text>
@@ -166,28 +226,44 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           </>
         ) : null}
 
-        {p.interests.length > 0 ? (
-          <>
-            <Text style={styles.section}>علاقه‌مندی‌ها</Text>
-            <View style={styles.interests}>
-              {p.interests.map((label) => (
-                <View key={label} style={styles.interest}>
-                  <Text style={styles.interestText}>{label}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        ) : null}
+        {p.interests.length > 0 ? (() => {
+          // علاقه‌مندی‌های مشترک با بیننده طلایی و اول نمایش داده می‌شوند — نقطه‌ی اتصالِ گفتگو.
+          const mine = new Set(user?.interests ?? []);
+          const shared = p.interests.filter((l) => mine.has(l));
+          const rest = p.interests.filter((l) => !mine.has(l));
+          return (
+            <>
+              <Text style={styles.section}>علاقه‌مندی‌ها</Text>
+              {shared.length > 0 ? (
+                <Text style={styles.sharedNote}>
+                  {faNum(shared.length)} علاقه‌ی مشترک دارید ✨
+                </Text>
+              ) : null}
+              <View style={styles.interests}>
+                {[...shared, ...rest].map((label) => {
+                  const isShared = mine.has(label);
+                  return (
+                    <View key={label} style={[styles.interest, isShared && styles.interestShared]}>
+                      <Text style={[styles.interestText, isShared && styles.interestTextShared]}>
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          );
+        })() : null}
 
         {/* کنش‌ها کنارِ هم — پسندیدن راست، ارسالِ پیام چپ */}
         <View style={styles.actions}>
           {!p.isMatch ? (
             <Button
-              label={vm.liked ? 'پسندیدی' : 'پسندیدن'}
-              icon="heart-fill"
-              onPress={vm.like}
+              label={vm.liked ? 'پسندیدی — لغو' : vm.disliked ? 'نپسندیدی — لغو' : 'پسندیدن'}
+              icon={vm.liked || vm.disliked ? 'rewind' : 'heart-fill'}
+              variant={vm.liked || vm.disliked ? 'outline' : 'gold'}
+              onPress={vm.liked || vm.disliked ? vm.undoSwipe : vm.like}
               loading={vm.swiping}
-              disabled={vm.liked}
               style={styles.actionBtn}
             />
           ) : null}
@@ -218,6 +294,20 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
             style={styles.actionBtn}
           />
         </View>
+
+        {/* نپسندیدن — فقط تا وقتی هیچ کنشی روی این کاربر ثبت نشده */}
+        {!p.isMatch && !vm.liked && !vm.disliked ? (
+          <Button
+            label="نپسندیدن"
+            icon="close"
+            variant="ghost"
+            onPress={vm.dislike}
+            loading={vm.swiping}
+            size="md"
+            style={styles.dislikeBtn}
+          />
+        ) : null}
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="گزارش عکس پروفایل"
@@ -386,6 +476,45 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   interestText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
+  interestShared: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
+  interestTextShared: { color: colors.gold2 },
+  sharedNote: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.gold2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: spacing.sm,
+  },
+  followRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  followCounts: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center' },
+  followDivider: { width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: spacing.md },
+  followStat: { alignItems: 'center' },
+  followStatPressed: { opacity: 0.6 },
+  followStatValue: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.ink },
+  followStatLabel: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3 },
+  followBtn: { minWidth: 132 },
+  followsYou: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.goldFaint,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+  },
+  followsYouText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
   actions: { flexDirection: 'row-reverse', marginTop: spacing.xl, gap: spacing.md },
   actionBtn: { flex: 1 },
+  dislikeBtn: { marginTop: spacing.sm },
 });

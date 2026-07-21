@@ -160,6 +160,7 @@ export function ViewersScreen() {
         requiredTier={4}
         title="دیدنِ بازدیدکننده‌ها قفل است"
         message="با عضویتِ طلایی، چهره‌ی همه‌ی بازدیدکنندگانِ پروفایلت آشکار می‌شود."
+        feature="دیدنِ بازدیدکننده‌ها"
         onClose={() => setShowPaywall(false)}
       />
     </ScreenContainer>

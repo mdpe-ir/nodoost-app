@@ -264,7 +264,11 @@ export function MapView() {
               label={locked ? `${o.label} · قفل` : o.label}
               active={vm.active === o.key}
               onPress={() => {
-                if (locked) router.push('/profile?tab=plans');
+                if (locked)
+                  router.push({
+                    pathname: '/plans',
+                    params: { required: String(o.minTier), feature: `فیلترِ «${o.label}»` },
+                  });
                 else vm.setActive(vm.active === o.key && o.key !== '' ? '' : o.key);
               }}
               style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
@@ -278,7 +282,11 @@ export function MapView() {
               label={locked ? 'چهره‌نما · قفل' : 'چهره‌نما'}
               active={vm.verified}
               onPress={() => {
-                if (locked) router.push('/profile?tab=plans');
+                if (locked)
+                  router.push({
+                    pathname: '/plans',
+                    params: { required: String(VERIFIED_MIN_TIER), feature: 'فیلترِ چهره‌نما' },
+                  });
                 else vm.setVerified(!vm.verified);
               }}
               style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
@@ -301,7 +309,11 @@ export function MapView() {
               label={o.locked ? `${faNum(o.km)} کیلومتر · قفل` : `${faNum(o.km)} کیلومتر`}
               active={!o.locked && selectedRadiusKm === o.km}
               onPress={() => {
-                if (o.locked) router.push('/profile?tab=plans');
+                if (o.locked)
+                  router.push({
+                    pathname: '/plans',
+                    params: { feature: 'شعاعِ جست‌وجوی بیشتر' },
+                  });
                 else vm.setRadiusKm(o.km);
               }}
               style={o.locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}

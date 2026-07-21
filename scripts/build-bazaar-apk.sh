@@ -51,45 +51,83 @@ fi
 # ── ABIهای دستگاه‌های واقعیِ بازار (نه x86 امولاتور) ───────────────────────
 ABIS="${ABIS:-arm64-v8a,armeabi-v7a}"
 
-# ── کی‌استورِ release (یک‌بار بساز، همیشه همان را نگه‌دار) ──────────────────
+# ── کی‌استورِ release ──────────────────────────────────────────────────────
+# بازار اپ را برای همیشه به کلیدِ *اولین انتشار* قفل می‌کند. برای com.nodoost.app
+# آن کلید، کی‌استورِ Shoplon (alias=upload) است. اگر با کلیدِ دیگری امضا کنیم،
+# بازار آپلود را رد می‌کند:
+#   «بسته باید با کلیدی یکسان با آخرین بسته منتشر شده امضا شود.»
+#
+# ⚠ این اسکریپت *عمداً* دیگر کی‌استور نمی‌سازد. تولیدِ خودکارِ کی‌استور قبلاً
+#   باعث شد نسخه‌ها با کلیدِ اشتباه (nodoost-release.jks) امضا شوند و انتشار
+#   بشکند. اگر کی‌استور نبود، build با خطا متوقف می‌شود — نه اینکه بی‌صدا
+#   کلیدِ بی‌مصرفِ جدید بسازد.
 KEYSTORE_DIR="$APP_DIR/keystore"
-KEYSTORE_FILE="${NODOOST_KEYSTORE_FILE:-$KEYSTORE_DIR/nodoost-release.jks}"
 KEYSTORE_ENV="$KEYSTORE_DIR/release-keystore.env"
-KEY_ALIAS="${NODOOST_KEY_ALIAS:-nodoost}"
-mkdir -p "$KEYSTORE_DIR"
 
-# اگر رمزها از قبل ذخیره شده‌اند، بارگذاری کن.
-if [[ -f "$KEYSTORE_ENV" ]]; then
-  # shellcheck disable=SC1090
-  source "$KEYSTORE_ENV"
+if [[ ! -f "$KEYSTORE_ENV" ]]; then
+  cat >&2 <<EOF
+
+✗ فایلِ رمزهای کی‌استور پیدا نشد:
+    $KEYSTORE_ENV
+
+  این فایل (به‌همراهِ .jks) محرمانه است و در git نیست. از بکاپِ امن بازیابی‌اش کن.
+EOF
+  exit 1
 fi
+# shellcheck disable=SC1090
+source "$KEYSTORE_ENV"
+
+KEYSTORE_FILE="$KEYSTORE_DIR/${STORE_FILE:-shoplon-upload-key.jks}"
+KEY_ALIAS="${KEY_ALIAS:-upload}"
+EXPECTED_SHA1="${EXPECTED_SHA1:-ED:56:8B:E8:E3:39:72:BA:01:2F:FE:00:85:6D:37:AB:54:3A:8F:19}"
 
 if [[ ! -f "$KEYSTORE_FILE" ]]; then
-  echo "==> کی‌استورِ release پیدا نشد — یک‌بار ساخته می‌شود…"
-  STORE_PASSWORD="${STORE_PASSWORD:-$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 28)}"
-  KEY_PASSWORD="${KEY_PASSWORD:-$STORE_PASSWORD}"
-  "$JAVA_HOME/bin/keytool" -genkeypair -v \
-    -keystore "$KEYSTORE_FILE" \
-    -alias "$KEY_ALIAS" \
-    -keyalg RSA -keysize 2048 -validity 10000 \
-    -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
-    -dname "CN=Nodoost, OU=Mobile, O=SpellAds, L=Tehran, C=IR"
-  umask 077
-  cat > "$KEYSTORE_ENV" <<EOF
-# رمزهای کی‌استورِ release نودوست — محرمانه. همراهِ فایلِ .jks بکاپ بگیر.
-# با گم‌شدنِ این‌ها، دیگر هرگز نمی‌توانی com.nodoost.app را در بازار به‌روزرسانی کنی.
-STORE_PASSWORD='$STORE_PASSWORD'
-KEY_PASSWORD='$KEY_PASSWORD'
+  cat >&2 <<EOF
+
+✗ کی‌استورِ انتشار پیدا نشد:
+    $KEYSTORE_FILE
+
+  بدونِ این فایل نمی‌توان com.nodoost.app را در بازار به‌روزرسانی کرد.
+  از بکاپِ امن بازیابی‌اش کن. (این اسکریپت عمداً کی‌استورِ جدید نمی‌سازد —
+  کلیدِ جدید یعنی آپلودِ ردشده در بازار.)
 EOF
-  chmod 600 "$KEYSTORE_ENV"
-  echo ""
-  echo "  ############################################################"
-  echo "  #  ⚠  از این دو فایل حتماً بکاپِ امن بگیر:"
-  echo "  #     $KEYSTORE_FILE"
-  echo "  #     $KEYSTORE_ENV"
-  echo "  #  بدونِ آن‌ها به‌روزرسانیِ اپ در بازار غیرممکن می‌شود."
-  echo "  ############################################################"
-  echo ""
+  exit 1
+fi
+
+# ── گیتِ فینگرپرینت: قبل از build مطمئن شو کلید همانی است که بازار می‌خواهد ──
+ACTUAL_SHA1="$("$JAVA_HOME/bin/keytool" -list -v \
+  -keystore "$KEYSTORE_FILE" -alias "$KEY_ALIAS" -storepass "$STORE_PASSWORD" 2>/dev/null \
+  | grep -i 'SHA1:' | head -1 | sed 's/.*SHA1: *//' | tr -d ' \r')"
+
+if [[ -z "$ACTUAL_SHA1" ]]; then
+  echo "✗ کی‌استور خوانده نشد — رمز یا alias ($KEY_ALIAS) اشتباه است." >&2
+  exit 1
+fi
+if [[ "${ACTUAL_SHA1^^}" != "${EXPECTED_SHA1^^}" ]]; then
+  cat >&2 <<EOF
+
+✗ کی‌استورِ اشتباه! بازار این بسته را رد خواهد کرد.
+    انتظار : $EXPECTED_SHA1
+    واقعی  : $ACTUAL_SHA1
+    فایل   : $KEYSTORE_FILE
+EOF
+  exit 1
+fi
+echo "==> کی‌استور تأیید شد (SHA-1: $ACTUAL_SHA1، alias: $KEY_ALIAS)"
+
+# ── گیتِ versionCode: باید از نسخه‌ی منتشرشده در بازار بزرگ‌تر باشد ─────────
+VERSION_CODE="$(node -p "require('./app.json').expo.android.versionCode" 2>/dev/null || echo 0)"
+PUBLISHED_VERSION_CODE="${PUBLISHED_VERSION_CODE:-12}"
+if (( VERSION_CODE <= PUBLISHED_VERSION_CODE )); then
+  cat >&2 <<EOF
+
+✗ versionCode برابرِ $VERSION_CODE است، اما نسخه‌ی منتشرشده در بازار
+  versionCode=$PUBLISHED_VERSION_CODE دارد. بازار فقط versionCodeِ بزرگ‌تر را می‌پذیرد.
+
+  در app.json مقدارِ expo.android.versionCode را به $((PUBLISHED_VERSION_CODE + 1))
+  یا بیشتر تغییر بده (و expo.version را هم بالا ببر).
+EOF
+  exit 1
 fi
 
 # ── prebuild: بازتولیدِ android/ با پلاگین‌ها (امضا + بازار + Poolakey patch) ─
@@ -116,24 +154,76 @@ echo "==> gradle assembleRelease  (ABIs: $ABIS,  API: $EXPO_PUBLIC_API_BASE_URL)
     "${SOCKS_ARGS[@]}" "${GRADLE_EXTRA[@]}" \
     --console=plain )
 
-# ── جمع‌آوریِ خروجی ────────────────────────────────────────────────────────
-APK="$APP_DIR/android/app/build/outputs/apk/release/app-release.apk"
-[[ -f "$APK" ]] || { echo "خطا: APK ساخته نشد در $APK" >&2; exit 1; }
-
+# ── جمع‌آوریِ خروجی (یک APK به ازای هر معماری — ABI splits) ────────────────
+RELEASE_DIR="$APP_DIR/android/app/build/outputs/apk/release"
 OUT_DIR="$APP_DIR/build-output"
 mkdir -p "$OUT_DIR"
 VER="$(node -p "require('./app.json').expo.version")"
-DEST="$OUT_DIR/nodoost-${VER}-bazaar-release.apk"
-cp "$APK" "$DEST"
+
+# یک الگو که هم خروجیِ split (app-arm64-v8a-release.apk) و هم خروجیِ
+# universal (app-release.apk) را بگیرد. توجه: nullglob فقط روی *الگو* اثر دارد،
+# نه روی نامِ ثابت — پس هر دو حالت باید داخلِ یک glob باشند.
+shopt -s nullglob
+BUILT_APKS=("$RELEASE_DIR"/app*release.apk)
+shopt -u nullglob
+if (( ${#BUILT_APKS[@]} == 0 )); then
+  echo "خطا: هیچ APKی ساخته نشد در $RELEASE_DIR" >&2
+  exit 1
+fi
+
+APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)"
+AAPT2="$(ls "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1 || true)"
+EXPECTED_PLAIN="$(echo "$EXPECTED_SHA1" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+
+DEST_LIST=()
+for APK in "${BUILT_APKS[@]}"; do
+  # APKِ universal (تک‌فایل، شاملِ هر دو معماری) → نامِ ساده.
+  # اگر روزی ABI split روشن شود، نامِ معماری به فایل اضافه می‌شود.
+  BASE="$(basename "$APK")"
+  if [[ "$BASE" == "app-release.apk" ]]; then
+    DEST="$OUT_DIR/nodoost-${VER}-bazaar-release.apk"
+  else
+    ABI="$(echo "$BASE" | sed -E 's/^app-(.*)-release\.apk$/\1/')"
+    DEST="$OUT_DIR/nodoost-${VER}-${ABI}-bazaar-release.apk"
+  fi
+  cp "$APK" "$DEST"
+
+  # ── گیتِ سختِ امضا: اگر Gradle به امضای debug برگشته باشد، اینجا گیر می‌افتد ──
+  if [[ -n "$APKSIGNER" ]]; then
+    APK_SHA1="$("$APKSIGNER" verify --print-certs "$DEST" 2>/dev/null \
+      | grep -i 'certificate SHA-1 digest' | head -1 | sed 's/.*digest: *//' | tr -d ' \r')"
+    if [[ "${APK_SHA1,,}" != "$EXPECTED_PLAIN" ]]; then
+      cat >&2 <<EOF
+
+✗ APK با کلیدِ اشتباه امضا شد — بازار ردش می‌کند. آپلود نکن!
+    فایل   : $BASE
+    انتظار : $EXPECTED_PLAIN
+    واقعی  : ${APK_SHA1:-<امضا پیدا نشد>}
+EOF
+      rm -f "$DEST"
+      exit 1
+    fi
+  fi
+  DEST_LIST+=("$DEST")
+done
 
 echo ""
-echo "✅ APKِ امضاشده‌ی production آماده است:"
-echo "   $DEST"
-# تأییدِ امضا (نباید androiddebugkey باشد).
-APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)"
-if [[ -n "$APKSIGNER" ]]; then
-  echo "── امضاکننده ──"
-  "$APKSIGNER" verify --print-certs "$DEST" 2>/dev/null | grep -iE "signer #1 (subject|certificate SHA-256)" || true
+echo "✅ خروجیِ امضاشده‌ی production آماده است (امضا با کلیدِ بازار تأیید شد):"
+for DEST in "${DEST_LIST[@]}"; do
+  SIZE="$(du -h "$DEST" | cut -f1)"
+  VC=""
+  if [[ -n "$AAPT2" ]]; then
+    VC="$("$AAPT2" dump badging "$DEST" 2>/dev/null | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1)"
+  fi
+  printf "   %-52s %6s  versionCode=%s\n" "$(basename "$DEST")" "$SIZE" "${VC:-?}"
+done
+echo ""
+if (( ${#DEST_LIST[@]} > 1 )); then
+  echo "هر ${#DEST_LIST[@]} فایل را در *یک رهانش* بارگذاری کن (گزینه‌ی «افزودن بسته»)؛"
+  echo "بازار خودش بستهٔ سازگارِ هر دستگاه را تحویل می‌دهد."
+else
+  echo "این فایل را در پنلِ توسعه‌دهنده‌ی بازار برای com.nodoost.app بارگذاری کن."
+  echo "(APKِ universal — شاملِ هر دو معماریِ arm64-v8a و armeabi-v7a.)"
 fi
 echo ""
 echo "بعدی: این APK را در پنلِ توسعه‌دهنده‌ی بازار برای com.nodoost.app بارگذاری کن."

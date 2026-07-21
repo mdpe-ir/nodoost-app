@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
@@ -16,6 +16,10 @@ import type { Tier } from '@/domain/entities';
  * صفحه‌ی سطح‌های اشتراک — «با هر پلن چه چیزی باز می‌شود و چرا بخری».
  * دو بخش: کارتِ کاملِ هر پلن (امکانات + خرید) و جدولِ مقایسه‌ی همه‌ی سطح‌ها.
  * از ‎/api/tiers‎ تغذیه می‌شود؛ هیچ عددی ثابت‌کد نیست.
+ *
+ * زمینه‌ی قفل: با ‎/plans?required=<level>&feature=<نامِ امکان>‎ باز شود، بنرِ
+ * «این امکان از سطحِ … باز می‌شود» را نشان می‌دهد، کارتِ همان سطح را برجسته
+ * می‌کند و به آن اسکرول می‌کند — تنها سطحِ خرید در کلِ اپ همین‌جاست.
  */
 export function PlansScreen() {
   const vm = usePlansViewModel();
@@ -23,12 +27,23 @@ export function PlansScreen() {
   const userTier = user?.tier ?? 1;
   const isPlus = Boolean(user?.isPlus);
 
+  const params = useLocalSearchParams<{ required?: string; feature?: string }>();
+  const required = Number(params.required) || 0;
+  const feature = typeof params.feature === 'string' && params.feature.trim() ? params.feature.trim() : null;
+  const contextual = required > 0 || feature != null;
+
+  // اسکرولِ خودکار به کارتِ سطحِ موردِ نیاز — مختصاتِ بخشِ کارت‌ها + کارتِ هدف.
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionY = useRef(0);
+  const scrolled = useRef(false);
+
   // به‌ترتیبِ سطح (کم به زیاد) تا کارت‌ها و ستون‌های جدول هم‌راستا باشند.
   const tiers = [...vm.tiers].sort((a, b) => a.level - b.level);
 
   return (
     <ScreenContainer flush>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
@@ -46,23 +61,58 @@ export function PlansScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.padded}>
-              <Text style={styles.lead}>
-                {isPlus
-                  ? `سطحِ فعلی‌ات ${tierName(userTier)} است. با ارتقا امکاناتِ بیشتری باز می‌شود.`
-                  : 'الان سطحِ عادی (رایگان) داری. یکی از پلن‌ها را انتخاب کن تا امکاناتش باز شود.'}
-              </Text>
+            <View
+              style={styles.padded}
+              onLayout={(e) => {
+                sectionY.current = e.nativeEvent.layout.y;
+              }}
+            >
+              {contextual ? (
+                <View style={styles.contextBanner}>
+                  <Icon name="lock" size={18} tint="gold" />
+                  <Text style={styles.contextText}>
+                    {`${feature ? `«${feature}»` : 'این امکان'} ${
+                      required
+                        ? `از سطحِ ${tierName(required)} به بالا باز می‌شود.`
+                        : 'به سطحِ بالاتری نیاز دارد.'
+                    } سطحِ فعلیِ تو ${isPlus ? tierName(userTier) : 'عادی (رایگان)'} است.`}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.lead}>
+                  {isPlus
+                    ? `سطحِ فعلی‌ات ${tierName(userTier)} است. با ارتقا امکاناتِ بیشتری باز می‌شود.`
+                    : 'الان سطحِ عادی (رایگان) داری. یکی از پلن‌ها را انتخاب کن تا امکاناتش باز شود.'}
+                </Text>
+              )}
 
-              {tiers.map((t) => (
-                <PlanCard
-                  key={t.id}
-                  tier={t}
-                  current={isPlus && t.level === userTier}
-                  recommended={t.level > userTier}
-                  purchasing={vm.purchasing === t.id}
-                  onBuy={() => vm.buy(t.id, t.bazaarSku)}
-                />
-              ))}
+              {tiers.map((t) => {
+                const isTarget = required > 0 && t.level === required;
+                return (
+                  <View
+                    key={t.id}
+                    onLayout={
+                      isTarget
+                        ? (e) => {
+                            if (scrolled.current) return;
+                            scrolled.current = true;
+                            const y = sectionY.current + e.nativeEvent.layout.y;
+                            scrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.md), animated: true });
+                          }
+                        : undefined
+                    }
+                  >
+                    <PlanCard
+                      tier={t}
+                      current={isPlus && t.level === userTier}
+                      recommended={t.level > userTier}
+                      highlight={isTarget}
+                      purchasing={vm.purchasing === t.id}
+                      onBuy={() => vm.buy(t.id, t.bazaarSku)}
+                    />
+                  </View>
+                );
+              })}
             </View>
 
             {tiers.length > 1 ? (
@@ -89,18 +139,34 @@ function PlanCard({
   tier,
   current,
   recommended,
+  highlight,
   purchasing,
   onBuy,
 }: {
   tier: Tier;
   current: boolean;
   recommended: boolean;
+  /** سطحِ موردِ نیازِ امکانِ قفل‌شده‌ای که کاربر را به این صفحه آورده. */
+  highlight?: boolean;
   purchasing: boolean;
   onBuy: () => void;
 }) {
   const perks = tierPerks(tier);
   return (
-    <View style={[styles.card, current && styles.cardCurrent, recommended && styles.cardRec]}>
+    <View
+      style={[
+        styles.card,
+        current && styles.cardCurrent,
+        recommended && styles.cardRec,
+        highlight && styles.cardHighlight,
+      ]}
+    >
+      {highlight ? (
+        <View style={styles.highlightTag}>
+          <Icon name="lock" size={12} tint="ink" />
+          <Text style={styles.highlightTagText}>موردِ نیاز برای این امکان</Text>
+        </View>
+      ) : null}
       <View style={styles.cardHead}>
         <View style={styles.cardHeadRight}>
           <TierBadge tier={tier.level} height={26} />
@@ -226,6 +292,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
 
+  // — بنرِ زمینه‌ی قفل («این امکان از سطحِ … باز می‌شود») —
+  contextBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.goldFaint,
+    marginBottom: spacing.lg,
+  },
+  contextText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+
   // — کارتِ پلن —
   card: {
     borderRadius: radius.xl,
@@ -237,6 +325,19 @@ const styles = StyleSheet.create({
   },
   cardCurrent: { borderColor: colors.goldSoft, backgroundColor: colors.surface2 },
   cardRec: { borderColor: colors.goldSoft },
+  cardHighlight: { borderColor: colors.gold, backgroundColor: colors.surface2 },
+  highlightTag: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.gold,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
+    marginBottom: spacing.md,
+  },
+  highlightTagText: { fontFamily: fonts.medium, fontSize: 10, color: colors.bg, writingDirection: 'rtl' },
   cardHead: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

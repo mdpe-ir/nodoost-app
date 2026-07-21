@@ -19,27 +19,40 @@ import { ProfileSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
+import { InstallButton } from '@/presentation/components/InstallButton';
+import { NotificationBell } from '@/presentation/components/NotificationBell';
+import { InterestPicker } from '@/presentation/components/InterestPicker';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { tierName } from '@/presentation/components/TierBadge';
-import { tierPerks, maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
+import { maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
-import { faNum, faPrice } from '@/core/utils/faNum';
+import { faNum } from '@/core/utils/faNum';
 import { faJalali, daysUntil } from '@/core/utils/time';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradients } from '@/core/theme';
 
 const COLS = 3;
 const GRID_GAP = 2;
 
-type Tab = 'photos' | 'about' | 'plans' | 'settings';
+type Tab = 'photos' | 'about' | 'settings';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'photos', label: 'عکس‌ها' },
   { key: 'about', label: 'درباره' },
-  { key: 'plans', label: 'عضویت' },
   { key: 'settings', label: 'تنظیمات' },
 ];
-/** زبانه‌ی معتبر از پارامترِ مسیر (مثلاً ‎/profile?tab=plans از دکمه‌های ارتقا). */
+/** زبانه‌ی معتبر از پارامترِ مسیر (مثلاً ‎/profile?tab=settings). */
 const asTab = (v: unknown): Tab | null =>
   typeof v === 'string' && TABS.some((t) => t.key === v) ? (v as Tab) : null;
+
+/** همه‌ی مسیرهای ارتقا به یک مقصد می‌روند: صفحه‌ی سطح‌ها، با زمینه‌ی امکانِ قفل. */
+const goToPlans = (required?: number, feature?: string) =>
+  router.push({
+    pathname: '/plans',
+    params: {
+      ...(required ? { required: String(required) } : null),
+      ...(feature ? { feature } : null),
+    },
+  });
 
 /** شهرهای حالتِ سفر (الماس) — مختصاتِ مرکزِ شهر. */
 const TRAVEL_CITIES: { name: string; lat: number; lng: number }[] = [
@@ -131,20 +144,40 @@ function PrivacyRow({
   );
 }
 
+/**
+ * کنش‌های هدرِ «من» — زنگوله‌ی اعلان‌ها کنارِ دکمه‌ی نصب.
+ * (ScreenHeader وقتی `action` بگیرد دکمه‌ی نصب را جایگزین می‌کند؛ پس هر دو را خودمان می‌چینیم.)
+ */
+function ProfileHeaderActions() {
+  return (
+    <View style={styles.headerActions}>
+      <NotificationBell />
+      <InstallButton />
+    </View>
+  );
+}
+
 export function ProfileScreen() {
   const vm = useProfileViewModel();
+  const { interests: interestsCatalog } = useRemoteConfig();
   const { width } = useWindowDimensions();
   // شبکه‌ی تمام‌عرض (لبه‌تا‌لبه) مثلِ اینستاگرام — سلول‌های مربعیِ نزدیک‌به‌هم.
   const tile = (width - GRID_GAP * (COLS - 1)) / COLS;
 
-  // زبانه‌ی فعال؛ با پارامترِ ‎?tab=…‎ قابلِ کنترل از هر جای اپ (دکمه‌های ارتقا → عضویت).
+  // زبانه‌ی فعال؛ با پارامترِ ‎?tab=…‎ قابلِ کنترل از هر جای اپ.
   const params = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>(asTab(params.tab) ?? 'photos');
   useEffect(() => {
+    // «عضویت» دیگر زبانه‌ی پروفایل نیست — لینک‌های قدیمیِ ?tab=plans به صفحه‌ی سطح‌ها می‌روند.
+    if (params.tab === 'plans') {
+      router.setParams({ tab: '' });
+      goToPlans();
+      return;
+    }
     const t = asTab(params.tab);
     if (t) {
       setTab(t);
-      // پارامتر را مصرف‌شده پاک می‌کنیم تا فشردنِ دوباره‌ی «ارتقا» همیشه دوباره اثر کند.
+      // پارامتر را مصرف‌شده پاک می‌کنیم تا لینکِ بعدی همیشه دوباره اثر کند.
       router.setParams({ tab: '' });
     }
   }, [params.tab]);
@@ -185,7 +218,7 @@ export function ProfileScreen() {
       >
         {/* ۰ — هویت؛ همراهِ اسکرول بالا می‌رود — */}
         <View style={styles.padded}>
-          <ScreenHeader title="من" />
+          <ScreenHeader title="من" action={<ProfileHeaderActions />} />
 
           <View style={styles.idRow}>
             <View style={[styles.avatarRing, shadow.gold]}>
@@ -199,7 +232,7 @@ export function ProfileScreen() {
             </View>
             <View style={styles.stats}>
               <Stat value={faNum(vm.photos.length)} label="عکس" onPress={() => setTab('photos')} />
-              <Stat value={activeTierName} label="سطح" onPress={() => setTab('plans')} />
+              <Stat value={activeTierName} label="سطح" onPress={() => goToPlans()} />
               {/* «as Href»: تایپِ مسیرها تولیدی است و تا اجرای بعدیِ expo start مسیرِ تازه را نمی‌شناسد. */}
               <Stat value={faNum(vm.viewersCount)} label="بازدید" onPress={() => router.push('/viewers' as Href)} />
             </View>
@@ -222,10 +255,11 @@ export function ProfileScreen() {
             <Button label="پسندها" size="sm" variant="ghost" icon="tab-likes" onPress={() => router.push('/likes')} style={styles.actionBtn} />
           </View>
 
-          {/* — دعوتِ ارتقا؛ فقط برای کاربرِ رایگان — */}
+          {/* — عضویت: برای کاربرِ رایگان دعوتِ ارتقا، برای مشترک کارتِ وضعیتِ اشتراک.
+              جزئیات و خرید فقط در صفحه‌ی «سطح‌های اشتراک» (/plans) است. — */}
           {!user?.isPlus ? (
             <Pressable
-              onPress={() => setTab('plans')}
+              onPress={() => goToPlans()}
               style={({ pressed }) => [styles.cta, shadow.gold, pressed && styles.ctaPressed]}
               accessibilityRole="button"
               accessibilityLabel="ارتقا به نودوست پلاس"
@@ -242,7 +276,31 @@ export function ProfileScreen() {
                 <Text style={styles.ctaPillText}>ارتقا</Text>
               </View>
             </Pressable>
-          ) : null}
+          ) : (
+            <Pressable
+              onPress={() => goToPlans()}
+              style={({ pressed }) => [styles.memberCard, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="مدیریتِ اشتراک و ارتقا"
+            >
+              <View style={styles.memberIcon}>
+                <Icon name="diamond-fill" size={20} tint="gold" />
+              </View>
+              <View style={styles.memberBody}>
+                <Text style={styles.memberTitle}>
+                  {`اشتراکِ ${activeTierName}${isTrial ? ' (آزمایشی)' : ''} فعال است`}
+                </Text>
+                <Text style={styles.memberSub}>
+                  {expiry
+                    ? `تا ${expiry}${remainingDays > 0 ? ` · ${faNum(remainingDays)} روزِ باقی‌مانده` : ''}`
+                    : 'برای تمدید یا ارتقا بزن'}
+                </Text>
+              </View>
+              <View style={styles.memberAction}>
+                <Text style={styles.memberActionText}>تمدید / ارتقا</Text>
+              </View>
+            </Pressable>
+          )}
         </View>
 
         {/* ۱ — نوارِ زبانه‌ها (چسبان) — */}
@@ -326,7 +384,7 @@ export function ProfileScreen() {
                 // سقفِ سطحِ فعلی پر شده — کاشیِ قفل، دعوت به ارتقا.
                 <Pressable
                   style={({ pressed }) => [styles.tile, styles.addTile, styles.lockTile, { width: tile, height: tile }, pressed && styles.addTilePressed]}
-                  onPress={() => setTab('plans')}
+                  onPress={() => goToPlans(userTier + 1, 'آپلودِ عکس‌های بیشتر')}
                   accessibilityRole="button"
                   accessibilityLabel="افزایشِ سقفِ عکس با ارتقای سطح"
                 >
@@ -375,6 +433,15 @@ export function ProfileScreen() {
                 maxLength={160}
               />
               <Text style={styles.bioCount}>{faNum(vm.draftBio.length)} / {faNum(160)}</Text>
+              <Text style={styles.fieldLabel}>علاقه‌مندی‌ها</Text>
+              <Text style={styles.fieldHint}>
+                با انتخابِ علاقه‌مندی‌ها، افرادِ هم‌سلیقه‌ات را بهتر پیدا می‌کنیم.
+              </Text>
+              <InterestPicker
+                options={interestsCatalog}
+                value={vm.draftInterests}
+                onChange={vm.setDraftInterests}
+              />
               {vm.saveError ? <Text style={styles.saveError}>ذخیره ناموفق بود. دوباره تلاش کن.</Text> : null}
               <Button
                 label="ذخیره‌ی تغییرات"
@@ -387,81 +454,41 @@ export function ProfileScreen() {
           </View>
         ) : null}
 
-        {tab === 'plans' ? (
-          <View style={styles.padded}>
-            {user?.isPlus ? (
-              <Text style={styles.statusLine}>
-                {isTrial ? 'اشتراکِ آزمایشی' : 'اشتراکِ فعال'}
-                {expiry ? ` · تا ${expiry}` : ''}
-                {remainingDays > 0 ? ` · ${faNum(remainingDays)} روزِ باقی‌مانده` : ''}
-              </Text>
-            ) : null}
-            <Button
-              label="مقایسه‌ی کاملِ سطح‌ها"
-              variant="ghost"
-              icon="diamond-fill"
-              onPress={() => router.push('/plans')}
-              style={styles.plansCta}
-            />
-            <View style={styles.tiers}>
-              {!user?.isPlus ? (
-                <View style={[styles.tierCard, styles.tierCardCurrent]}>
-                  <View style={styles.tierCardHead}>
-                    <View style={styles.tierNameRow}>
-                      <Text style={styles.tierName}>رایگان</Text>
-                      <View style={styles.currentTag}><Text style={styles.currentTagText}>پلنِ فعلی</Text></View>
-                    </View>
-                    <Text style={styles.tierPrice}>بدونِ پرداخت</Text>
-                  </View>
-                </View>
-              ) : null}
-              {vm.tiers.map((t) => {
-                const current = user?.isPlus && t.level === userTier;
-                const perks = tierPerks(t).slice(0, 3);
-                return (
-                  <View key={t.id} style={[styles.tierCard, current && styles.tierCardCurrent]}>
-                    <View style={styles.tierCardHead}>
-                      <View style={styles.tierNameRow}>
-                        <Text style={styles.tierName}>{t.name}</Text>
-                        {current ? (
-                          <View style={styles.currentTag}><Text style={styles.currentTagText}>{isTrial ? 'trial فعال' : 'پلنِ فعلی'}</Text></View>
-                        ) : null}
-                      </View>
-                      {t.priceToman != null ? <Text style={styles.tierPrice}>{faPrice(t.priceToman)} تومان</Text> : null}
-                    </View>
-                    {perks.length ? (
-                      <View style={styles.tierPerks}>
-                        {perks.map((p, i) => (
-                          <View key={i} style={styles.tierPerkRow}>
-                            <Icon name="check" size={13} tint="gold" />
-                            <Text style={styles.tierPerkText} numberOfLines={1}>{p}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : null}
-                    {!current ? (
-                      <Button
-                        label="خرید"
-                        size="sm"
-                        onPress={() => vm.buy(t.id, t.bazaarSku)}
-                        loading={vm.busy}
-                        style={styles.buyBtn}
-                      />
-                    ) : (
-                      <View style={styles.tierActiveRow}>
-                        <Icon name="check" size={16} tint="gold" />
-                        <Text style={styles.tierActiveText}>فعال است</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
         {tab === 'settings' ? (
           <View style={styles.padded}>
+            {/* — اعلان‌ها: صفحه‌ی جدا با سوییچِ هر گونه — */}
+            <Text style={styles.groupLabel}>اعلان‌ها</Text>
+            <View style={styles.group}>
+              <Pressable
+                style={styles.rowInner}
+                onPress={() => router.push('/notification-settings' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="تنظیماتِ اعلان"
+              >
+                <View style={styles.rowChip}><Icon name="bell" size={18} tint="gold" /></View>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>تنظیماتِ اعلان</Text>
+                  <Text style={styles.rowHint}>انتخاب کن برای کدام اتفاق‌ها خبردار شوی</Text>
+                </View>
+                <Icon name="chevron-prev" size={16} tint="gold" />
+              </Pressable>
+              <View style={styles.rowDivider} />
+              <Pressable
+                style={styles.rowInner}
+                onPress={() => router.push('/followers' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="دنبال‌کننده‌ها"
+              >
+                <View style={styles.rowChip}><Icon name="tab-profile" size={18} tint="gold" /></View>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>دنبال‌کننده‌ها و دنبال‌شده‌ها</Text>
+                  <Text style={styles.rowHint}>فهرستِ کسانی که دنبالت می‌کنند و دنبالشان می‌کنی</Text>
+                </View>
+                <Icon name="chevron-prev" size={16} tint="gold" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.groupLabel}>موقعیت</Text>
             <View style={styles.group}>
               <View style={styles.rowInner}>
                 <View style={styles.rowChip}><Icon name="map" size={18} tint="gold" /></View>
@@ -498,7 +525,7 @@ export function ProfileScreen() {
                 value={user?.prefs?.hideOnline ?? false}
                 saving={vm.savingPref === 'hideOnline'}
                 onChange={(v) => vm.updatePrefs({ hideOnline: v })}
-                onUpgrade={() => setTab('plans')}
+                onUpgrade={() => goToPlans(4, 'پنهان‌کردنِ وضعیتِ آنلاین')}
               />
               <View style={styles.rowDivider} />
               <PrivacyRow
@@ -511,7 +538,7 @@ export function ProfileScreen() {
                 value={user?.prefs?.hideDistance ?? false}
                 saving={vm.savingPref === 'hideDistance'}
                 onChange={(v) => vm.updatePrefs({ hideDistance: v })}
-                onUpgrade={() => setTab('plans')}
+                onUpgrade={() => goToPlans(4, 'پنهان‌کردنِ فاصله')}
               />
               <View style={styles.rowDivider} />
               <PrivacyRow
@@ -524,7 +551,7 @@ export function ProfileScreen() {
                 value={user?.prefs?.incognito ?? false}
                 saving={vm.savingPref === 'incognito'}
                 onChange={(v) => vm.updatePrefs({ incognito: v })}
-                onUpgrade={() => setTab('plans')}
+                onUpgrade={() => goToPlans(5, 'حالتِ ناشناس')}
               />
             </View>
 
@@ -532,7 +559,7 @@ export function ProfileScreen() {
             <Text style={styles.groupLabel}>حالتِ سفر</Text>
             <View style={styles.group}>
               {userTier < 5 ? (
-                <Pressable style={styles.rowInner} onPress={() => setTab('plans')} accessibilityRole="button">
+                <Pressable style={styles.rowInner} onPress={() => goToPlans(5, 'حالتِ سفر')} accessibilityRole="button">
                   <View style={styles.rowChip}><Icon name="lock" size={18} tint="gold" /></View>
                   <View style={styles.rowBody}>
                     <Text style={styles.rowTitle}>جست‌وجو در شهرِ دلخواه</Text>
@@ -607,6 +634,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
 
   // — ردیفِ هویت: آواتار + آمار —
+  headerActions: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs },
   idRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.lg },
   avatarRing: {
     width: 84,
@@ -681,6 +709,46 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42,29,18,0.9)',
   },
   ctaPillText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
+
+  // — کارتِ وضعیتِ اشتراک (کاربرِ مشترک) — جزئیات و خرید در /plans —
+  memberCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.goldFaint,
+    marginTop: spacing.lg,
+  },
+  memberIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memberBody: { flex: 1, alignItems: 'flex-end', gap: 2 },
+  memberTitle: { fontFamily: fonts.bold, fontSize: fontSizes.sm, color: colors.ink, textAlign: 'right', writingDirection: 'rtl' },
+  memberSub: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  memberAction: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.surface,
+  },
+  memberActionText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
 
   // — نوارِ زبانه‌ها —
   tabSticky: {
@@ -789,6 +857,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   fieldLabel: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2, textAlign: 'right' },
+  fieldHint: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink3,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   input: {
     minHeight: 48,
     borderRadius: radius.md,
@@ -850,39 +926,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-
-  // — پلن‌ها —
-  statusLine: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.gold2, textAlign: 'center', marginTop: spacing.lg },
-  plansCta: { marginTop: spacing.lg },
-  tiers: { gap: spacing.sm, marginTop: spacing.md },
-  tierCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  tierCardHead: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  tierCardCurrent: { borderColor: colors.goldSoft, backgroundColor: colors.surface2 },
-  tierPerks: { gap: 6 },
-  tierPerkRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
-  tierPerkText: { flex: 1, fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink, textAlign: 'right', writingDirection: 'rtl' },
-  tierActiveRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
-  tierActiveText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold },
-  tierNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
-  tierName: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.gold2 },
-  currentTag: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 1,
-    borderRadius: radius.pill,
-    backgroundColor: colors.goldFaint,
-    borderWidth: 1,
-    borderColor: colors.goldSoft,
-  },
-  currentTagText: { fontFamily: fonts.medium, fontSize: 10, color: colors.gold2 },
-  tierPrice: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink2 },
-  buyBtn: { paddingHorizontal: spacing.xl },
 
   logout: { marginTop: spacing.xl },
   // — لایت‌باکس —

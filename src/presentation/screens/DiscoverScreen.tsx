@@ -8,8 +8,23 @@ import { NudgeBanner } from '@/presentation/components/NudgeBanner';
 import { CardSkeleton } from '@/presentation/components/Skeleton';
 import { IconButton } from '@/presentation/components/IconButton';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
+import { NotificationBell } from '@/presentation/components/NotificationBell';
+import { InstallButton } from '@/presentation/components/InstallButton';
 import { useDiscoverViewModel } from '@/presentation/hooks/useDiscoverViewModel';
 import { colors, spacing, radius } from '@/core/theme';
+
+/**
+ * کنش‌های هدر — زنگوله‌ی اعلان‌ها کنارِ دکمه‌ی نصب.
+ * (ScreenHeader وقتی `action` بگیرد دکمه‌ی نصب را جایگزین می‌کند؛ پس هر دو را خودمان می‌چینیم.)
+ */
+function HeaderActions() {
+  return (
+    <View style={styles.headerActions}>
+      <NotificationBell />
+      <InstallButton />
+    </View>
+  );
+}
 
 export function DiscoverScreen() {
   const vm = useDiscoverViewModel();
@@ -22,7 +37,7 @@ export function DiscoverScreen() {
   if (vm.loading) {
     return (
       <ScreenContainer flush style={styles.wrap}>
-        <ScreenHeader title="کاوش" />
+        <ScreenHeader title="کاوش" action={<HeaderActions />} />
         <CardSkeleton />
       </ScreenContainer>
     );
@@ -127,6 +142,7 @@ export function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: spacing.lg },
+  headerActions: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs },
   deck: { flex: 1, marginVertical: spacing.md },
   behind: {
     position: 'absolute',

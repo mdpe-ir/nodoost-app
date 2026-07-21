@@ -104,9 +104,16 @@ export interface PeerProfile {
   isMatch?: boolean;
   /** اگر مچ شده‌اند، برای رفتنِ مستقیم به گفتگو. */
   matchId?: number;
+  /** کنشِ خودم روی این کاربر — برای نمایشِ «پسندیدی/لغو» و «نپسندیدی». */
+  mySwipe?: 'like' | 'super' | 'nope';
   /** وضعیتِ فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد. */
   isOnline?: boolean;
   lastActiveMin?: number;
+  /** گرافِ دنبال‌کردن — رایگان برای همه‌ی سطح‌ها. */
+  isFollowing: boolean;
+  isFollowedBy: boolean;
+  followersCount: number;
+  followingCount: number;
   interests: string[];
   /** فقط عکس‌های تأییدشده. */
   photos: string[];

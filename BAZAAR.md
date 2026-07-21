@@ -36,8 +36,8 @@
 bazaar_package_name  = com.nodoost.app
 bazaar_rsa_key       = <کلیدِ عمومیِ RSA از پنلِ بازار>
 android_store_url    = https://cafebazaar.ir/app/com.nodoost.app
-min_android_version  = 1.0.4   # خالی = دروازهٔ به‌روزرسانیِ اجباری غیرفعال
-latest_version       = 1.0.4
+min_android_version  = 2.2.1   # خالی = دروازهٔ به‌روزرسانیِ اجباری غیرفعال
+latest_version       = 2.2.1
 ```
 متغیرهای محیطی (`BAZAAR_PACKAGE_NAME`, `BAZAAR_RSA_KEY`, `MIN_ANDROID_VERSION`, …) فقط
 **fallback** هستند اگر کلید در `app_settings` نباشد.
@@ -60,8 +60,31 @@ npx expo prebuild -p android --clean
 cd android && ./gradlew assembleRelease      # یا bundleRelease برای AAB
 # خروجی: android/app/build/outputs/apk/release/app-release.apk
 ```
-> **کی‌استور**: یک بار بساز و **همیشه** با همان امضا کن؛ گم‌شدنش جلوی هر
-> به‌روزرسانیِ بعدی در بازار را می‌گیرد.
+### ⚠ کی‌استور — مهم‌ترین نکته
+
+بازار اپ را برای همیشه به کلیدِ **اولین انتشار** قفل می‌کند. برای `com.nodoost.app`
+آن کلید، کی‌استورِ **Shoplon** است:
+
+```
+فایل   : keystore/shoplon-upload-key.jks      alias: upload
+مالک   : CN=M.Karimi, O=Shoplon, OU=Mobile
+SHA-1  : ED:56:8B:E8:E3:39:72:BA:01:2F:FE:00:85:6D:37:AB:54:3A:8F:19
+```
+
+امضا با هر کلیدِ دیگری باعثِ این خطای بازار می‌شود:
+> بسته باید با کلیدی یکسان با آخرین بسته منتشر شده امضا (Sign) شود.
+
+- کی‌استور و رمزها در `keystore/` هستند و **در git نیستند** — بکاپِ امنِ offline بگیر.
+- اسکریپتِ build **دیگر کی‌استور نمی‌سازد**. قبلاً ساختِ خودکار باعث شد نسخه‌ها با
+  کلیدِ اشتباه (`nodoost-release.jks`، SHA-1 `C7:68:C9…`) امضا شوند و انتشار بشکند.
+  آن فایل **بی‌مصرف** است؛ استفاده نکن.
+- build قبل و بعد از ساخت، فینگرپرینت را با مقدارِ بالا تطبیق می‌دهد و در صورتِ
+  اختلاف متوقف می‌شود.
+
+### شماره‌ی نسخه
+بازار فقط `versionCode` بزرگ‌تر از آخرین نسخه را می‌پذیرد. آخرین نسخه‌ی منتشرشده
+`2.2.0` با `versionCode=12` است، پس هر آپلودِ بعدی باید `versionCode ≥ 13` باشد
+(در `app.json` → `expo.android.versionCode`). اسکریپت این را هم چک می‌کند.
 
 ## ۴) به‌روزرسانیِ روی‌هوا (OTA)
 `expo-updates` نصب و در [app.json](app.json) با `runtimeVersion.policy = appVersion`

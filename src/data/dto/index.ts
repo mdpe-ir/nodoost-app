@@ -63,12 +63,90 @@ export interface PeerProfileDTO {
   distance_m?: number | null;
   is_match?: boolean;
   match_id?: number | null;
+  /** کنشِ خودم روی این کاربر؛ اگر هنوز کنشی نکرده‌ام null. */
+  my_swipe?: 'like' | 'super' | 'nope' | null;
   /** فقط برای بیننده‌ی نقره‌ای+ و اگر طرف پنهانش نکرده باشد. */
   is_online?: boolean;
   last_active_min?: number | null;
+  /** گرافِ دنبال‌کردن — رایگان، بدونِ وابستگی به سطح. */
+  is_following?: boolean;
+  is_followed_by?: boolean;
+  followers_count?: number;
+  following_count?: number;
   interests?: string[];
   photos?: string[];
   photo_ids?: number[];
+}
+
+/** پاسخِ مشترکِ ‎POST/DELETE /api/users/{id}/follow‎. */
+export interface FollowStateDTO {
+  ok?: boolean;
+  is_following?: boolean;
+  is_followed_by?: boolean;
+  followers_count?: number;
+  following_count?: number;
+}
+
+/** یک سطر در فهرستِ دنبال‌کننده‌ها/دنبال‌شده‌ها. */
+export interface FollowUserDTO {
+  id: number;
+  name?: string | null;
+  age?: number;
+  photo_url?: string | null;
+  tier?: number;
+  verified?: boolean;
+  is_following?: boolean;
+}
+
+export interface NotificationActorDTO {
+  id: number;
+  name?: string | null;
+  photo_url?: string | null;
+  tier?: number;
+}
+
+/** یک اعلان؛ `title`/`body` متنِ فارسیِ آماده‌ی سرور است. */
+export interface NotificationDTO {
+  id: number;
+  kind: string;
+  title?: string | null;
+  body?: string | null;
+  actors?: NotificationActorDTO[] | null;
+  count?: number;
+  locked?: boolean;
+  entity_id?: number | null;
+  link_url?: string | null;
+  seen?: boolean;
+  read?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** پاسخِ ‎GET /api/me/badges‎. */
+export interface BadgesDTO {
+  notifications?: number;
+  unread_notifications?: number;
+  unread_messages?: number;
+  unread_threads?: number;
+}
+
+/** پاسخ/بدنه‌ی ‎/api/me/notification-prefs‎. */
+export interface NotificationPrefsDTO {
+  notif_follows?: boolean;
+  notif_likes?: boolean;
+  notif_messages?: boolean;
+  notif_matches?: boolean;
+  notif_profile_views?: boolean;
+  notif_system?: boolean;
+}
+
+/** شکلِ عمومیِ پاسخِ صفحه‌بندی‌شده‌ی بک‌اند. */
+export interface PagedDTO<T> {
+  results?: T[] | null;
+  page?: number;
+  limit?: number;
+  total?: number;
+  has_more?: boolean;
 }
 
 export interface LikerDTO {

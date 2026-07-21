@@ -156,9 +156,115 @@ function withFetchyInit(config) {
       );
     }
 
+    // پلِ کوچک React Native برای خواندن توکنی که SDK بعد از ثبت دستگاه می‌سازد.
+    if (isKotlin && !src.includes('add(FetchyTokenPackage())')) {
+      src = src.replace(
+        /PackageList\(this\)\.packages\.apply \{\n/,
+        (m) => `${m}          add(FetchyTokenPackage())\n`
+      );
+    }
+
     cfg.modResults.contents = src;
     return cfg;
   });
+}
+
+// ۵) توکن Fetchy داخل دیتابیس خصوصی SDK است. این ماژول نیتیو فقط API عمومی
+// Fetchy.getToken(context) را به JS وصل می‌کند تا پس از ورود برای بک‌اند ثبت شود.
+function withFetchyTokenBridge(config) {
+  return withDangerousMod(config, [
+    'android',
+    (cfg) => {
+      const packageName = cfg.android?.package;
+      if (!packageName) throw new Error('Fetchy: android.package تنظیم نشده است.');
+      const sourceDir = path.join(
+        cfg.modRequest.platformProjectRoot,
+        'app',
+        'src',
+        'main',
+        'java',
+        ...packageName.split('.')
+      );
+      fs.mkdirSync(sourceDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(sourceDir, 'FetchyTokenModule.kt'),
+        `package ${packageName}
+
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+
+class FetchyTokenModule(reactContext: ReactApplicationContext) :
+  ReactContextBaseJavaModule(reactContext) {
+  override fun getName() = "FetchyToken"
+
+  @ReactMethod
+  fun getToken(promise: Promise) {
+    Thread {
+      try {
+        promise.resolve(readFetchyToken())
+      } catch (error: Throwable) {
+        promise.reject("fetchy_token_failed", error)
+      }
+    }.start()
+  }
+
+  private fun readFetchyToken(): String? {
+    // نسخه‌های جدید SDK متد عمومی دارند؛ با reflection سازگاریِ باینری حفظ می‌شود.
+    try {
+      val fetchyClass = Class.forName("com.fetchy.sdk.Fetchy")
+      val method = fetchyClass.methods.firstOrNull {
+        it.name == "getToken" && it.parameterTypes.contentEquals(arrayOf(Context::class.java))
+      }
+      val token = method?.invoke(null, reactApplicationContext) as? String
+      if (!token.isNullOrBlank()) return token
+    } catch (_: Throwable) {
+      // نسخه‌های قدیمی‌تر API عمومی ندارند؛ از state فعلی SDK فقط خوانده می‌شود.
+    }
+
+    val databaseFile = reactApplicationContext.getDatabasePath("pn_fetchy.db")
+    if (!databaseFile.exists()) return null
+    val database = SQLiteDatabase.openDatabase(
+      databaseFile.path,
+      null,
+      SQLiteDatabase.OPEN_READONLY
+    )
+    return database.use { db ->
+      db.rawQuery(
+        "SELECT value FROM pn_state WHERE key = ? LIMIT 1",
+        arrayOf("pn_backend_token")
+      ).use { cursor ->
+        if (cursor.moveToFirst()) cursor.getString(0)?.takeIf { it.isNotBlank() } else null
+      }
+    }
+  }
+}
+`
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, 'FetchyTokenPackage.kt'),
+        `package ${packageName}
+
+import com.facebook.react.ReactPackage
+import com.facebook.react.bridge.NativeModule
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.uimanager.ViewManager
+
+class FetchyTokenPackage : ReactPackage {
+  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
+    listOf(FetchyTokenModule(reactContext))
+
+  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> =
+    emptyList()
+}
+`
+      );
+      return cfg;
+    },
+  ]);
 }
 
 module.exports = function withFetchySdk(config) {
@@ -166,5 +272,6 @@ module.exports = function withFetchySdk(config) {
   config = withFetchyGradleDependency(config);
   config = withFetchyConfigAsset(config);
   config = withFetchyInit(config);
+  config = withFetchyTokenBridge(config);
   return config;
 };

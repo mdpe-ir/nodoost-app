@@ -103,6 +103,7 @@ export function RandomScreen() {
         requiredTier={2}
         title="فیلترِ جنسیت قفل است"
         message="انتخابِ جنسیتِ هم‌صحبت از سطحِ برنزی باز می‌شود. برای استفاده، حسابت را ارتقا بده."
+        feature="فیلترِ جنسیتِ هم‌صحبت"
         onClose={() => setGenderLock(false)}
       />
     </ScreenContainer>
