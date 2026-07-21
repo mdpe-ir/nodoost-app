@@ -15,6 +15,9 @@ export function useProfileViewModel() {
   const { user, refreshUser, logout } = useSession();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [viewersCount, setViewersCount] = useState(0);
+  // شمارنده‌های دنبال‌کردن برای ردیفِ آمارِ بالای پروفایل (سبکِ اینستاگرام).
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [travelBusy, setTravelBusy] = useState(false);
@@ -123,12 +126,16 @@ export function useProfileViewModel() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [p, v] = await Promise.all([
+      const [p, v, fr, fg] = await Promise.all([
         uc.profile.getPhotos(),
         uc.likes.getViewers().catch(() => null),
+        uc.follow.getList('followers').catch(() => null),
+        uc.follow.getList('following').catch(() => null),
       ]);
       setPhotos(p);
       if (v) setViewersCount(v.count);
+      if (fr) setFollowersCount(fr.total ?? fr.items.length);
+      if (fg) setFollowingCount(fg.total ?? fg.items.length);
     } catch {
       /* نادیده */
     } finally {
@@ -177,6 +184,8 @@ export function useProfileViewModel() {
     user,
     photos,
     viewersCount,
+    followersCount,
+    followingCount,
     loading,
     busy,
     addPhoto,

@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/presentation/components/AppText';
 import { InstallMethods } from '@/presentation/components/InstallMethods';
+import { ReinstallNotice } from '@/presentation/components/ReinstallNotice';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { usableMethods } from '@/core/config/installConfig';
 import { colors, spacing, radius } from '@/core/theme';
@@ -82,6 +83,10 @@ export function AndroidAppGateProvider({ children }: { children: React.ReactNode
         <View style={styles.methods}>
           <InstallMethods methods={methods} />
         </View>
+        {/* راهنمای رفعِ خطای نصب — جمع‌شده تا کاربرِ تازه را نترساند. */}
+        <View style={styles.troubleshoot}>
+          <ReinstallNotice variant="subtle" />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -99,4 +104,5 @@ const styles = StyleSheet.create({
   icon: { width: 88, height: 88, borderRadius: radius.xl, marginBottom: spacing.sm },
   body: { marginTop: spacing.xs, marginBottom: spacing.lg, opacity: 0.75 },
   methods: { alignSelf: 'stretch' },
+  troubleshoot: { alignSelf: 'stretch', marginTop: spacing.md },
 });

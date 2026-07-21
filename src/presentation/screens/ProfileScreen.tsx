@@ -19,8 +19,6 @@ import { ProfileSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
-import { InstallButton } from '@/presentation/components/InstallButton';
-import { NotificationBell } from '@/presentation/components/NotificationBell';
 import { InterestPicker } from '@/presentation/components/InterestPicker';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { tierName } from '@/presentation/components/TierBadge';
@@ -144,19 +142,6 @@ function PrivacyRow({
   );
 }
 
-/**
- * کنش‌های هدرِ «من» — زنگوله‌ی اعلان‌ها کنارِ دکمه‌ی نصب.
- * (ScreenHeader وقتی `action` بگیرد دکمه‌ی نصب را جایگزین می‌کند؛ پس هر دو را خودمان می‌چینیم.)
- */
-function ProfileHeaderActions() {
-  return (
-    <View style={styles.headerActions}>
-      <NotificationBell />
-      <InstallButton />
-    </View>
-  );
-}
-
 export function ProfileScreen() {
   const vm = useProfileViewModel();
   const { interests: interestsCatalog } = useRemoteConfig();
@@ -218,7 +203,7 @@ export function ProfileScreen() {
       >
         {/* ۰ — هویت؛ همراهِ اسکرول بالا می‌رود — */}
         <View style={styles.padded}>
-          <ScreenHeader title="من" action={<ProfileHeaderActions />} />
+          <ScreenHeader title="من" />
 
           <View style={styles.idRow}>
             <View style={[styles.avatarRing, shadow.gold]}>
@@ -232,7 +217,9 @@ export function ProfileScreen() {
             </View>
             <View style={styles.stats}>
               <Stat value={faNum(vm.photos.length)} label="عکس" onPress={() => setTab('photos')} />
-              <Stat value={activeTierName} label="سطح" onPress={() => goToPlans()} />
+              {/* شمارنده‌های دنبال‌کردن — سبکِ اینستاگرام؛ سطحِ اشتراک در کارتِ عضویتِ پایین دیده می‌شود. */}
+              <Stat value={faNum(vm.followersCount)} label="دنبال‌کننده" onPress={() => router.push('/followers' as Href)} />
+              <Stat value={faNum(vm.followingCount)} label="دنبال‌شده" onPress={() => router.push('/followers?tab=following' as Href)} />
               {/* «as Href»: تایپِ مسیرها تولیدی است و تا اجرای بعدیِ expo start مسیرِ تازه را نمی‌شناسد. */}
               <Stat value={faNum(vm.viewersCount)} label="بازدید" onPress={() => router.push('/viewers' as Href)} />
             </View>
@@ -472,20 +459,6 @@ export function ProfileScreen() {
                 </View>
                 <Icon name="chevron-prev" size={16} tint="gold" />
               </Pressable>
-              <View style={styles.rowDivider} />
-              <Pressable
-                style={styles.rowInner}
-                onPress={() => router.push('/followers' as Href)}
-                accessibilityRole="button"
-                accessibilityLabel="دنبال‌کننده‌ها"
-              >
-                <View style={styles.rowChip}><Icon name="tab-profile" size={18} tint="gold" /></View>
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowTitle}>دنبال‌کننده‌ها و دنبال‌شده‌ها</Text>
-                  <Text style={styles.rowHint}>فهرستِ کسانی که دنبالت می‌کنند و دنبالشان می‌کنی</Text>
-                </View>
-                <Icon name="chevron-prev" size={16} tint="gold" />
-              </Pressable>
             </View>
 
             <Text style={styles.groupLabel}>موقعیت</Text>
@@ -634,7 +607,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
 
   // — ردیفِ هویت: آواتار + آمار —
-  headerActions: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs },
   idRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.lg },
   avatarRing: {
     width: 84,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "نودوست",
     "slug": "nodoost",
-    "version": "2.2.1",
+    "version": "2.3.0",
     "orientation": "portrait",
     "icon": "./assets/logo/app-icon.png",
     "scheme": "nodoost",
@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.nodoost.app",
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
         "backgroundImage": "./assets/logo/adaptive-icon-background.png",

@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 import { InstallButton } from '@/presentation/components/InstallButton';
+import { NotificationBell } from '@/presentation/components/NotificationBell';
 import { Icon } from '@/presentation/components/Icon';
 
 /** حاشیه‌ی افقیِ استانداردِ صفحات — برای محاسبه‌ی عرضِ سلول‌ها هم استفاده می‌شود. */
@@ -31,6 +32,8 @@ export function ScreenContainer({ children, flush, style }: Props) {
  * هدرِ یک‌دستِ صفحات — عنوانِ بزرگِ طلایی (راست‌چین) + کنشِ اختیاری در سمتِ چپ.
  * اگر `onBack` بدهی، دکمه‌ی بازگشت در سمتِ راست می‌نشیند (قراردادِ RTL) و ردیف
  * راست‌به‌چپ چیده می‌شود.
+ * در حالتِ بدونِ بازگشت (صفحه‌های تب) زنگوله‌ی اعلان‌ها همیشه هست — مثلِ اینستاگرام
+ * از هر تب در دسترس است.
  */
 export function ScreenHeader({
   title,
@@ -66,7 +69,10 @@ export function ScreenHeader({
   }
   return (
     <View style={styles.head}>
-      {action ?? <InstallButton />}
+      <View style={styles.headActions}>
+        <NotificationBell />
+        {action ?? <InstallButton />}
+      </View>
       <View style={styles.headText}>
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -86,6 +92,8 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
   },
+  // زنگوله سمتِ راستِ گروه (نزدیکِ عنوان) و کنش/دکمه‌ی نصب سمتِ چپ.
+  headActions: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs },
   // حالتِ بازگشت‌دار: راست‌به‌چپ تا دکمه‌ی بازگشت در سمتِ راست بنشیند.
   headBack: { flexDirection: 'row-reverse', gap: spacing.sm },
   backBtn: {

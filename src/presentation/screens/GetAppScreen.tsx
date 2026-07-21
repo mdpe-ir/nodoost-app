@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { Icon } from '@/presentation/components/Icon';
 import { InstallMethods } from '@/presentation/components/InstallMethods';
+import { ReinstallNotice } from '@/presentation/components/ReinstallNotice';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { usableMethods } from '@/core/config/installConfig';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
@@ -71,6 +72,12 @@ export function GetAppScreen() {
           <Text style={styles.sectionTitle}>راه‌های نصب</Text>
           <InstallMethods methods={methods} />
 
+          {/* راهنمای رفعِ خطای نصب — جمع‌شده، چون بیشترِ کاربرانِ این صفحه نصبِ تازه
+              دارند و به آن برنمی‌خورند. پیامِ «حسابت همان می‌ماند» پایین‌تر هست. */}
+          <View style={styles.troubleshoot}>
+            <ReinstallNotice variant="subtle" showAccountNote={false} />
+          </View>
+
           <View style={styles.note}>
             <Icon name="shield-check" size={18} tint="gold" />
             <Text style={styles.noteText}>
@@ -115,6 +122,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     marginBottom: spacing.md,
   },
+  troubleshoot: { marginTop: spacing.lg },
   note: {
     flexDirection: 'row-reverse',
     alignItems: 'flex-start',
