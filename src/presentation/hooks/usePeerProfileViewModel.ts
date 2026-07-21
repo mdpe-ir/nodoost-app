@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
+import { recordInstallNagAction } from '@/core/installNag';
 import type { PeerProfile, MatchResult } from '@/domain/entities';
 
 type MySwipe = 'like' | 'super' | 'nope' | undefined;
@@ -56,6 +57,7 @@ export function usePeerProfileViewModel(userId: number) {
     try {
       const r = await uc.discovery.swipe(userId, 'like');
       setMySwipe('like');
+      recordInstallNagAction();
       if (r.matchId) {
         setMatch(r);
         setProfile((p) => (p ? { ...p, isMatch: true, matchId: r.matchId } : p));

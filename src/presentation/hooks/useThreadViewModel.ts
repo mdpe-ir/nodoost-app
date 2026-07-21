@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { ApiError } from '@/core/http/ApiError';
+import { recordInstallNagAction } from '@/core/installNag';
 import type { Message } from '@/domain/entities';
 
 /** اندازه‌ی صفحه‌ی تاریخچه‌ی پیام. */
@@ -104,6 +105,7 @@ export function useThreadViewModel(matchId: number) {
     try {
       const msg = await uc.chat.sendMessage(matchId, body);
       setMessages((prev) => [...prev, msg]);
+      recordInstallNagAction();
     } catch (e) {
       setDraft(body);
       setSendError(limitErrorMessage(e));

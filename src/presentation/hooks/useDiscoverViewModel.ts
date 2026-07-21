@@ -3,6 +3,7 @@ import { useCases } from '@/core/di/DIProvider';
 import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
+import { recordInstallNagAction } from '@/core/installNag';
 import type { Candidate, MatchResult } from '@/domain/entities';
 
 /**
@@ -88,6 +89,7 @@ export function useDiscoverViewModel() {
       setIndex((i) => i + 1);
       try {
         const result = await uc.discovery.swipe(target.id, action);
+        if (action === 'like') recordInstallNagAction();
         if (action === 'like' && (result.peer || result.matchId)) {
           setMatch({ matchId: result.matchId, peer: result.peer ?? target });
         }

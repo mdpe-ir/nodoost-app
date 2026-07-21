@@ -12,17 +12,35 @@ export interface InstallMethod {
   enabled: boolean;
 }
 
+/**
+ * رفتارِ وبِ اندروید نسبت به نصبِ اپ:
+ * - `off`: هیچ.
+ * - `nag`: یادآورِ قابلِ‌بستن که پس از چند کنشِ معنادار ظاهر و مدام تکرار می‌شود.
+ * - `block`: صفحه‌ی مسدودکننده‌ی تمام‌صفحه (رفتارِ قدیمی).
+ */
+export type AndroidGateMode = 'off' | 'nag' | 'block';
+
 export interface InstallConfig {
   /** اگر true باشد، دکمه‌ی خرید در وب به صفحه‌ی «نصبِ اپ» می‌رود (به‌جای زرین‌پال). */
   forceAppForPayments: boolean;
-  /** اگر true باشد، کاربرانِ اندرویدیِ PWA پس از مدتی برای ادامه به نصبِ اپ مسدود می‌شوند. */
-  androidPwaGate: boolean;
+  androidGateMode: AndroidGateMode;
+  /** از چندمین کنشِ معنادار (پیام، لایک، …) اولین یادآور نشان داده شود. */
+  nagStartAfter: number;
+  /** پس از اولین یادآور، هر چند کنش یک‌بار دوباره ظاهر شود. */
+  nagEvery: number;
+  /** متنِ دلخواهِ ادمین برای یادآور؛ خالی ⇒ متن‌های پله‌ایِ پیش‌فرضِ اپ. */
+  nagTitle: string;
+  nagBody: string;
   methods: InstallMethod[];
 }
 
 export const emptyInstallConfig: InstallConfig = {
   forceAppForPayments: false,
-  androidPwaGate: false,
+  androidGateMode: 'off',
+  nagStartAfter: 3,
+  nagEvery: 3,
+  nagTitle: '',
+  nagBody: '',
   methods: [],
 };
 
@@ -41,9 +59,25 @@ export function parseInstallConfig(raw: unknown): InstallConfig {
       };
     })
     .filter((m) => m.key);
+  // سرورهای قدیمی فقط bool می‌فرستند؛ mode نامعتبر از همان مشتق می‌شود.
+  const rawMode = String(o.android_gate_mode ?? '');
+  const mode: AndroidGateMode =
+    rawMode === 'off' || rawMode === 'nag' || rawMode === 'block'
+      ? rawMode
+      : o.android_pwa_gate
+        ? 'block'
+        : 'off';
+  const positiveInt = (v: unknown, fallback: number) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : fallback;
+  };
   return {
     forceAppForPayments: Boolean(o.force_app_for_payments),
-    androidPwaGate: Boolean(o.android_pwa_gate),
+    androidGateMode: mode,
+    nagStartAfter: positiveInt(o.nag_start_after, 3),
+    nagEvery: positiveInt(o.nag_every, 3),
+    nagTitle: String(o.nag_title ?? '').trim(),
+    nagBody: String(o.nag_body ?? '').trim(),
     methods,
   };
 }
