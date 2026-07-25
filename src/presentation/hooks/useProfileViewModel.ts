@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
-import { normalizeImage } from '@/core/media/normalizeImage';
+import { photoErrorMessage } from '@/core/media/photoErrors';
 import { resolveLocation } from '@/core/utils/location';
 import type { Photo, UserPreferences } from '@/domain/entities';
 
@@ -21,6 +20,9 @@ export function useProfileViewModel() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [travelBusy, setTravelBusy] = useState(false);
+  // — افزودنِ عکس: برگه‌ی سرچشمه + پیامِ خطای اختصاصی —
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   // — ویرایشِ نام، بیو و علاقه‌مندی‌ها —
   const [draftName, setDraftName] = useState('');
@@ -147,32 +149,45 @@ export function useProfileViewModel() {
     load();
   }, [load]);
 
-  const addPhoto = useCallback(async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-    const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
-    if (res.canceled || !res.assets?.[0]) return;
-    setBusy(true);
-    try {
-      await uc.profile.addPhoto(await normalizeImage(res.assets[0].uri));
-      await load();
-      await refreshUser();
-    } catch {
-      /* نادیده */
-    } finally {
-      setBusy(false);
-    }
-  }, [uc, load, refreshUser]);
+  /** برگه‌ی انتخابِ سرچشمه (دوربین/گالری) را باز می‌کند؛ بقیه‌ی کار با PhotoPicker است. */
+  const addPhoto = useCallback(() => {
+    setPhotoError(null);
+    setPickerOpen(true);
+  }, []);
+
+  const closePicker = useCallback(() => setPickerOpen(false), []);
+
+  /**
+   * uriِ ورودی از قبل JPEGِ برش‌خورده و فشرده است. خطای آپلود دیگر بلعیده
+   * نمی‌شود — کاربر باید بفهمد چرا عکسش بالا نرفت.
+   */
+  const onPhotoPicked = useCallback(
+    async (uri: string) => {
+      setBusy(true);
+      setPhotoError(null);
+      try {
+        await uc.profile.addPhoto(uri);
+        await load();
+        await refreshUser();
+      } catch (e) {
+        setPhotoError(photoErrorMessage(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [uc, load, refreshUser]
+  );
 
   const deletePhoto = useCallback(
     async (id: number) => {
       setBusy(true);
+      setPhotoError(null);
       try {
         await uc.profile.deletePhoto(id);
         await load();
         await refreshUser();
-      } catch {
-        /* نادیده */
+      } catch (e) {
+        setPhotoError(photoErrorMessage(e));
       } finally {
         setBusy(false);
       }
@@ -189,6 +204,11 @@ export function useProfileViewModel() {
     loading,
     busy,
     addPhoto,
+    pickerOpen,
+    closePicker,
+    onPhotoPicked,
+    photoError,
+    setPhotoError,
     deletePhoto,
     logout,
     draftName,

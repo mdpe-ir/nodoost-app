@@ -1,24 +1,9 @@
 import { useCallback, useState } from 'react';
 import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { useCases } from '@/core/di/DIProvider';
-import { normalizeImage } from '@/core/media/normalizeImage';
-import { ApiError } from '@/core/http/ApiError';
+import { photoErrorMessage } from '@/core/media/photoErrors';
 import type { Gender } from '@/domain/entities';
-
-/** خطای بک‌اندِ آپلود را به پیامِ قابلِ‌فهمِ فارسی نگاشت می‌کند. */
-function uploadErrorMessage(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.status === 402 || e.code === 'photo_limit_reached') {
-      return 'به سقفِ تعدادِ عکسِ مجاز رسیده‌ای.';
-    }
-    if (e.code === 'not a valid image' || e.code === 'invalid upload') {
-      return 'این عکس قابلِ استفاده نیست (فرمت یا حجمِ نامناسب). عکسِ دیگری انتخاب کن.';
-    }
-  }
-  return 'ثبت ناموفق بود. دوباره تلاش کن.';
-}
 
 /** سن را به تاریخِ تولدِ تقریبی (میلادی) تبدیل می‌کند — کاوش به birthdate نیاز دارد. */
 function ageToBirthdate(age: number): string {
@@ -48,6 +33,7 @@ export function useOnboarding() {
   const [bio, setBio] = useState(user?.bio ?? '');
   const [interests, setInterests] = useState<string[]>(user?.interests ?? []);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,17 +43,18 @@ export function useOnboarding() {
     ?.filter((photo) => photo.status === 'rejected' && photo.rejectionReason)
     .map((photo) => photo.rejectionReason as string) ?? [];
 
-  const pickPhoto = useCallback(async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setError('برای افزودنِ عکس به گالری دسترسی بده');
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
-    if (res.canceled || !res.assets?.[0]) return;
+  /** برگه‌ی انتخابِ سرچشمه (دوربین/گالری) را باز می‌کند؛ بقیه‌ی کار با PhotoPicker است. */
+  const pickPhoto = useCallback(() => {
     setError(null);
-    // به JPEGِ فشرده تبدیل کن تا با دیکدرِ بک‌اند و سقفِ ۸ مگابایت بخواند.
-    setPhotoUri(await normalizeImage(res.assets[0].uri));
+    setPickerOpen(true);
+  }, []);
+
+  const closePicker = useCallback(() => setPickerOpen(false), []);
+
+  /** خروجیِ ویرایشگر از قبل JPEGِ برش‌خورده و فشرده است — همان را نگه می‌داریم. */
+  const onPhotoPicked = useCallback((uri: string) => {
+    setError(null);
+    setPhotoUri(uri);
   }, []);
 
   const submit = useCallback(async () => {
@@ -99,13 +86,23 @@ export function useOnboarding() {
         interests,
       });
       if (photoUri) await uc.profile.addPhoto(photoUri);
-      await refreshUser();
-      router.replace('/discover');
     } catch (e) {
-      setError(uploadErrorMessage(e));
-    } finally {
+      // تنها این دو فراخوانی «ثبت» هستند؛ خطای این‌جا واقعاً یعنی ذخیره نشد.
+      setError(photoErrorMessage(e));
       setLoading(false);
+      return;
     }
+
+    // از این نقطه به بعد پروفایل و عکس ذخیره شده‌اند. تازه‌سازیِ نشست یک کارِ
+    // جانبی است؛ اگر شکست بخورد نباید «ثبت ناموفق بود» نشان دهیم — گارد مسیر
+    // با اولین رفرشِ بعدی خودش را درست می‌کند.
+    try {
+      await refreshUser();
+    } catch {
+      /* نادیده — داده روی سرور ذخیره شده است */
+    }
+    setLoading(false);
+    router.replace('/discover');
   }, [name, gender, age, bio, interests, photoUri, hasPhoto, uc, refreshUser]);
 
   return {
@@ -121,6 +118,10 @@ export function useOnboarding() {
     setInterests,
     photoUri,
     pickPhoto,
+    pickerOpen,
+    closePicker,
+    onPhotoPicked,
+    setError,
     hasPhoto,
     rejectionReasons,
     loading,

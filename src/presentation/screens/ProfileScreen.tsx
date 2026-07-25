@@ -20,6 +20,7 @@ import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
 import { InterestPicker } from '@/presentation/components/InterestPicker';
+import { PhotoPicker } from '@/presentation/components/PhotoPicker';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { tierName } from '@/presentation/components/TierBadge';
 import { maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
@@ -381,6 +382,8 @@ export function ProfileScreen() {
               ) : null}
             </View>
             <View style={styles.padded}>
+              {/* خطای آپلود/حذف دیگر بی‌صدا بلعیده نمی‌شود. */}
+              {vm.photoError ? <Text style={styles.photoError}>{vm.photoError}</Text> : null}
               <Text style={styles.caption}>
                 {faNum(countedPhotos)} از {faNum(maxPhotos)} عکسِ سطحِ {activeTierName} استفاده شده.
                 {' '}عکس‌های تازه بلافاصله نمایش داده می‌شوند. اگر عکسی خلاف قوانین باشد، دلیلِ رد آن را همین‌جا می‌بینی.
@@ -597,6 +600,14 @@ export function ProfileScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* برگه‌ی دوربین/گالری + ویرایشگرِ برش — همان جریانی که در تکمیلِ پروفایل است. */}
+      <PhotoPicker
+        visible={vm.pickerOpen}
+        onClose={vm.closePicker}
+        onPicked={vm.onPhotoPicked}
+        onError={vm.setPhotoError}
+      />
     </ScreenContainer>
   );
 }
@@ -853,6 +864,15 @@ const styles = StyleSheet.create({
   bioInput: { minHeight: 96, textAlignVertical: 'top' },
   bioCount: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, textAlign: 'left' },
   saveError: { fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.rose, textAlign: 'right' },
+  photoError: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.rose,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: spacing.sm,
+  },
 
   // — تنظیمات —
   group: {

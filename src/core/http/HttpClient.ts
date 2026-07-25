@@ -74,8 +74,15 @@ export class HttpClient {
     return (await res.json().catch(() => null)) as T;
   }
 
-  /** آپلودِ فایلِ چندبخشی — روی وب Blob و روی نیتیو {uri,name,type}. */
-  async upload<T>(path: string, uri: string, field = 'photo'): Promise<T> {
+  /**
+   * آپلودِ فایلِ چندبخشی — روی وب Blob و روی نیتیو {uri,name,type}.
+   *
+   * مثلِ request روی ۴۰۱ یک‌بار توکن را تازه می‌کند و دوباره می‌فرستد. نبودِ این
+   * تلاشِ دوباره یعنی کاربری که توکنِ دسترسی‌اش تازه منقضی شده، در گامِ عکسِ
+   * تکمیلِ پروفایل «ثبت ناموفق بود» می‌گرفت. FormData در فراخوانیِ بازگشتی از نو
+   * ساخته می‌شود؛ بدنه‌ی مصرف‌شده قابلِ ارسالِ دوباره نیست.
+   */
+  async upload<T>(path: string, uri: string, field = 'photo', retried = false): Promise<T> {
     const token = await this.tokens.getAccess();
     const form = new FormData();
     const name = uri.split('/').pop() || 'photo.jpg';
@@ -93,6 +100,10 @@ export class HttpClient {
       },
       body: form,
     });
+    if (res.status === 401 && !retried) {
+      if (await this.tryRefresh()) return this.upload<T>(path, uri, field, true);
+      throw new ApiError(401);
+    }
     if (!res.ok) {
       let code: string | undefined;
       try {

@@ -2,7 +2,7 @@
   "expo": {
     "name": "نودوست",
     "slug": "nodoost",
-    "version": "2.3.0",
+    "version": "2.3.6",
     "orientation": "portrait",
     "icon": "./assets/logo/app-icon.png",
     "scheme": "nodoost",
@@ -23,13 +23,14 @@
     },
     "android": {
       "package": "com.nodoost.app",
-      "versionCode": 14,
+      "versionCode": 17,
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
         "backgroundImage": "./assets/logo/adaptive-icon-background.png",
         "foregroundImage": "./assets/logo/adaptive-icon-foreground.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"]
     },
     "web": {
       "output": "static",
@@ -58,7 +59,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "برای انتخابِ عکسِ پروفایل، به گالریِ تصاویر دسترسی نیاز داریم."
+          "photosPermission": "برای انتخابِ عکسِ پروفایل، به گالریِ تصاویر دسترسی نیاز داریم.",
+          "cameraPermission": "برای گرفتنِ عکسِ پروفایل با دوربین، به دوربینِ دستگاه دسترسی نیاز داریم.",
+          "microphonePermission": false
         }
       ],
       "expo-secure-store",

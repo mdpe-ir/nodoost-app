@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, StyleSheet, Platform } from 'react-native';
-import { KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +29,12 @@ type Row =
       firstOfGroup: boolean;
     };
 
-/** پیام‌ها را با جداکننده‌ی روز و گروه‌بندیِ فرستنده به سطرهای رندر تبدیل می‌کند. */
+/**
+ * پیام‌ها را با جداکننده‌ی روز و گروه‌بندیِ فرستنده به سطرهای رندر تبدیل می‌کند.
+ * خروجی **وارونه** است چون فهرست با `inverted` رندر می‌شود: خانه‌ی صفر پایینِ صفحه
+ * (تازه‌ترین پیام) می‌نشیند. با این کار باز شدنِ کیبورد یا بلند شدنِ ورودی، ته‌ی
+ * گفتگو را جابه‌جا نمی‌کند — دقیقاً مثلِ تلگرام.
+ */
 function buildRows(messages: Message[], myId?: number): Row[] {
   const rows: Row[] = [];
   messages.forEach((m, i) => {
@@ -49,7 +55,8 @@ function buildRows(messages: Message[], myId?: number): Row[] {
       lastOfGroup: !sameAsNext,
     });
   });
-  return rows;
+  // ترتیبِ صعودی ساخته شد؛ برای فهرستِ وارونه باید برعکس شود.
+  return rows.reverse();
 }
 
 export function ThreadScreen({
@@ -67,24 +74,40 @@ export function ThreadScreen({
 }) {
   const vm = useThreadViewModel(matchId);
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList>(null);
-  // هنگامِ افزودنِ پیام‌های قدیمی به بالای فهرست، نباید به انتها بپریم.
-  const prependingRef = useRef(false);
+  const listRef = useRef<FlatList<Row>>(null);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
 
-  // رسیدن به بالای فهرست → بارگذاریِ صفحه‌ی قدیمی‌ترِ بعدی (با حفظِ موقعیتِ اسکرول).
-  const onStartReached = () => {
+  // در فهرستِ وارونه، «انتها» یعنی قدیمی‌ترین پیام؛ پس صفحه‌بندیِ گذشته به onEndReached
+  // وصل می‌شود. چون این پیام‌ها بعد از سطرهای موجود می‌آیند، اسکرول تکان نمی‌خورد و
+  // دیگر به ترفندِ نگه‌داشتنِ موقعیت نیازی نیست.
+  const onEndReached = () => {
     if (!vm.hasMore || vm.loadingOlder) return;
-    prependingRef.current = true;
     vm.loadOlder();
   };
   const canSend = !!vm.draft.trim() && !vm.sending;
-  // با کیبوردِ باز، خودِ کیبورد نوارِ ناوبری را پوشانده است؛ اگر insets.bottom را
-  // دوباره اضافه کنیم، نوارِ نوشتن یک فاصله‌ی بیهوده بالای کیبورد می‌گیرد.
-  const keyboardVisible = useKeyboardState((s) => s.isVisible);
-  const barBottomPad = keyboardVisible
-    ? spacing.md
-    : Math.max(spacing.md, insets.bottom + spacing.sm);
+
+  /*
+   * ردیابیِ کیبورد روی رشته‌ی UI (بدونِ رفت‌وبرگشتِ جاوااسکریپت):
+   * `height` از keyboard-controller در هر فریمِ انیمیشن به‌روز می‌شود (هنگامِ باز بودن
+   * منفی است). یک فاصله‌گیرِ متحرک در پایینِ صفحه می‌گذاریم که ارتفاعش برابرِ همان
+   * مقدار است؛ نوارِ نوشتن با آن بالا می‌آید و فهرست به همان اندازه کوتاه می‌شود.
+   *
+   * چرا max با insets.bottom؟ اپ edge-to-edge است و در این حالت ارتفاعِ گزارش‌شده‌ی
+   * کیبورد شاملِ ناحیه‌ی نوارِ ناوبری هم هست. اگر insets.bottom را جداگانه اضافه کنیم
+   * با کیبوردِ باز یک فاصله‌ی دوتایی می‌افتد؛ با max، کیبورد آن را «می‌بلعد» و با
+   * کیبوردِ بسته همان اینستِ نوارِ اشاره‌ای باقی می‌ماند.
+   */
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const bottomSpacer = useAnimatedStyle(() => ({
+    height: Math.max(-keyboardHeight.value, insets.bottom),
+  }));
+
+  // ارسال → پریدن به تازه‌ترین پیام (در فهرستِ وارونه یعنی آفستِ صفر).
+  const onSend = () => {
+    void vm.send();
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   // قانونِ سطح: تا وقتی گفتگو پیامی ندارد، فقط هم‌سطح یا بالاتر می‌تواند شروع کند.
   // اگر طرفِ مقابل سطحِ بالاتری دارد، ورودی قفل می‌شود تا او پیامِ اول را بدهد.
   const tierLocked = !vm.loading && vm.messages.length === 0 && !!peerTier && peerTier > vm.myTier;
@@ -128,15 +151,11 @@ export function ThreadScreen({
       </View>
 
       {/*
-       * KeyboardAvoidingView از react-native-keyboard-controller — نسخه‌ی خودِ RN
-       * روی اندرویدِ edge-to-edge بی‌اثر بود (adjustResize نادیده گرفته می‌شود) و
-       * کیبورد روی نوارِ نوشتن می‌افتاد. behavior="padding" روی هر دو پلتفرم.
+       * بدنه‌ی گفتگو: فهرست + نوارِ نوشتن + فاصله‌گیرِ متحرکِ کیبورد. هیچ
+       * KeyboardAvoidingView‌ای در کار نیست؛ ارتفاعِ فاصله‌گیر مستقیماً از انیمیشنِ
+       * کیبورد می‌آید تا حرکت روی رشته‌ی UI و بدونِ لرزش باشد.
        */}
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-        keyboardVerticalOffset={insets.top + 64}
-      >
+      <View style={styles.flex}>
         {vm.loading ? (
           <BubblesSkeleton />
         ) : rows.length === 0 ? (
@@ -155,21 +174,18 @@ export function ThreadScreen({
           <FlatList
             ref={listRef}
             data={rows}
+            inverted
             keyExtractor={(r) => r.key}
             contentContainerStyle={styles.list}
-            onContentSizeChange={() => {
-              // در حالتِ افزودنِ پیام‌های قدیمی به بالا، جای اسکرول را نگه می‌داریم؛
-              // فقط برای پیام‌های تازه/بارِ اول به انتها می‌رویم.
-              if (prependingRef.current) {
-                prependingRef.current = false;
-                return;
-              }
-              listRef.current?.scrollToEnd({ animated: false });
-            }}
-            maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
-            onStartReached={onStartReached}
-            onStartReachedThreshold={0.2}
-            ListHeaderComponent={
+            // پیامِ تازه در ابتدای داده می‌نشیند؛ اگر کاربر بالا رفته باشد نباید صفحه
+            // زیرِ دستش بپرد. آستانه هم باعث می‌شود وقتی ته‌ی گفتگوییم خودکار بچسبیم.
+            maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 10 }}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.2}
+            // کشیدنِ فهرست کیبورد را می‌بندد. مقدارِ interactive فقط روی iOS معنا دارد
+            // و روی اندروید بی‌صدا نادیده گرفته می‌شود؛ آنجا on-drag لازم است.
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            ListFooterComponent={
               vm.loadingOlder ? (
                 <View style={styles.olderLoading}>
                   <Skeleton width={160} height={38} br={radius.lg} style={{ alignSelf: 'flex-start' }} />
@@ -215,7 +231,7 @@ export function ThreadScreen({
         )}
 
         {tierLocked ? (
-          <View style={[styles.lockedBar, { paddingBottom: barBottomPad }]}>
+          <View style={styles.lockedBar}>
             <Text style={styles.lockedText}>
               {`این کاربر سطحِ ${tierName(peerTier!)} دارد. برای شروعِ گفتگو باید سطحِ حسابت را ارتقا بدهی.`}
             </Text>
@@ -231,7 +247,7 @@ export function ThreadScreen({
             />
           </View>
         ) : (
-        <View style={[styles.composer, { paddingBottom: barBottomPad }]}>
+        <View style={styles.composer}>
           {vm.sendError ? <Text style={styles.sendError}>{vm.sendError}</Text> : null}
           <TextInput
             style={styles.input}
@@ -244,7 +260,7 @@ export function ThreadScreen({
           />
           <Pressable
             style={({ pressed }) => [styles.send, pressed && canSend && styles.sendPressed]}
-            onPress={vm.send}
+            onPress={onSend}
             disabled={!canSend}
             accessibilityRole="button"
             accessibilityLabel="ارسال"
@@ -259,7 +275,10 @@ export function ThreadScreen({
           </Pressable>
         </View>
         )}
-      </KeyboardAvoidingView>
+
+        {/* ناحیه‌ی امنِ پایین وقتی کیبورد بسته است، و جای خودِ کیبورد وقتی باز است. */}
+        <Animated.View style={bottomSpacer} />
+      </View>
     </ScreenContainer>
   );
 }
@@ -296,7 +315,9 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   emptyWrap: { flex: 1, justifyContent: 'center' },
-  list: { padding: spacing.lg, paddingBottom: spacing.sm },
+  // فهرست وارونه است، پس paddingهای این ظرف هم وارونه دیده می‌شوند: paddingTop
+  // فاصله‌ی نزدیکِ نوارِ نوشتن و paddingBottom فاصله‌ی بالای صفحه است.
+  list: { padding: spacing.lg, paddingTop: spacing.sm },
   olderLoading: { paddingBottom: spacing.md },
   sepWrap: {
     alignSelf: 'center',
@@ -343,7 +364,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    // فاصله‌ی پایین ثابت است؛ ناحیه‌ی امن/کیبورد را فاصله‌گیرِ متحرکِ زیرِ نوار می‌دهد.
+    paddingVertical: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
     backgroundColor: colors.bg,
@@ -377,7 +399,7 @@ const styles = StyleSheet.create({
   lockedBar: {
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingVertical: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
     backgroundColor: colors.bg,

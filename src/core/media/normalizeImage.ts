@@ -1,4 +1,4 @@
-import * as ImageManipulator from 'expo-image-manipulator';
+import { processImage, type ProcessOptions, type ProcessedImage } from './imageOps';
 
 /**
  * هر عکسِ انتخاب‌شده را به JPEGِ فشرده و کوچک‌شده تبدیل می‌کند.
@@ -7,47 +7,36 @@ import * as ImageManipulator from 'expo-image-manipulator';
  * WebP یا HEIC و گاهی چندده‌مگابایتی. اما بک‌اند فقط JPEG/PNGِ تا ۸ مگابایت را
  * دیکد می‌کند و کلاینت هم فایل را همیشه با برچسبِ image/jpeg می‌فرستد؛ نتیجه:
  * «not a valid image / invalid upload» و در UI «ثبت ناموفق بود».
- * این‌جا بایت‌ها را واقعاً به JPEG تبدیل و اندازه را محدود می‌کنیم تا با برچسب و
- * با دیکدرِ سرور بخواند.
  *
- * اگر تبدیل به هر دلیل شکست بخورد، همان uri اصلی برمی‌گردد تا از قبل بدتر نشود.
+ * نسخه‌ی قبلی هر خطایی را می‌بلعید و uriِ اصلی را برمی‌گرداند — یعنی دقیقاً همان
+ * فایلِ HEIC/WebP آپلود می‌شد و سرور ردش می‌کرد. حالا اگر تبدیل شکست بخورد،
+ * خطای تایپ‌دارِ ImageProcessError پرتاب می‌شود تا کاربر پیامِ درست ببیند و
+ * فایلِ غیرقابلِ‌دیکد اصلاً روی شبکه نرود.
  */
-export async function normalizeImage(uri: string): Promise<string> {
-  try {
-    const M = ImageManipulator as unknown as {
-      // API جدید (SDK ۵۲+)
-      ImageManipulator?: {
-        manipulate: (u: string) => {
-          resize: (o: { width: number }) => {
-            renderAsync: () => Promise<{
-              saveAsync: (o: { compress: number; format: unknown }) => Promise<{ uri: string }>;
-            }>;
-          };
-        };
-      };
-      // API قدیمی (منسوخ ولی هنوز رایج)
-      manipulateAsync?: (
-        u: string,
-        actions: unknown[],
-        opts: { compress: number; format: unknown }
-      ) => Promise<{ uri: string }>;
-      SaveFormat: { JPEG: unknown };
-    };
 
-    if (typeof M.ImageManipulator?.manipulate === 'function') {
-      const ref = await M.ImageManipulator.manipulate(uri).resize({ width: 1440 }).renderAsync();
-      const out = await ref.saveAsync({ compress: 0.8, format: M.SaveFormat.JPEG });
-      return out.uri;
-    }
-    if (typeof M.manipulateAsync === 'function') {
-      const out = await M.manipulateAsync(uri, [{ resize: { width: 1440 } }], {
-        compress: 0.8,
-        format: M.SaveFormat.JPEG,
-      });
-      return out.uri;
-    }
-  } catch {
-    /* برمی‌گردیم به uri اصلی */
+/** بزرگ‌ترین ضلعِ عکسی که آپلود می‌شود. */
+export const MAX_UPLOAD_SIZE = 1440;
+
+/** شکستِ پردازشِ محلیِ عکس — پیامش مستقیماً به کاربر نشان داده می‌شود. */
+export class ImageProcessError extends Error {
+  constructor(
+    message = 'این عکس روی دستگاهِ تو قابلِ پردازش نیست. عکسِ دیگری انتخاب کن یا با دوربین یکی بگیر.'
+  ) {
+    super(message);
+    this.name = 'ImageProcessError';
   }
-  return uri;
+}
+
+/** برش/تغییرِ اندازه با ضمانتِ خروجیِ JPEG؛ در صورتِ شکست ImageProcessError. */
+export async function toJpeg(uri: string, opts: ProcessOptions = {}): Promise<ProcessedImage> {
+  try {
+    return await processImage(uri, { maxSize: MAX_UPLOAD_SIZE, compress: 0.82, ...opts });
+  } catch {
+    throw new ImageProcessError();
+  }
+}
+
+/** همان toJpeg بدونِ برش — فقط uriِ خروجی. */
+export async function normalizeImage(uri: string): Promise<string> {
+  return (await toJpeg(uri)).uri;
 }

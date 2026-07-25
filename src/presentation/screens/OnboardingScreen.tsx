@@ -8,6 +8,7 @@ import { Button } from '@/presentation/components/Button';
 import { Chip } from '@/presentation/components/Chip';
 import { Icon } from '@/presentation/components/Icon';
 import { InterestPicker } from '@/presentation/components/InterestPicker';
+import { PhotoPicker } from '@/presentation/components/PhotoPicker';
 import { useOnboarding } from '@/presentation/hooks/useOnboarding';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { faNum } from '@/core/utils/faNum';
@@ -218,6 +219,14 @@ export function OnboardingScreen() {
           ) : null}
         </View>
       </KeyboardAvoidingView>
+
+      {/* برگه‌ی دوربین/گالری + ویرایشگرِ برش — تنها راهِ افزودنِ عکس در این گام. */}
+      <PhotoPicker
+        visible={vm.pickerOpen}
+        onClose={vm.closePicker}
+        onPicked={vm.onPhotoPicked}
+        onError={vm.setError}
+      />
     </ScreenContainer>
   );
 }
