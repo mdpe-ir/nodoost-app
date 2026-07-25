@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Platform, View, ScrollView, StyleSheet, Linking } from 'react-native';
+import React from 'react';
+import { Platform, View, ScrollView, StyleSheet } from 'react-native';
 import * as Application from 'expo-application';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { env } from '@/core/config/env';
 import { colors, spacing } from '@/core/theme';
 import { AppText } from '@/presentation/components/AppText';
 import { Button } from '@/presentation/components/Button';
@@ -10,6 +9,7 @@ import { InstallMethods } from '@/presentation/components/InstallMethods';
 import { ReinstallNotice } from '@/presentation/components/ReinstallNotice';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { usableMethods } from '@/core/config/installConfig';
+import { cmpVersion, openStore } from '@/core/config/appUpdate';
 
 /**
  * دروازه‌ی به‌روزرسانیِ اجباری (فقط نیتیو).
@@ -22,68 +22,18 @@ import { usableMethods } from '@/core/config/installConfig';
  *
  * سیاست: fail-open — اگر درخواست شکست خورد یا فیلدها نبود، کاربر مسدود نمی‌شود.
  */
-const PKG = 'com.nodoost.app';
-const DEFAULT_STORE_URL = `https://cafebazaar.ir/app/${PKG}`;
-const DEEP_LINK = `bazaar://details?id=${PKG}`;
-
-type Config = {
-  min_android_version?: string;
-  latest_version?: string;
-  store_url?: string;
-};
-
-/** مقایسه‌ی نسخه‌های نقطه‌ای مثل «1.0.4» — منفی اگر a < b. */
-function cmpVersion(a: string, b: string): number {
-  const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = b.split('.').map((n) => parseInt(n, 10) || 0);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d !== 0) return d;
-  }
-  return 0;
-}
-
-async function openStore(storeUrl: string) {
-  try {
-    if (await Linking.canOpenURL(DEEP_LINK)) {
-      await Linking.openURL(DEEP_LINK);
-      return;
-    }
-  } catch {
-    /* fallback زیر */
-  }
-  Linking.openURL(storeUrl).catch(() => {});
-}
-
 export function UpdateGateProvider({ children }: { children: React.ReactNode }) {
-  const { install } = useRemoteConfig();
-  const [blocked, setBlocked] = useState(false);
-  const [storeUrl, setStoreUrl] = useState(DEFAULT_STORE_URL);
+  const { install, version } = useRemoteConfig();
+  const storeUrl = version.storeUrl;
 
-  useEffect(() => {
-    // فقط اندرویدِ نیتیو؛ وب و iOS (فعلاً بازار ندارد) رد می‌شوند.
-    if (Platform.OS !== 'android') return;
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch(`${env.apiBaseUrl}/api/config`);
-        if (!res.ok) return;
-        const cfg: Config = await res.json();
-        if (!alive) return;
-        if (cfg.store_url) setStoreUrl(cfg.store_url);
-        const installed = Application.nativeApplicationVersion;
-        if (cfg.min_android_version && installed && cmpVersion(installed, cfg.min_android_version) < 0) {
-          setBlocked(true);
-        }
-      } catch {
-        /* fail-open */
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // فقط اندرویدِ نیتیو؛ وب و iOS (فعلاً بازار ندارد) رد می‌شوند. تا وقتی پیکربندی
+  // نیامده `minAndroidVersion` خالی است و کسی مسدود نمی‌شود (fail-open).
+  const installed = Application.nativeApplicationVersion;
+  const blocked =
+    Platform.OS === 'android' &&
+    !!version.minAndroidVersion &&
+    !!installed &&
+    cmpVersion(installed, version.minAndroidVersion) < 0;
 
   if (!blocked) return <>{children}</>;
 

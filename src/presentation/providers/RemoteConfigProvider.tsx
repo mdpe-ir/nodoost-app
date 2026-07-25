@@ -10,6 +10,11 @@ import {
   parseInterestsCatalog,
   type InterestItem,
 } from '@/core/config/interestsCatalog';
+import {
+  emptyVersionConfig,
+  parseVersionConfig,
+  type VersionConfig,
+} from '@/core/config/appUpdate';
 
 /**
  * پیکربندیِ زمانِ اجرا که یک‌بار از `GET /api/config` خوانده و در کلِ اپ به اشتراک
@@ -20,12 +25,14 @@ import {
 interface RemoteConfigValue {
   install: InstallConfig;
   interests: InterestItem[];
+  version: VersionConfig;
   loaded: boolean;
 }
 
 const RemoteConfigContext = createContext<RemoteConfigValue>({
   install: emptyInstallConfig,
   interests: defaultInterestsCatalog,
+  version: emptyVersionConfig,
   loaded: false,
 });
 
@@ -34,6 +41,7 @@ export const useRemoteConfig = () => useContext(RemoteConfigContext);
 export function RemoteConfigProvider({ children }: { children: React.ReactNode }) {
   const [install, setInstall] = useState<InstallConfig>(emptyInstallConfig);
   const [interests, setInterests] = useState<InterestItem[]>(defaultInterestsCatalog);
+  const [version, setVersion] = useState<VersionConfig>(emptyVersionConfig);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -46,6 +54,8 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
         if (!alive) return;
         setInstall(parseInstallConfig(cfg.install));
         setInterests(parseInterestsCatalog(cfg.interests));
+        // فیلدهای نسخه در ریشه‌ی پاسخ‌اند (نه زیرِ install)، پس کلِ cfg را می‌دهیم.
+        setVersion(parseVersionConfig(cfg));
       } catch {
         /* fail-safe: مقدارِ پیش‌فرض می‌ماند */
       } finally {
@@ -58,7 +68,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <RemoteConfigContext.Provider value={{ install, interests, loaded }}>
+    <RemoteConfigContext.Provider value={{ install, interests, version, loaded }}>
       {children}
     </RemoteConfigContext.Provider>
   );

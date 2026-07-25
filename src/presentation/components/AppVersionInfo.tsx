@@ -5,6 +5,11 @@ import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
+import { isUpdateAvailable, openStore } from '@/core/config/appUpdate';
+import { usableMethods } from '@/core/config/installConfig';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import { Button } from './Button';
+import { InstallMethods } from './InstallMethods';
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -17,11 +22,22 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** اطلاعاتِ نسخه‌ی نیتیو و بسته‌ی JSای که همین لحظه در حال اجراست. */
+/**
+ * اطلاعاتِ نسخه‌ی نیتیو و بسته‌ی JSای که همین لحظه در حال اجراست، به‌علاوه‌ی
+ * پیشنهادِ به‌روزرسانیِ *اختیاری*: اگر `latest_version`ِ پنلِ ادمین از نسخه‌ی نصب‌شده
+ * جلوتر باشد، این‌جا به کاربر گفته می‌شود — بدونِ مسدود کردنِ چیزی. (نسخه‌ی اجباری
+ * کارِ UpdateGateProvider است.)
+ */
 export function AppVersionInfo() {
+  const { version, install } = useRemoteConfig();
   const appVersion = Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '—';
   const buildVersion = Application.nativeBuildVersion;
   const updateId = Updates.updateId?.slice(0, 8) ?? '—';
+  const updateAvailable = isUpdateAvailable(
+    Application.nativeApplicationVersion,
+    version.latestVersion
+  );
+  const updateMethods = usableMethods(install);
 
   let status = 'نسخه‌ی برنامه';
   let description = 'اطلاعات به‌روزرسانی در این نسخه در دسترس نیست.';
@@ -43,6 +59,13 @@ export function AppVersionInfo() {
     }
   }
 
+  // نسخه‌ی نیتیوِ تازه از هر پیامِ دیگری مهم‌تر است، پس بالادست می‌نشیند.
+  if (updateAvailable) {
+    status = 'نسخه‌ی جدید در دسترس است';
+    description = `نسخه‌ی ${faNum(version.latestVersion)} منتشر شده است. برای دریافتِ تازه‌ترین قابلیت‌ها و رفعِ اشکال‌ها، برنامه را به‌روزرسانی کن.`;
+    statusColor = colors.gold;
+  }
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionLabel}>درباره‌ی برنامه</Text>
@@ -54,6 +77,21 @@ export function AppVersionInfo() {
             <Text selectable style={styles.statusDescription}>{description}</Text>
           </View>
         </View>
+        {updateAvailable ? (
+          <View style={styles.updateAction}>
+            {/* همان روش‌هایی که ادمین فعال کرده — نه بیشتر. دکمه‌ی بازار فقط وقتی
+                می‌آید که هیچ روشی تنظیم نشده باشد تا کاربر بن‌بست نخورد. */}
+            {updateMethods.length > 0 ? (
+              <InstallMethods methods={updateMethods} />
+            ) : (
+              <Button
+                label="به‌روزرسانی از بازار"
+                size="md"
+                onPress={() => openStore(version.storeUrl)}
+              />
+            )}
+          </View>
+        ) : null}
         <View style={styles.divider} />
         <InfoRow
           label="نسخه‌ی برنامه"
@@ -91,6 +129,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
   },
   statusDot: { width: 9, height: 9, borderRadius: radius.pill, marginTop: 7 },
+  updateAction: { paddingBottom: spacing.lg },
   statusBody: { flex: 1, alignItems: 'flex-end', gap: 2 },
   statusTitle: { fontFamily: fonts.bold, fontSize: fontSizes.md, textAlign: 'right' },
   statusDescription: {
