@@ -6,7 +6,8 @@ import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { getPaymentMode } from '@/core/billing/paymentStrategy';
-import { bazaarBilling } from '@/core/billing/bazaarBilling';
+import { bazaarBilling, isAlreadyOwned } from '@/core/billing/bazaarBilling';
+import { restorePurchases } from '@/core/billing/restorePurchases';
 import type { Tier } from '@/domain/entities';
 
 /**
@@ -55,19 +56,42 @@ export function usePlansViewModel() {
           let purchase;
           try {
             purchase = await bazaarBilling.purchase(bazaarSku || plan);
-          } catch {
+          } catch (err) {
+            // «از قبل مالکش هستی» یعنی خریدِ قبلی هرگز به سرور نرسیده و consume نشده.
+            // پیش از این این خطا هم مثلِ لغو بی‌صدا بلعیده می‌شد و کاربر برای همیشه
+            // گیر می‌کرد؛ حالا همان خرید را بازیابی می‌کنیم.
+            if (isAlreadyOwned(err)) {
+              const s = await restorePurchases({ restore: uc.catalog.restoreBazaarPurchase });
+              await refreshUser();
+              Alert.alert(
+                s.restored > 0 ? 'اشتراکِ شما فعال شد' : 'خریدِ قبلی پیدا نشد',
+                s.restored > 0
+                  ? 'خریدِ قبلیِ شما ثبت نشده بود و همین حالا فعال شد.'
+                  : 'این محصول در بازار به نامِ شماست ولی فعال‌سازی نشد. لطفاً با پشتیبانی تماس بگیرید.'
+              );
+              return;
+            }
             // لغوِ کاربر یا نبودِ اتصالِ بازار — بی‌صدا (کاربر خودش می‌داند).
             return;
           }
           try {
             await uc.catalog.verifyBazaarPurchase(purchase.originalJson, purchase.dataSignature);
+            // فقط بعد از ثبتِ موفق در سرور. اگر این‌جا شکست بخورد، خرید مصرف‌نشده
+            // می‌ماند و جاروی بازیابی دفعه‌ی بعد سراغش می‌رود.
+            if (purchase.purchaseToken) {
+              try {
+                await bazaarBilling.consume(purchase.purchaseToken);
+              } catch {
+                /* دورِ بعد */
+              }
+            }
             await refreshUser();
           } catch {
-            // پرداخت انجام شد ولی تأییدِ سرور شکست خورد — کاربر باید بداند و بتواند
-            // دوباره تلاش کند (جریان idempotent است؛ همان توکن دوباره تأیید می‌شود).
+            // پرداخت انجام شد ولی تأییدِ سرور شکست خورد. خرید مصرف نشده، پس در صفِ
+            // بازیابی می‌ماند و دفعه‌ی بعدی که اپ باز شود خودکار فعال می‌شود.
             Alert.alert(
-              'تأییدِ خرید ناموفق بود',
-              'پرداختِ شما انجام شد اما فعال‌سازیِ اشتراک با خطا روبه‌رو شد. لطفاً چند لحظه بعد دوباره «خرید» را بزنید؛ اگر برطرف نشد با پشتیبانی تماس بگیرید.'
+              'تأییدِ خرید کمی طول می‌کشد',
+              'پرداختِ شما انجام شد. فعال‌سازی همین حالا ممکن نشد، اما خریدِ شما محفوظ است و دفعه‌ی بعد که اپ را باز کنید خودکار فعال می‌شود.'
             );
           }
           return;

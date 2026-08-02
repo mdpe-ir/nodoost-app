@@ -33,4 +33,18 @@ export class CatalogRepositoryImpl implements CatalogRepository {
     );
     return { subscriptionUntil: d?.subscription_until };
   }
+
+  async restoreBazaarPurchase(
+    purchaseToken: string,
+    productId: string
+  ): Promise<{ subscriptionUntil?: string; already: boolean }> {
+    const d = await this.http.request<{ subscription_until?: string; already?: boolean }>(
+      '/api/payments/bazaar/restore',
+      {
+        method: 'POST',
+        body: { purchase_token: purchaseToken, product_id: productId },
+      }
+    );
+    return { subscriptionUntil: d?.subscription_until, already: d?.already === true };
+  }
 }

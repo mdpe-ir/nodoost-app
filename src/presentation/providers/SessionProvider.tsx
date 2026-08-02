@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useCases } from '@/core/di/DIProvider';
+import { restorePurchases } from '@/core/billing/restorePurchases';
 import type { User, AuthResult } from '@/domain/entities';
 
 type Status = 'loading' | 'authed' | 'guest';
@@ -58,6 +60,33 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       alive = false;
     };
   }, [uc, refreshUser]);
+
+  // بازیابیِ خریدهای گم‌شده: هر بار که نشستِ معتبر داریم و هر بار که اپ از پس‌زمینه
+  // برمی‌گردد، صفِ خریدهای مصرف‌نشده‌ی بازار خالی می‌شود.
+  //
+  // چرا لازم است: اگر اندروید پروسه را وسطِ پرداخت بکشد، رسید هرگز به سرور نمی‌رسد و
+  // کاربر پول داده ولی اشتراک ندارد. این تنها مسیرِ خودترمیمِ آن حالت است.
+  //
+  // اگر چیزی واقعاً فعال شود، refreshUser بالا رفتنِ سطح را می‌بیند و همان پنجره‌ی
+  // تبریکِ همیشگی را نشان می‌دهد.
+  useEffect(() => {
+    if (status !== 'authed') return;
+
+    let alive = true;
+    const sweep = async () => {
+      const s = await restorePurchases({ restore: uc.catalog.restoreBazaarPurchase });
+      if (alive && s.restored > 0) await refreshUser();
+    };
+    sweep();
+
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') sweep();
+    });
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [status, uc, refreshUser]);
 
   const login = useCallback(
     async (phone: string, code: string) => {

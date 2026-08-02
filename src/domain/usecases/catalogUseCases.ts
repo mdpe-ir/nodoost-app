@@ -6,9 +6,13 @@ export const makeStartPayment = (r: CatalogRepository) => (plan: string) =>
 export const makeVerifyBazaarPurchase =
   (r: CatalogRepository) => (originalJson: string, dataSignature: string) =>
     r.verifyBazaarPurchase(originalJson, dataSignature);
+export const makeRestoreBazaarPurchase =
+  (r: CatalogRepository) => (purchaseToken: string, productId: string) =>
+    r.restoreBazaarPurchase(purchaseToken, productId);
 
 export type CatalogUseCases = {
   getTiers: ReturnType<typeof makeGetTiers>;
   startPayment: ReturnType<typeof makeStartPayment>;
   verifyBazaarPurchase: ReturnType<typeof makeVerifyBazaarPurchase>;
+  restoreBazaarPurchase: ReturnType<typeof makeRestoreBazaarPurchase>;
 };

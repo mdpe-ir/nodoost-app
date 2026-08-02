@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
+import { File as ExpoFile } from 'expo-file-system';
 import * as Updates from 'expo-updates';
 import { ApiError } from './ApiError';
 import type { TokenStorage } from '@/core/storage/TokenStorage';
@@ -75,7 +76,7 @@ export class HttpClient {
   }
 
   /**
-   * آپلودِ فایلِ چندبخشی — روی وب Blob و روی نیتیو {uri,name,type}.
+   * آپلودِ فایلِ چندبخشی — روی وب Blob و روی نیتیو Fileِ واقعیِ expo-file-system.
    *
    * مثلِ request روی ۴۰۱ یک‌بار توکن را تازه می‌کند و دوباره می‌فرستد. نبودِ این
    * تلاشِ دوباره یعنی کاربری که توکنِ دسترسی‌اش تازه منقضی شده، در گامِ عکسِ
@@ -90,7 +91,10 @@ export class HttpClient {
       const blob = await (await fetch(uri)).blob();
       form.append(field, blob, name);
     } else {
-      form.append(field, { uri, name, type: 'image/jpeg' } as unknown as Blob);
+      // global fetch در Expo SDK 56 همان expo/fetch است و شیء قدیمیِ
+      // React Native به‌شکلِ {uri,name,type} را نمی‌پذیرد. File رابطِ Blob/bytes
+      // واقعی را فراهم می‌کند تا بدنه‌ی multipart پیش از ارسال درست سریال شود.
+      form.append(field, new ExpoFile(uri), name);
     }
     const res = await fetch(this.baseUrl + path, {
       method: 'POST',
