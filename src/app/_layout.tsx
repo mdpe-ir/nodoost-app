@@ -53,14 +53,20 @@ function AuthGate() {
       if (root !== 'login') router.replace('/login');
       return;
     }
-    if (user?.status === 'banned' || user?.status === 'pending_review') {
-      if (root !== 'suspended') router.replace('/suspended');
-      return;
-    }
-    // تا وقتی پروفایل کامل نشده (نام، جنسیت، سن و حداقل یک عکس) اجازه‌ی ورود به اپ نیست.
-    if (!isProfileComplete(user)) {
-      if (root !== 'onboarding') router.replace('/onboarding');
-      return;
+    // پشتیبانی از هر وضعیتی باز می‌ماند. کاربرِ مسدود یا نیمه‌ثبت‌نام دقیقاً همان
+    // کسی است که بیشترین نیاز را به تماس دارد (اعتراض به مسدودی، عکسی که تأیید
+    // نمی‌شود)؛ اگر اینجا هم بیرونش کنیم هیچ راهی برایش نمی‌ماند. سمتِ سرور هم
+    // مسیرهای /api/support عمداً بیرونِ دروازه‌ی «پروفایلِ کامل» ثبت شده‌اند.
+    if ((root as string) !== 'support') {
+      if (user?.status === 'banned' || user?.status === 'pending_review') {
+        if (root !== 'suspended') router.replace('/suspended');
+        return;
+      }
+      // تا وقتی پروفایل کامل نشده (نام، جنسیت، سن و حداقل یک عکس) اجازه‌ی ورود به اپ نیست.
+      if (!isProfileComplete(user)) {
+        if (root !== 'onboarding') router.replace('/onboarding');
+        return;
+      }
     }
     if (onAuthScreen || root === undefined) router.replace('/discover');
   }, [status, user, welcomeSeen, segments, router]);
@@ -79,6 +85,7 @@ function AuthGate() {
       <Stack.Screen name="viewers" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="notification-settings" />
+      <Stack.Screen name="support" />
       <Stack.Screen name="followers" />
       <Stack.Screen name="plans" />
       <Stack.Screen name="get-app" />

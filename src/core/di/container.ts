@@ -12,6 +12,7 @@ import { CatalogRepositoryImpl } from '@/data/repositories/CatalogRepositoryImpl
 import { SafetyRepositoryImpl } from '@/data/repositories/SafetyRepositoryImpl';
 import { NotificationsRepositoryImpl } from '@/data/repositories/NotificationsRepositoryImpl';
 import { FollowRepositoryImpl } from '@/data/repositories/FollowRepositoryImpl';
+import { SupportRepositoryImpl } from '@/data/repositories/SupportRepositoryImpl';
 
 import * as auth from '@/domain/usecases/authUseCases';
 import * as profile from '@/domain/usecases/profileUseCases';
@@ -23,6 +24,7 @@ import * as catalog from '@/domain/usecases/catalogUseCases';
 import * as safety from '@/domain/usecases/safetyUseCases';
 import * as notifications from '@/domain/usecases/notificationsUseCases';
 import * as follow from '@/domain/usecases/followUseCases';
+import * as support from '@/domain/usecases/supportUseCases';
 
 /**
  * Composition root: زیرساخت → repository → use case را یک‌بار می‌سازد.
@@ -42,6 +44,7 @@ export function createContainer() {
   const safetyRepo = new SafetyRepositoryImpl(http);
   const notificationsRepo = new NotificationsRepositoryImpl(http);
   const followRepo = new FollowRepositoryImpl(http);
+  const supportRepo = new SupportRepositoryImpl(http);
 
   const useCases = {
     auth: {
@@ -109,6 +112,12 @@ export function createContainer() {
       follow: follow.makeFollow(followRepo),
       unfollow: follow.makeUnfollow(followRepo),
       getList: follow.makeGetFollowList(followRepo),
+    },
+    support: {
+      getOverview: support.makeGetSupportOverview(supportRepo),
+      startThread: support.makeStartSupportThread(supportRepo),
+      getMessages: support.makeGetSupportMessages(supportRepo),
+      sendMessage: support.makeSendSupportMessage(supportRepo),
     },
   };
 

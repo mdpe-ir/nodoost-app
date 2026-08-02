@@ -576,6 +576,24 @@ export function ProfileScreen() {
               )}
             </View>
 
+            {/* — پشتیبانی: تنها راهِ رسمیِ تماس با ما — */}
+            <Text style={styles.groupLabel}>پشتیبانی</Text>
+            <View style={styles.group}>
+              <Pressable
+                style={styles.rowInner}
+                onPress={() => router.push('/support' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="گفتگو با پشتیبانی"
+              >
+                <View style={styles.rowChip}><Icon name="shield-check" size={18} tint="gold" /></View>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>گفتگو با پشتیبانی</Text>
+                  <Text style={styles.rowHint}>سوال، مشکلِ پرداخت یا گزارشِ تخلف</Text>
+                </View>
+                <Icon name="chevron-prev" size={16} tint="gold" />
+              </Pressable>
+            </View>
+
             <AppVersionInfo />
             <Button label="خروج از حساب" variant="danger" onPress={vm.logout} style={styles.logout} />
           </View>

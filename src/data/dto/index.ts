@@ -196,8 +196,36 @@ export interface ConversationDTO {
   last_body?: string;
   last_at?: string;
   unread?: number;
-  source?: 'swipe' | 'random';
+  source?: 'swipe' | 'random' | 'direct' | 'avatar' | 'support';
   initiated_by?: number | null;
+  /** حسابِ رسمیِ پشتیبانی — ردیفش سنجاق و نشان‌دار می‌شود. */
+  is_support?: boolean;
+  verified?: boolean;
+}
+
+export interface SupportTopicDTO {
+  slug: string;
+  label: string;
+}
+
+export interface SupportAccountDTO {
+  user_id: number;
+  label?: string;
+  name?: string | null;
+  photo_url?: string | null;
+  verified?: boolean;
+  active?: boolean;
+}
+
+export interface SupportOverviewDTO {
+  enabled?: boolean;
+  account?: SupportAccountDTO | null;
+  topics?: SupportTopicDTO[] | null;
+  welcome_message?: string;
+  match_id?: number | null;
+  topic?: string | null;
+  status?: 'open' | 'pending' | 'resolved' | null;
+  unread?: number;
 }
 
 export interface MessageDTO {

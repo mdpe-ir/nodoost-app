@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
@@ -63,11 +63,27 @@ export function usePlansViewModel() {
             if (isAlreadyOwned(err)) {
               const s = await restorePurchases({ restore: uc.catalog.restoreBazaarPurchase });
               await refreshUser();
+              if (s.restored > 0) {
+                Alert.alert(
+                  'اشتراکِ شما فعال شد',
+                  'خریدِ قبلیِ شما ثبت نشده بود و همین حالا فعال شد.'
+                );
+                return;
+              }
+              // بن‌بستِ واقعی: پول رفته ولی بازیابی هم جواب نداده. تا پیش از این
+              // فقط می‌گفتیم «با پشتیبانی تماس بگیرید» بی‌آنکه راهی وجود داشته
+              // باشد؛ حالا دکمه مستقیم تیکت را با موضوعِ پرداخت باز می‌کند.
               Alert.alert(
-                s.restored > 0 ? 'اشتراکِ شما فعال شد' : 'خریدِ قبلی پیدا نشد',
-                s.restored > 0
-                  ? 'خریدِ قبلیِ شما ثبت نشده بود و همین حالا فعال شد.'
-                  : 'این محصول در بازار به نامِ شماست ولی فعال‌سازی نشد. لطفاً با پشتیبانی تماس بگیرید.'
+                'خریدِ قبلی پیدا نشد',
+                'این محصول در بازار به نامِ شماست ولی فعال‌سازی نشد. پشتیبانی می‌تواند دستی بررسی‌اش کند.',
+                [
+                  { text: 'بعداً', style: 'cancel' },
+                  {
+                    text: 'تماس با پشتیبانی',
+                    // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ تازه تا اجرای بعدیِ expo start شناخته نمی‌شود.
+                    onPress: () => router.push('/support' as Href),
+                  },
+                ]
               );
               return;
             }
