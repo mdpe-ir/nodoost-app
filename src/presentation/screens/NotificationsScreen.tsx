@@ -15,6 +15,8 @@ import { RowsSkeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Icon } from '@/presentation/components/Icon';
 import { Avatar } from '@/presentation/components/Avatar';
+import { InAppAlarmList } from '@/presentation/components/inapp/InAppAlarmList';
+import { useInAppMessages } from '@/presentation/providers/InAppMessagesProvider';
 import { useNotificationsViewModel } from '@/presentation/hooks/useNotificationsViewModel';
 import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import { toAppPath } from '@/core/utils/deepLink';
@@ -142,6 +144,7 @@ function NotificationCard({
 /** فهرستِ اعلان‌ها — گروه‌بندی‌شده بر پایه‌ی زمان، با تازه‌سازیِ کششی و بارگذاریِ پیوسته. */
 export function NotificationsScreen() {
   const vm = useNotificationsViewModel();
+  const { alarms } = useInAppMessages();
   useRefetchOnFocus(vm.refresh);
 
   const sections = useMemo(() => {
@@ -213,19 +216,24 @@ export function NotificationsScreen() {
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.list}
+        // اعلان‌های ادمین سرِ فهرست می‌نشینند — چه فید خالی باشد چه پر.
+        ListHeaderComponent={<InAppAlarmList />}
         onEndReachedThreshold={0.4}
         onEndReached={vm.loadMore}
         refreshControl={
           <RefreshControl refreshing={vm.refreshing} onRefresh={vm.refresh} tintColor={colors.gold} />
         }
         ListEmptyComponent={
-          <View style={styles.center}>
-            <EmptyState
-              icon="bell"
-              title="هنوز اعلانی نداری"
-              hint="وقتی کسی دنبالت کند، پسندت کند یا پیام بدهد، همین‌جا خبردار می‌شوی."
-            />
-          </View>
+          // اگر اعلانِ ادمینی سرِ فهرست هست، «هیچ اعلانی نداری» دروغ است.
+          alarms.length ? null : (
+            <View style={styles.center}>
+              <EmptyState
+                icon="bell"
+                title="هنوز اعلانی نداری"
+                hint="وقتی کسی دنبالت کند، پسندت کند یا پیام بدهد، همین‌جا خبردار می‌شوی."
+              />
+            </View>
+          )
         }
         ListFooterComponent={
           vm.loadingMore ? (

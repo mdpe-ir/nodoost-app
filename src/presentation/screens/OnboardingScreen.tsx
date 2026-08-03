@@ -11,7 +11,7 @@ import { InterestPicker } from '@/presentation/components/InterestPicker';
 import { PhotoPicker } from '@/presentation/components/PhotoPicker';
 import { useOnboarding } from '@/presentation/hooks/useOnboarding';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
-import { faNum } from '@/core/utils/faNum';
+import { enNum, faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import type { Gender } from '@/domain/entities';
 
@@ -133,7 +133,7 @@ export function OnboardingScreen() {
             <TextInput
               style={styles.input}
               value={vm.age}
-              onChangeText={(t) => vm.setAge(t.replace(/[^0-9]/g, '').slice(0, 2))}
+              onChangeText={(t) => vm.setAge(enNum(t).replace(/[^0-9]/g, '').slice(0, 2))}
               placeholder="مثلاً ۲۶"
               placeholderTextColor={colors.ink3}
               keyboardType="number-pad"

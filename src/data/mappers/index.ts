@@ -7,6 +7,7 @@ import type {
   FollowState,
   FollowUser,
   Gender,
+  InAppMessage,
   Liker,
   MapUser,
   MatchResult,
@@ -29,6 +30,7 @@ import type {
   ConversationDTO,
   FollowStateDTO,
   FollowUserDTO,
+  InAppMessageDTO,
   LikerDTO,
   MapUserDTO,
   MatchDTO,
@@ -327,3 +329,47 @@ export const fromNotificationPrefs = (p: Partial<NotificationPrefs>): Notificati
   if (p.system !== undefined) dto.notif_system = p.system;
   return dto;
 };
+
+const IN_APP_SURFACES = ['banner', 'popup', 'alarm'] as const;
+const IN_APP_ACCENTS = ['gold', 'info', 'success', 'warn', 'danger'] as const;
+const IN_APP_POLICIES = [
+  'once',
+  'once_per_session',
+  'once_per_day',
+  'max_count',
+  'always',
+] as const;
+
+/**
+ * پیامِ درون‌برنامه‌ای. هر مقدارِ ناشناخته به امن‌ترین حالت می‌افتد: سطحِ نامعلوم
+ * «بنر» می‌شود (کم‌آزارترین) و سیاستِ نامعلوم «یک بار» — تا نسخه‌ی قدیمی‌ترِ اپ
+ * با پیامِ نوعِ تازه، پاپ‌آپِ بی‌پایان نسازد.
+ */
+export const toInAppMessage = (d: InAppMessageDTO): InAppMessage => ({
+  id: d.id,
+  surface: (IN_APP_SURFACES as readonly string[]).includes(d.surface ?? '')
+    ? (d.surface as InAppMessage['surface'])
+    : 'banner',
+  title: d.title ?? '',
+  body: d.body ?? '',
+  fullBody: d.full_body?.trim() ? d.full_body : (d.body ?? ''),
+  imageUrl: undefIfNull(d.image_url) || undefined,
+  icon: undefIfNull(d.icon) || undefined,
+  accent: (IN_APP_ACCENTS as readonly string[]).includes(d.accent ?? '')
+    ? (d.accent as InAppMessage['accent'])
+    : 'gold',
+  ctaLabel: undefIfNull(d.cta_label) || undefined,
+  ctaUrl: undefIfNull(d.cta_url) || undefined,
+  secondaryLabel: undefIfNull(d.secondary_label) || undefined,
+  secondaryUrl: undefIfNull(d.secondary_url) || undefined,
+  dismissible: d.dismissible !== false,
+  policy: (IN_APP_POLICIES as readonly string[]).includes(d.display_policy ?? '')
+    ? (d.display_policy as InAppMessage['policy'])
+    : 'once',
+  maxImpressions: d.max_impressions ?? 1,
+  cooldownMinutes: d.cooldown_minutes ?? 0,
+  scope: d.persist_scope === 'client' ? 'client' : 'server',
+  priority: d.priority ?? 0,
+  impressions: d.impressions ?? 0,
+  lastSeenAt: undefIfNull(d.last_seen_at),
+});

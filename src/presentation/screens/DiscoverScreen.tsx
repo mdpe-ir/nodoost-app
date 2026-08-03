@@ -5,6 +5,7 @@ import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenC
 import { SwipeCard, type SwipeCardHandle } from '@/presentation/components/SwipeCard';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { NudgeBanner } from '@/presentation/components/NudgeBanner';
+import { InAppBanner } from '@/presentation/components/inapp/InAppBanner';
 import { CardSkeleton } from '@/presentation/components/Skeleton';
 import { IconButton } from '@/presentation/components/IconButton';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
@@ -31,6 +32,10 @@ export function DiscoverScreen() {
   return (
     <ScreenContainer flush style={styles.wrap}>
       <ScreenHeader title="کاوش" />
+
+      {/* بنرِ ادمین بالای همه‌چیز می‌نشیند، ولی زیرِ نیازهای عملیاتیِ خودِ اپ
+          (مثلِ روشن‌کردنِ موقعیت) نمی‌آید — آن یکی مسدودکننده‌ی واقعیِ تجربه است. */}
+      <InAppBanner />
 
       {vm.needsLocation ? (
         <NudgeBanner

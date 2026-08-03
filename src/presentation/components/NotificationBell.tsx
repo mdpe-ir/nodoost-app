@@ -4,14 +4,18 @@ import { router, type Href } from 'expo-router';
 import { Icon } from './Icon';
 import { CountBadge } from './CountBadge';
 import { useBadges } from '@/presentation/providers/BadgesProvider';
+import { useInAppMessages } from '@/presentation/providers/InAppMessagesProvider';
 import { colors, radius } from '@/core/theme';
 
 /**
  * زنگوله‌ی هدر — درِ ورودیِ صفحه‌ی اعلان‌ها، با نشانِ «دیده‌نشده‌ها».
- * شمارنده از BadgesProvider می‌آید (هر ۳۰ ثانیه و با بازگشتِ اپ تازه می‌شود).
+ * شمارنده از BadgesProvider می‌آید (هر ۳۰ ثانیه و با بازگشتِ اپ تازه می‌شود)
+ * به‌علاوه‌ی اعلان‌های ادمینی که هنوز باز نشده‌اند — هر دو در همان صفحه‌اند،
+ * پس یک نشان باید هر دو را نمایندگی کند.
  */
 export function NotificationBell() {
   const { badges } = useBadges();
+  const { unreadAlarms } = useInAppMessages();
   return (
     <Pressable
       // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ تازه تا اجرای بعدیِ expo start شناخته نمی‌شود.
@@ -23,7 +27,7 @@ export function NotificationBell() {
     >
       <View>
         <Icon name="bell" size={22} tint="gold" />
-        <CountBadge count={badges.notifications} />
+        <CountBadge count={badges.notifications + unreadAlarms} />
       </View>
     </Pressable>
   );

@@ -11,6 +11,7 @@ import { RandomRepositoryImpl } from '@/data/repositories/RandomRepositoryImpl';
 import { CatalogRepositoryImpl } from '@/data/repositories/CatalogRepositoryImpl';
 import { SafetyRepositoryImpl } from '@/data/repositories/SafetyRepositoryImpl';
 import { NotificationsRepositoryImpl } from '@/data/repositories/NotificationsRepositoryImpl';
+import { InAppMessagesRepositoryImpl } from '@/data/repositories/InAppMessagesRepositoryImpl';
 import { FollowRepositoryImpl } from '@/data/repositories/FollowRepositoryImpl';
 import { SupportRepositoryImpl } from '@/data/repositories/SupportRepositoryImpl';
 
@@ -23,6 +24,7 @@ import * as random from '@/domain/usecases/randomUseCases';
 import * as catalog from '@/domain/usecases/catalogUseCases';
 import * as safety from '@/domain/usecases/safetyUseCases';
 import * as notifications from '@/domain/usecases/notificationsUseCases';
+import * as inAppMessages from '@/domain/usecases/inAppMessagesUseCases';
 import * as follow from '@/domain/usecases/followUseCases';
 import * as support from '@/domain/usecases/supportUseCases';
 
@@ -43,6 +45,7 @@ export function createContainer() {
   const catalogRepo = new CatalogRepositoryImpl(http);
   const safetyRepo = new SafetyRepositoryImpl(http);
   const notificationsRepo = new NotificationsRepositoryImpl(http);
+  const inAppMessagesRepo = new InAppMessagesRepositoryImpl(http);
   const followRepo = new FollowRepositoryImpl(http);
   const supportRepo = new SupportRepositoryImpl(http);
 
@@ -107,6 +110,10 @@ export function createContainer() {
       getBadges: notifications.makeGetBadges(notificationsRepo),
       getPrefs: notifications.makeGetNotificationPrefs(notificationsRepo),
       updatePrefs: notifications.makeUpdateNotificationPrefs(notificationsRepo),
+    },
+    inAppMessages: {
+      list: inAppMessages.makeGetInAppMessages(inAppMessagesRepo),
+      recordEvent: inAppMessages.makeRecordInAppEvent(inAppMessagesRepo),
     },
     follow: {
       follow: follow.makeFollow(followRepo),

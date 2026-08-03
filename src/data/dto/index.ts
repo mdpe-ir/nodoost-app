@@ -269,3 +269,33 @@ export interface MatchDTO {
   match_id?: number;
   peer?: CandidateDTO;
 }
+
+/** یک آیتمِ ‎GET /api/me/inapp-messages‎ — پیامِ درون‌برنامه‌ای. */
+export interface InAppMessageDTO {
+  id: number;
+  surface?: string;
+  title?: string | null;
+  body?: string | null;
+  full_body?: string | null;
+  image_url?: string | null;
+  icon?: string | null;
+  accent?: string | null;
+  cta_label?: string | null;
+  cta_url?: string | null;
+  secondary_label?: string | null;
+  secondary_url?: string | null;
+  dismissible?: boolean;
+  display_policy?: string;
+  max_impressions?: number;
+  cooldown_minutes?: number;
+  persist_scope?: string;
+  priority?: number;
+  impressions?: number;
+  last_seen_at?: string | null;
+}
+
+/** پاسخِ ‎GET /api/me/inapp-messages‎. */
+export interface InAppMessagesDTO {
+  results?: InAppMessageDTO[] | null;
+  server_time?: string;
+}

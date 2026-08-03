@@ -20,6 +20,8 @@ import { AndroidAppGateProvider } from '@/presentation/providers/AndroidAppGateP
 import { FetchyDeviceRegistration } from '@/presentation/providers/FetchyDeviceRegistration';
 import { LocationPrimerProvider } from '@/presentation/providers/LocationPrimerProvider';
 import { BadgesProvider } from '@/presentation/providers/BadgesProvider';
+import { InAppMessagesProvider } from '@/presentation/providers/InAppMessagesProvider';
+import { InAppPopup } from '@/presentation/components/inapp/InAppPopup';
 import { isProfileComplete } from '@/domain/policies/profile';
 import { requestNotificationPermission } from '@/core/notifications/notificationPermission';
 import { Loading } from '@/presentation/components/Loading';
@@ -91,6 +93,7 @@ function AuthGate() {
       <Stack.Screen name="get-app" />
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="thread/[id]" />
+      <Stack.Screen name="message/[id]" />
     </Stack>
   );
 }
@@ -129,6 +132,13 @@ export default function RootLayout() {
             <FetchyDeviceRegistration />
             {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
             <BadgesProvider>
+              {/*
+               * پیام‌های درون‌برنامه‌ای بالای درختِ ناوبری‌اند تا هر سه سطحشان یک
+               * منبع داشته باشند: بنرِ صفحه‌ی خانه، پاپ‌آپِ ریشه و کارت‌های
+               * صفحه‌ی اعلان‌ها. زیرِ BadgesProvider است چون نشانِ زنگوله
+               * اعلان‌های نخوانده‌ی این سامانه را هم می‌شمارد.
+               */}
+              <InAppMessagesProvider>
               <RemoteConfigProvider>
                 <WelcomeProvider>
                   <PwaInstallProvider>
@@ -137,6 +147,9 @@ export default function RootLayout() {
                         <StatusBar style="light" />
                         <AuthGate />
                         <CelebrationModal />
+                        {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
+                            ارتقای سطح — که لحظه‌ای‌تر است — رویش نیفتد. */}
+                        <InAppPopup />
                         <LocationPrimerProvider />
                         {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
                       </AndroidAppGateProvider>
@@ -144,6 +157,7 @@ export default function RootLayout() {
                   </PwaInstallProvider>
                 </WelcomeProvider>
               </RemoteConfigProvider>
+              </InAppMessagesProvider>
             </BadgesProvider>
           </SessionProvider>
         </DIProvider>

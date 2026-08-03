@@ -22,6 +22,14 @@ export type {
   Badges,
   NotificationPrefs,
 } from './notifications';
+export type {
+  InAppSurface,
+  InAppAccent,
+  InAppPolicy,
+  InAppScope,
+  InAppEvent,
+  InAppMessage,
+} from './inappMessages';
 export type { FollowState, FollowUser, FollowListKind } from './social';
 export type { Conversation, Message } from './chat';
 export type {

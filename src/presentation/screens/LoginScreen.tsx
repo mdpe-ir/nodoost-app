@@ -9,7 +9,7 @@ import { Icon } from '@/presentation/components/Icon';
 import { Button } from '@/presentation/components/Button';
 import { useLogin } from '@/presentation/hooks/useLogin';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients, shadow } from '@/core/theme';
-import { faNum } from '@/core/utils/faNum';
+import { enNum, faNum } from '@/core/utils/faNum';
 
 const CODE_LEN = 4;
 
@@ -79,7 +79,7 @@ export function LoginScreen() {
                 <TextInput
                   style={styles.input}
                   value={vm.phone}
-                  onChangeText={vm.setPhone}
+                  onChangeText={(t) => vm.setPhone(enNum(t))}
                   keyboardType="phone-pad"
                   placeholder="۰۹۱۲ ۳۴۵ ۶۷۸۹"
                   placeholderTextColor={colors.ink3}
@@ -151,7 +151,7 @@ function CodeBoxes({ value, onChange }: { value: string; onChange: (v: string) =
       <TextInput
         ref={ref}
         value={value}
-        onChangeText={(t) => onChange(t.replace(/[^0-9]/g, '').slice(0, CODE_LEN))}
+        onChangeText={(t) => onChange(enNum(t).replace(/[^0-9]/g, '').slice(0, CODE_LEN))}
         keyboardType="number-pad"
         maxLength={CODE_LEN}
         style={styles.hiddenInput}
