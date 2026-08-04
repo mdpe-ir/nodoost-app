@@ -18,6 +18,8 @@ import type {
   PeerProfile,
   Photo,
   ProfileDraft,
+  PurchaseResult,
+  QueuedSubscription,
   SupportOverview,
   Tier,
   User,
@@ -40,6 +42,8 @@ import type {
   NotificationPrefsDTO,
   PeerProfileDTO,
   PhotoDTO,
+  PurchaseResultDTO,
+  SubscriptionSegmentDTO,
   SupportOverviewDTO,
   TierDTO,
   UserDTO,
@@ -73,6 +77,7 @@ export const toUser = (d: UserDTO): User => ({
   subscriptionPlan: undefIfNull(d.subscription_plan),
   subscriptionProvider: undefIfNull(d.subscription_provider),
   subscriptionStatus: undefIfNull(d.subscription_status),
+  subscriptionQueue: (d.subscription_queue ?? []).map(toQueuedSubscription),
   hasLocation: d.has_location,
   interests: d.interests,
   photos: d.photos?.map(toPhoto),
@@ -229,8 +234,29 @@ export const toTier = (d: TierDTO): Tier => {
     canFilterRandomGender: Boolean(d.can_filter_random_gender),
     maxRadiusKm: d.max_radius_km ?? 0,
     boostPerMonth: d.boost_per_month ?? 0,
+    // نبودِ فیلد یعنی بک‌اند قدیمی است یا کاربر لاگین نیست — در هر دو حالت قفل نکن.
+    purchasable: d.purchasable !== false,
+    blockReason: d.block_reason || undefined,
+    blockMessage: d.block_message || undefined,
+    queuedDaysLeft: d.days_left,
   };
 };
+
+export const toQueuedSubscription = (d: SubscriptionSegmentDTO): QueuedSubscription => ({
+  tierLevel: d.tier_level,
+  daysRemaining: d.days_remaining ?? 0,
+  startsAt: d.starts_at,
+  endsAt: d.ends_at,
+});
+
+export const toPurchaseResult = (d: PurchaseResultDTO | undefined): PurchaseResult => ({
+  outcome: d?.outcome as PurchaseResult['outcome'],
+  tier: d?.tier,
+  subscriptionUntil: undefIfNull(d?.subscription_until),
+  grantedUntil: undefIfNull(d?.granted_until),
+  deferred: (d?.deferred ?? []).map(toQueuedSubscription),
+  already: d?.already === true,
+});
 
 export const toAuthResult = (d: AuthDTO): AuthResult => ({
   accessToken: d.access_token,

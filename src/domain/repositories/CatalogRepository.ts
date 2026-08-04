@@ -1,4 +1,4 @@
-import type { Tier } from '@/domain/entities';
+import type { PurchaseResult, Tier } from '@/domain/entities';
 
 export interface CatalogRepository {
   getTiers(): Promise<Tier[]>;
@@ -6,11 +6,11 @@ export interface CatalogRepository {
   /**
    * اعتبارسنجیِ خریدِ درون‌برنامه‌ایِ کافه‌بازار سمتِ سرور (با امضای RSA) و فعال‌سازیِ اشتراک.
    * `originalJson` دادهٔ امضاشدهٔ خرید و `dataSignature` امضای آن است.
+   *
+   * پاسخ می‌گوید خرید ارتقا بوده، تمدید، یا در صف نشسته — همان چیزی که پیامِ
+   * بعد از خرید باید از رویش نوشته شود.
    */
-  verifyBazaarPurchase(
-    originalJson: string,
-    dataSignature: string
-  ): Promise<{ subscriptionUntil?: string }>;
+  verifyBazaarPurchase(originalJson: string, dataSignature: string): Promise<PurchaseResult>;
   /**
    * بازیابیِ خریدی که در بازار انجام شده ولی رسیدش هرگز به سرور نرسیده — مثلاً
    * وقتی اندروید پروسه‌ی اپ را وسطِ پرداخت کشته و promiseِ خرید هرگز settle نشده.
@@ -18,8 +18,5 @@ export interface CatalogRepository {
    * برخلافِ verify این‌جا امضا در دست نیست (بازار در فهرستِ خریدهای مصرف‌نشده امضا
    * نمی‌دهد)، پس سرور با Developer API اعتبارسنجی می‌کند. idempotent است.
    */
-  restoreBazaarPurchase(
-    purchaseToken: string,
-    productId: string
-  ): Promise<{ subscriptionUntil?: string; already: boolean }>;
+  restoreBazaarPurchase(purchaseToken: string, productId: string): Promise<PurchaseResult>;
 }

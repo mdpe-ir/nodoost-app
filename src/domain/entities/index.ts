@@ -39,5 +39,10 @@ export type {
   SupportOverview,
 } from './support';
 export type { Page } from './paging';
-export type { Tier } from './catalog';
+export type {
+  Tier,
+  QueuedSubscription,
+  PurchaseOutcome,
+  PurchaseResult,
+} from './catalog';
 export type { AuthResult } from './auth';

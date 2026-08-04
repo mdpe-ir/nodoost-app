@@ -8,6 +8,7 @@ import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { getPaymentMode } from '@/core/billing/paymentStrategy';
 import { bazaarBilling, isAlreadyOwned } from '@/core/billing/bazaarBilling';
 import { restorePurchases } from '@/core/billing/restorePurchases';
+import { purchaseResultMessage, upgradeConfirm } from '@/presentation/tiers/subscriptionCopy';
 import type { Tier } from '@/domain/entities';
 
 /**
@@ -39,15 +40,49 @@ export function usePlansViewModel() {
     load();
   }, [load]);
 
+
   const buy = useCallback(
     async (plan: string, bazaarSku?: string) => {
       if (purchasing) return;
+      const target = tiers.find((t) => t.id === plan || t.bazaarSku === plan);
+
+      // دفاعِ لایه‌ی دوم: کارتِ سطحِ پایین‌تر از قبل غیرفعال است، ولی اگر از هر
+      // مسیرِ دیگری به این‌جا رسید، پیش از باز کردنِ درگاه متوقفش کن — رد کردن
+      // *قبل* از پرداخت بی‌ضرر است، برخلافِ رد کردنِ بعد از آن.
+      if (target && target.purchasable === false) {
+        Alert.alert(
+          'این سطح فعلاً قابلِ خرید نیست',
+          target.blockMessage ||
+            'با اشتراکِ فعالِ فعلی‌تان، خریدِ این سطح ممکن نیست. پس از پایانِ اشتراکِ فعلی دوباره امتحان کنید.'
+        );
+        return;
+      }
+
       // وب/PWA: پرداخت فقط داخلِ APK ممکن است. اگر ادمین اجبار کرده باشد، به‌جای
       // زرین‌پال کاربر را به صفحه‌ی «برای خرید، اپ را نصب کن» می‌بریم.
       if (Platform.OS === 'web' && install.forceAppForPayments) {
         router.push({ pathname: '/get-app', params: { reason: 'purchase' } });
         return;
       }
+
+      // ارتقا وسطِ یک اشتراکِ فعال: قولِ «روزهایت حفظ می‌شود» باید *پیش از* پرداخت
+      // داده شود، وگرنه کاربر با ترسِ سوختنِ روزها اصلاً ارتقا نمی‌دهد.
+      // عمداً این‌جا (زمانِ کلیک) حساب می‌شود نه در رندر: خواندنِ ساعت در رندر
+      // ناخالص است و شمارشِ روز هم باید در لحظه‌ی تصمیم دقیق باشد.
+      const daysLeft = remainingDays(user?.subscriptionUntil, user?.tier);
+      if (target && daysLeft > 0) {
+        const confirm = upgradeConfirm(tiers, target, user?.tier ?? 1, daysLeft);
+        if (confirm) {
+          const go = await new Promise<boolean>((resolve) => {
+            Alert.alert(confirm.title, confirm.message, [
+              { text: 'انصراف', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'ادامه و پرداخت', onPress: () => resolve(true) },
+            ]);
+          });
+          if (!go) return;
+        }
+      }
+
       setPurchasing(plan);
       try {
         if (getPaymentMode() === 'bazaar') {
@@ -91,7 +126,10 @@ export function usePlansViewModel() {
             return;
           }
           try {
-            await uc.catalog.verifyBazaarPurchase(purchase.originalJson, purchase.dataSignature);
+            const res = await uc.catalog.verifyBazaarPurchase(
+              purchase.originalJson,
+              purchase.dataSignature
+            );
             // فقط بعد از ثبتِ موفق در سرور. اگر این‌جا شکست بخورد، خرید مصرف‌نشده
             // می‌ماند و جاروی بازیابی دفعه‌ی بعد سراغش می‌رود.
             if (purchase.purchaseToken) {
@@ -102,6 +140,10 @@ export function usePlansViewModel() {
               }
             }
             await refreshUser();
+            await load(); // قابلیتِ خریدِ کارت‌ها با سطحِ تازه عوض می‌شود
+            // پیام از روی کاری که سرور واقعاً کرد نوشته می‌شود، نه حدسِ اپ.
+            const msg = purchaseResultMessage(tiers, res);
+            Alert.alert(msg.title, msg.message);
           } catch {
             // پرداخت انجام شد ولی تأییدِ سرور شکست خورد. خرید مصرف نشده، پس در صفِ
             // بازیابی می‌ماند و دفعه‌ی بعدی که اپ باز شود خودکار فعال می‌شود.
@@ -121,8 +163,18 @@ export function usePlansViewModel() {
         setPurchasing(null);
       }
     },
-    [uc, refreshUser, purchasing, install]
+    [uc, refreshUser, purchasing, install, tiers, user?.tier, user?.subscriptionUntil, load]
   );
 
   return { user, tiers, loading, purchasing, buy, reload: load };
+}
+
+/**
+ * روزهای باقی‌ماندهٔ اشتراکِ فعال، رو به بالا گرد — تا با شمارشِ سرور بخواند
+ * («۱ روز مانده» بهتر از «۰ روز» است). صفر یعنی اشتراکِ فعالی برای حفظ نیست.
+ */
+function remainingDays(until?: string, tier?: number): number {
+  if (!until || (tier ?? 1) <= 1) return 0;
+  const ms = new Date(until).getTime() - Date.now();
+  return ms > 0 ? Math.ceil(ms / 86_400_000) : 0;
 }

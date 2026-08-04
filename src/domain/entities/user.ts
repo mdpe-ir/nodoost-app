@@ -1,3 +1,5 @@
+import type { QueuedSubscription } from './catalog';
+
 export type Gender = 'f' | 'm' | 'x';
 export type AccountStatus = 'active' | 'banned' | 'pending_review';
 
@@ -27,6 +29,12 @@ export interface User {
   subscriptionPlan?: string;
   subscriptionProvider?: string;
   subscriptionStatus?: string;
+  /**
+   * اشتراک‌هایی که پشتِ اشتراکِ فعال در صف‌اند. وقتی کاربر وسطِ یک اشتراک، سطحِ
+   * بالاتری می‌خرد، روزهای باقی‌مانده‌ی قبلی این‌جا حفظ می‌شوند و پس از پایانِ
+   * سطحِ بالاتر از سر گرفته می‌شوند.
+   */
+  subscriptionQueue?: QueuedSubscription[];
   /** موقعیت ست شده؟ بدونِ آن، کاربر در کاوشِ دیگران دیده نمی‌شود. */
   hasLocation?: boolean;
   interests?: string[];

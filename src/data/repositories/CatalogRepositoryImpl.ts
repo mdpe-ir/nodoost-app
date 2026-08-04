@@ -1,8 +1,8 @@
 import type { CatalogRepository } from '@/domain/repositories/CatalogRepository';
-import type { Tier } from '@/domain/entities';
+import type { PurchaseResult, Tier } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { TierDTO } from '@/data/dto';
-import { toTier } from '@/data/mappers';
+import type { PurchaseResultDTO, TierDTO } from '@/data/dto';
+import { toPurchaseResult, toTier } from '@/data/mappers';
 
 export class CatalogRepositoryImpl implements CatalogRepository {
   constructor(private readonly http: HttpClient) {}
@@ -23,28 +23,19 @@ export class CatalogRepositoryImpl implements CatalogRepository {
   async verifyBazaarPurchase(
     originalJson: string,
     dataSignature: string
-  ): Promise<{ subscriptionUntil?: string }> {
-    const d = await this.http.request<{ subscription_until?: string }>(
-      '/api/payments/bazaar/verify',
-      {
-        method: 'POST',
-        body: { original_json: originalJson, data_signature: dataSignature },
-      }
-    );
-    return { subscriptionUntil: d?.subscription_until };
+  ): Promise<PurchaseResult> {
+    const d = await this.http.request<PurchaseResultDTO>('/api/payments/bazaar/verify', {
+      method: 'POST',
+      body: { original_json: originalJson, data_signature: dataSignature },
+    });
+    return toPurchaseResult(d);
   }
 
-  async restoreBazaarPurchase(
-    purchaseToken: string,
-    productId: string
-  ): Promise<{ subscriptionUntil?: string; already: boolean }> {
-    const d = await this.http.request<{ subscription_until?: string; already?: boolean }>(
-      '/api/payments/bazaar/restore',
-      {
-        method: 'POST',
-        body: { purchase_token: purchaseToken, product_id: productId },
-      }
-    );
-    return { subscriptionUntil: d?.subscription_until, already: d?.already === true };
+  async restoreBazaarPurchase(purchaseToken: string, productId: string): Promise<PurchaseResult> {
+    const d = await this.http.request<PurchaseResultDTO>('/api/payments/bazaar/restore', {
+      method: 'POST',
+      body: { purchase_token: purchaseToken, product_id: productId },
+    });
+    return toPurchaseResult(d);
   }
 }

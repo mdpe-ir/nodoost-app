@@ -8,6 +8,7 @@ import { TierBadge, tierName } from '@/presentation/components/TierBadge';
 import { RowsSkeleton } from '@/presentation/components/Skeleton';
 import { usePlansViewModel } from '@/presentation/hooks/usePlansViewModel';
 import { tierPerks, tierFeatures, TIER_FEATURE_ROWS } from '@/presentation/tiers/tierFeatures';
+import { queueSummary } from '@/presentation/tiers/subscriptionCopy';
 import { faNum, faPrice } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
 import type { Tier } from '@/domain/entities';
@@ -39,6 +40,7 @@ export function PlansScreen() {
 
   // به‌ترتیبِ سطح (کم به زیاد) تا کارت‌ها و ستون‌های جدول هم‌راستا باشند.
   const tiers = [...vm.tiers].sort((a, b) => a.level - b.level);
+  const queueLine = queueSummary(tiers, user?.subscriptionQueue ?? []);
 
   return (
     <ScreenContainer flush>
@@ -85,6 +87,15 @@ export function PlansScreen() {
                     : 'الان سطحِ عادی (رایگان) داری. یکی از پلن‌ها را انتخاب کن تا امکاناتش باز شود.'}
                 </Text>
               )}
+
+              {/* روزهایی که کاربر خریده و پشتِ اشتراکِ فعال منتظرند. بدونِ این خط،
+                  افتِ سطح در آینده مثلِ باگ به نظر می‌رسد. */}
+              {queueLine ? (
+                <View style={styles.queueBanner}>
+                  <Icon name="clock" size={16} tint="gold" />
+                  <Text style={styles.queueText}>{queueLine}</Text>
+                </View>
+              ) : null}
 
               {tiers.map((t) => {
                 const isTarget = required > 0 && t.level === required;
@@ -152,13 +163,17 @@ function PlanCard({
   onBuy: () => void;
 }) {
   const perks = tierPerks(tier);
+  // سطحِ پایین‌تر از اشتراکِ فعال. کارت عمداً پنهان نمی‌شود — کاربر باید ببیند
+  // این سطح وجود دارد و چرا الان نمی‌تواند بخردش.
+  const blocked = tier.purchasable === false && !current;
   return (
     <View
       style={[
         styles.card,
         current && styles.cardCurrent,
-        recommended && styles.cardRec,
+        recommended && !blocked && styles.cardRec,
         highlight && styles.cardHighlight,
+        blocked && styles.cardBlocked,
       ]}
     >
       {highlight ? (
@@ -193,7 +208,26 @@ function PlanCard({
         ))}
       </View>
 
-      {!current ? (
+      {current ? (
+        <View style={styles.currentBadgeRow}>
+          <Icon name="check" size={18} tint="gold" />
+          <Text style={styles.currentBadgeText}>همین حالا فعال است</Text>
+        </View>
+      ) : blocked ? (
+        <View style={styles.blockedRow}>
+          <Icon name="lock" size={18} tint="ink" />
+          <View style={styles.blockedTexts}>
+            <Text style={styles.blockedText}>
+              {tier.blockMessage || 'با اشتراکِ فعالِ شما، این سطح قابلِ خرید نیست.'}
+            </Text>
+            {tier.queuedDaysLeft ? (
+              <Text style={styles.blockedQueue}>
+                {`${faNum(tier.queuedDaysLeft)} روز از این سطح در صف شماست و پس از پایانِ اشتراکِ فعلی شروع می‌شود.`}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : (
         <Button
           label={`خرید سطحِ ${tier.name}`}
           onPress={onBuy}
@@ -201,11 +235,6 @@ function PlanCard({
           icon="diamond-fill"
           style={styles.buy}
         />
-      ) : (
-        <View style={styles.currentBadgeRow}>
-          <Icon name="check" size={18} tint="gold" />
-          <Text style={styles.currentBadgeText}>همین حالا فعال است</Text>
-        </View>
       )}
     </View>
   );
@@ -325,6 +354,55 @@ const styles = StyleSheet.create({
   },
   cardCurrent: { borderColor: colors.goldSoft, backgroundColor: colors.surface2 },
   cardRec: { borderColor: colors.goldSoft },
+  // کارتِ سطحِ پایین‌تر از اشتراکِ فعال: کم‌رنگ ولی خوانا — پنهان نمی‌شود تا
+  // کاربر بداند این سطح هست و چرا الان در دسترس نیست.
+  cardBlocked: { opacity: 0.45, borderColor: colors.line },
+  blockedRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  blockedTexts: { flex: 1, gap: 4 },
+  blockedText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  blockedQueue: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink3,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  queueBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.goldFaint,
+    marginBottom: spacing.lg,
+  },
+  queueText: {
+    flex: 1,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   cardHighlight: { borderColor: colors.gold, backgroundColor: colors.surface2 },
   highlightTag: {
     alignSelf: 'flex-end',

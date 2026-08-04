@@ -23,6 +23,8 @@ export interface UserDTO {
   subscription_plan?: string | null;
   subscription_provider?: string | null;
   subscription_status?: string | null;
+  /** اشتراک‌های خریداری‌شده‌ای که پشتِ اشتراکِ فعال منتظرند. */
+  subscription_queue?: SubscriptionSegmentDTO[] | null;
   verified?: boolean;
   has_location?: boolean;
   interests?: string[];
@@ -257,6 +259,29 @@ export interface TierDTO {
   can_filter_random_gender?: boolean;
   max_radius_km?: number;
   boost_per_month?: number;
+  /** فقط وقتی درخواست توکنِ کاربر داشته باشد می‌آید. نبودنش یعنی «قابلِ خرید». */
+  purchasable?: boolean;
+  block_reason?: string;
+  block_message?: string;
+  days_left?: number;
+}
+
+/** قطعه‌ی صفِ استحقاق — اشتراکی که پشتِ اشتراکِ فعال منتظر است. */
+export interface SubscriptionSegmentDTO {
+  tier_level: number;
+  days_remaining: number;
+  starts_at?: string;
+  ends_at?: string;
+}
+
+/** پاسخِ مشترکِ همه‌ی مسیرهای خرید/بازیابی. */
+export interface PurchaseResultDTO {
+  outcome?: string;
+  tier?: number;
+  subscription_until?: string | null;
+  granted_until?: string | null;
+  deferred?: SubscriptionSegmentDTO[] | null;
+  already?: boolean;
 }
 
 export interface AuthDTO {
