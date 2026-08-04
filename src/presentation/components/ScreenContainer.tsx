@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 import { InstallButton } from '@/presentation/components/InstallButton';
 import { NotificationBell } from '@/presentation/components/NotificationBell';
+import { SupportButton } from '@/presentation/components/SupportButton';
 import { Icon } from '@/presentation/components/Icon';
 
 /** حاشیه‌ی افقیِ استانداردِ صفحات — برای محاسبه‌ی عرضِ سلول‌ها هم استفاده می‌شود. */
@@ -34,17 +35,21 @@ export function ScreenContainer({ children, flush, style }: Props) {
  * راست‌به‌چپ چیده می‌شود.
  * در حالتِ بدونِ بازگشت (صفحه‌های تب) زنگوله‌ی اعلان‌ها همیشه هست — مثلِ اینستاگرام
  * از هر تب در دسترس است.
+ * با `support` یک دکمه‌ی پشتیبانی هم سمتِ راستِ زنگوله می‌نشیند (صفحه‌ی «من»).
  */
 export function ScreenHeader({
   title,
   subtitle,
   action,
   onBack,
+  support,
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
   onBack?: () => void;
+  /** نمایشِ دکمه‌ی پشتیبانی کنارِ زنگوله — فقط در حالتِ بدونِ بازگشت. */
+  support?: boolean;
 }) {
   if (onBack) {
     return (
@@ -70,6 +75,8 @@ export function ScreenHeader({
   return (
     <View style={styles.head}>
       <View style={styles.headActions}>
+        {/* چیدمانِ row-reverse: فرزندِ اول راست‌ترین است — پشتیبانی سمتِ راستِ زنگوله. */}
+        {support ? <SupportButton /> : null}
         <NotificationBell />
         {action ?? <InstallButton />}
       </View>

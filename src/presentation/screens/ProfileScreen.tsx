@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   useWindowDimensions,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
@@ -32,6 +36,8 @@ import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradien
 
 const COLS = 3;
 const GRID_GAP = 2;
+/** بلندیِ نوارِ چسبانِ پشتیبانی + حاشیه‌هایش — هم برای جاباز‌کردن، هم برای محاسبه‌ی دیده‌شدن. */
+const SUPPORT_DOCK_H = 96;
 
 type Tab = 'photos' | 'about' | 'settings';
 const TABS: { key: Tab; label: string }[] = [
@@ -169,10 +175,46 @@ export function ProfileScreen() {
   }, [params.tab]);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
 
+  /* — نوارِ چسبانِ پشتیبانی —
+     تا وقتی کاربر به ردیفِ «گفتگو با پشتیبانی» (ته‌ی زبانه‌ی تنظیمات) نرسیده،
+     یک نوارِ برجسته پایینِ صفحه می‌ماند؛ به‌محضِ دیده‌شدنِ ردیف کنار می‌رود.
+     موقعیتِ ردیف = y نوارِ محتوای زبانه + y محتوای تنظیمات + y خودِ بخش. */
+  const dock = useRef({ scrollTop: 0, viewportH: 0, contentY: 0, settingsY: 0, sectionY: -1, sectionH: 0 });
+  const [supportSeen, setSupportSeen] = useState(false);
+  const syncSupportSeen = useCallback(() => {
+    const m = dock.current;
+    if (m.sectionY < 0 || m.viewportH === 0) return;
+    const sectionBottom = m.contentY + m.settingsY + m.sectionY + m.sectionH;
+    // نوارِ چسبان خودش پایینِ دید را می‌پوشاند؛ پس آن اندازه از ارتفاعِ دید کم می‌شود.
+    const seen = m.scrollTop + m.viewportH - SUPPORT_DOCK_H >= sectionBottom;
+    setSupportSeen((prev) => (prev === seen ? prev : seen));
+  }, []);
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      dock.current.scrollTop = e.nativeEvent.contentOffset.y;
+      dock.current.viewportH = e.nativeEvent.layoutMeasurement.height;
+      syncSupportSeen();
+    },
+    [syncSupportSeen],
+  );
+  const onScrollLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      dock.current.viewportH = e.nativeEvent.layout.height;
+      syncSupportSeen();
+    },
+    [syncSupportSeen],
+  );
+  // با عوض‌شدنِ زبانه اندازه‌های قبلی بی‌اعتبارند؛ onLayoutِ زبانه‌ی تازه دوباره پرشان می‌کند.
+  const changeTab = useCallback((t: Tab) => {
+    dock.current.sectionY = -1;
+    setSupportSeen(false);
+    setTab(t);
+  }, []);
+
   if (vm.loading) {
     return (
       <ScreenContainer>
-        <ScreenHeader title="من" />
+        <ScreenHeader title="من" support />
         <ProfileSkeleton />
       </ScreenContainer>
     );
@@ -201,10 +243,13 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         stickyHeaderIndices={[1]}
+        onScroll={onScroll}
+        onLayout={onScrollLayout}
+        scrollEventThrottle={32}
       >
         {/* ۰ — هویت؛ همراهِ اسکرول بالا می‌رود — */}
         <View style={styles.padded}>
-          <ScreenHeader title="من" />
+          <ScreenHeader title="من" support />
 
           <View style={styles.idRow}>
             <View style={[styles.avatarRing, shadow.gold]}>
@@ -217,7 +262,7 @@ export function ProfileScreen() {
               )}
             </View>
             <View style={styles.stats}>
-              <Stat value={faNum(vm.photos.length)} label="عکس" onPress={() => setTab('photos')} />
+              <Stat value={faNum(vm.photos.length)} label="عکس" onPress={() => changeTab('photos')} />
               {/* شمارنده‌های دنبال‌کردن — سبکِ اینستاگرام؛ سطحِ اشتراک در کارتِ عضویتِ پایین دیده می‌شود. */}
               <Stat value={faNum(vm.followersCount)} label="دنبال‌کننده" onPress={() => router.push('/followers' as Href)} />
               <Stat value={faNum(vm.followingCount)} label="دنبال‌شده" onPress={() => router.push('/followers?tab=following' as Href)} />
@@ -239,7 +284,7 @@ export function ProfileScreen() {
           ) : null}
 
           <View style={styles.actions}>
-            <Button label="ویرایشِ پروفایل" size="sm" variant="ghost" onPress={() => setTab('about')} style={styles.actionBtn} />
+            <Button label="ویرایشِ پروفایل" size="sm" variant="ghost" onPress={() => changeTab('about')} style={styles.actionBtn} />
             <Button label="پسندها" size="sm" variant="ghost" icon="tab-likes" onPress={() => router.push('/likes')} style={styles.actionBtn} />
           </View>
 
@@ -299,7 +344,7 @@ export function ProfileScreen() {
               return (
                 <Pressable
                   key={t.key}
-                  onPress={() => setTab(t.key)}
+                  onPress={() => changeTab(t.key)}
                   style={[styles.tabItem, active && styles.tabItemActive]}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
@@ -312,7 +357,7 @@ export function ProfileScreen() {
         </View>
 
         {/* ۲ — محتوای زبانه‌ی فعال — */}
-        <View>
+        <View onLayout={(e) => { dock.current.contentY = e.nativeEvent.layout.y; syncSupportSeen(); }}>
         {tab === 'photos' ? (
           <>
             <View style={styles.grid}>
@@ -445,7 +490,10 @@ export function ProfileScreen() {
         ) : null}
 
         {tab === 'settings' ? (
-          <View style={styles.padded}>
+          <View
+            style={styles.padded}
+            onLayout={(e) => { dock.current.settingsY = e.nativeEvent.layout.y; syncSupportSeen(); }}
+          >
             {/* — اعلان‌ها: صفحه‌ی جدا با سوییچِ هر گونه — */}
             <Text style={styles.groupLabel}>اعلان‌ها</Text>
             <View style={styles.group}>
@@ -576,30 +624,76 @@ export function ProfileScreen() {
               )}
             </View>
 
-            {/* — پشتیبانی: تنها راهِ رسمیِ تماس با ما — */}
-            <Text style={styles.groupLabel}>پشتیبانی</Text>
-            <View style={styles.group}>
-              <Pressable
-                style={styles.rowInner}
-                onPress={() => router.push('/support' as Href)}
-                accessibilityRole="button"
-                accessibilityLabel="گفتگو با پشتیبانی"
-              >
-                <View style={styles.rowChip}><Icon name="shield-check" size={18} tint="gold" /></View>
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowTitle}>گفتگو با پشتیبانی</Text>
-                  <Text style={styles.rowHint}>سوال، مشکلِ پرداخت یا گزارشِ تخلف</Text>
-                </View>
-                <Icon name="chevron-prev" size={16} tint="gold" />
-              </Pressable>
+            {/* — پشتیبانی: تنها راهِ رسمیِ تماس با ما —
+                onLayout: تا نوارِ چسبانِ پایین بداند کِی کاربر به این بخش رسیده. */}
+            <View
+              onLayout={(e) => {
+                dock.current.sectionY = e.nativeEvent.layout.y;
+                dock.current.sectionH = e.nativeEvent.layout.height;
+                syncSupportSeen();
+              }}
+            >
+              <Text style={styles.groupLabel}>پشتیبانی</Text>
+              <View style={[styles.group, styles.supportGroup]}>
+                <Pressable
+                  style={styles.rowInner}
+                  onPress={() => router.push('/support' as Href)}
+                  accessibilityRole="button"
+                  accessibilityLabel="گفتگو با پشتیبانی"
+                >
+                  <View style={[styles.rowChip, styles.supportRowChip]}><Icon name="shield-check" size={18} tint="gold" /></View>
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>گفتگو با پشتیبانی</Text>
+                    <Text style={styles.rowHint}>سوال، مشکلِ پرداخت یا گزارشِ تخلف</Text>
+                  </View>
+                  <Icon name="chevron-prev" size={16} tint="gold" />
+                </Pressable>
+              </View>
             </View>
 
             <AppVersionInfo />
             <Button label="خروج از حساب" variant="danger" onPress={vm.logout} style={styles.logout} />
+            {/* جای خالی زیرِ نوارِ چسبان تا دکمه‌ی خروج پشتش پنهان نشود. */}
+            <View style={styles.dockSpacer} />
           </View>
         ) : null}
         </View>
       </ScrollView>
+
+      {/* — نوارِ چسبانِ پشتیبانی: فقط در زبانه‌ی تنظیمات و تا وقتی ردیفش دیده نشده — */}
+      {tab === 'settings' && !supportSeen ? (
+        <Animated.View
+          entering={FadeInDown.duration(220)}
+          exiting={FadeOutDown.duration(160)}
+          style={styles.supportDock}
+          pointerEvents="box-none"
+        >
+          {/* محوشدگی تا محتوای زیرِ نوار ناگهانی قطع نشود. */}
+          <LinearGradient
+            colors={['rgba(11,9,16,0)', colors.bg]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <Pressable
+            onPress={() => router.push('/support' as Href)}
+            style={({ pressed }) => [styles.supportDockBtn, shadow.gold, pressed && styles.ctaPressed]}
+            accessibilityRole="button"
+            accessibilityLabel="گفتگو با پشتیبانی"
+          >
+            <LinearGradient colors={gradients.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <View style={styles.supportDockIcon}>
+              <Icon name="shield-check" size={20} tint="ink" />
+            </View>
+            <View style={styles.ctaBody}>
+              <Text style={styles.ctaTitle}>پشتیبانیِ نودوست</Text>
+              <Text style={styles.ctaSub}>سوال یا مشکلی داری؟ همین‌جا بپرس</Text>
+            </View>
+            <View style={styles.ctaPill}>
+              <Text style={styles.ctaPillText}>گفتگو</Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+      ) : null}
 
       {/* — نمایِ تمام‌صفحه‌ی عکس — */}
       <Modal
@@ -938,6 +1032,37 @@ const styles = StyleSheet.create({
   },
 
   logout: { marginTop: spacing.xl },
+
+  // — پشتیبانی: کارتِ برجسته در فهرست + نوارِ چسبانِ پایین —
+  supportGroup: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
+  supportRowChip: { backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldSoft },
+  dockSpacer: { height: SUPPORT_DOCK_H },
+  supportDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: PAGE_PADDING,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xl,
+  },
+  supportDockBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  supportDockIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   // — لایت‌باکس —
   viewerBackdrop: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
   viewerImage: { width: '100%', height: '100%' },
