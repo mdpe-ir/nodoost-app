@@ -96,7 +96,13 @@ export function usePlansViewModel() {
             // پیش از این این خطا هم مثلِ لغو بی‌صدا بلعیده می‌شد و کاربر برای همیشه
             // گیر می‌کرد؛ حالا همان خرید را بازیابی می‌کنیم.
             if (isAlreadyOwned(err)) {
-              const s = await restorePurchases({ restore: uc.catalog.restoreBazaarPurchase });
+              const s = await restorePurchases(
+                {
+                  restore: uc.catalog.restoreBazaarPurchase,
+                  report: uc.catalog.reportBazaarSweep,
+                },
+                'already-owned'
+              );
               await refreshUser();
               if (s.restored > 0) {
                 Alert.alert(
@@ -131,13 +137,32 @@ export function usePlansViewModel() {
               purchase.dataSignature
             );
             // فقط بعد از ثبتِ موفق در سرور. اگر این‌جا شکست بخورد، خرید مصرف‌نشده
-            // می‌ماند و جاروی بازیابی دفعه‌ی بعد سراغش می‌رود.
+            // می‌ماند و جاروی بازیابی دفعه‌ی بعد سراغش می‌رود — ولی شکستش دیگر
+            // بی‌صدا نیست: با beacon گزارش می‌شود (درسِ باگِ نامرئیِ ۲۰۲۶-۰۸).
             if (purchase.purchaseToken) {
               try {
                 await bazaarBilling.consume(purchase.purchaseToken);
-              } catch {
-                /* دورِ بعد */
+              } catch (e) {
+                uc.catalog
+                  .reportBazaarSweep({
+                    trigger: 'purchase-consume',
+                    connect_ok: true,
+                    owned: 1,
+                    consumed: 0,
+                    errors: [String((e as Error)?.message ?? e).slice(0, 300)],
+                  })
+                  .catch(() => {});
               }
+            } else {
+              uc.catalog
+                .reportBazaarSweep({
+                  trigger: 'purchase-consume',
+                  connect_ok: true,
+                  owned: 1,
+                  consumed: 0,
+                  errors: ['empty purchaseToken in originalJson'],
+                })
+                .catch(() => {});
             }
             await refreshUser();
             await load(); // قابلیتِ خریدِ کارت‌ها با سطحِ تازه عوض می‌شود

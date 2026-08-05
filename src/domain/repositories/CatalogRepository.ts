@@ -11,6 +11,8 @@ export interface CatalogRepository {
    * بعد از خرید باید از رویش نوشته شود.
    */
   verifyBazaarPurchase(originalJson: string, dataSignature: string): Promise<PurchaseResult>;
+  /** beaconِ تشخیصیِ جاروی بازیابی — سرور شکست‌های بی‌صدا را این‌طور می‌بیند. */
+  reportBazaarSweep(report: Record<string, unknown>): Promise<void>;
   /**
    * بازیابیِ خریدی که در بازار انجام شده ولی رسیدش هرگز به سرور نرسیده — مثلاً
    * وقتی اندروید پروسه‌ی اپ را وسطِ پرداخت کشته و promiseِ خرید هرگز settle نشده.

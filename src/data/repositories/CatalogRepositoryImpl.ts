@@ -38,4 +38,11 @@ export class CatalogRepositoryImpl implements CatalogRepository {
     });
     return toPurchaseResult(d);
   }
+
+  async reportBazaarSweep(report: Record<string, unknown>): Promise<void> {
+    await this.http.request('/api/payments/bazaar/sweep-report', {
+      method: 'POST',
+      body: report,
+    });
+  }
 }

@@ -75,3 +75,47 @@ index a9aa802..0e1710d 100644
        "currentActivity is null"
      }
  
+diff --git a/node_modules/@cafebazaar/react-native-poolakey/src/index.ts b/node_modules/@cafebazaar/react-native-poolakey/src/index.ts
+index 83b40a8..b4f45ed 100644
+--- a/node_modules/@cafebazaar/react-native-poolakey/src/index.ts
++++ b/node_modules/@cafebazaar/react-native-poolakey/src/index.ts
+@@ -26,10 +26,21 @@ function ensureConnected(): Promise<void> {
+   }
+ 
+   if (!isConnecting) {
+-    isConnecting = bridge.connect(initedRsaKey).then(() => {
+-      isConnected = true;
+-      isConnecting = undefined;
+-    });
++    // PATCH(nodoost): on failure the latch must be cleared, otherwise the first
++    // rejected connect() is cached in `isConnecting` forever and every later call
++    // (consumePurchase, getPurchasedProducts, even purchaseProduct) rejects
++    // instantly until the process dies. This single line is what silently killed
++    // the purchase-restore sweep in production for weeks.
++    isConnecting = bridge.connect(initedRsaKey).then(
++      () => {
++        isConnected = true;
++        isConnecting = undefined;
++      },
++      (e) => {
++        isConnecting = undefined;
++        throw e;
++      }
++    );
+   }
+ 
+   return isConnecting;
+@@ -50,7 +61,12 @@ const poolakey = {
+   connect(rsaKey: string | null) {
+     initedRsaKey = rsaKey || null;
+     devConnected++;
+-    return ensureConnected().catch(praseError);
++    // PATCH(nodoost): `.catch(praseError)` swallowed failures — praseError
++    // *returns* the error, so a dead connection resolved successfully and callers
++    // proceeded as if connected. Re-throw so `await connect()` actually fails.
++    return ensureConnected().catch((e) => {
++      throw praseError(e instanceof Error ? e : new Error(e + ''));
++    });
+   },
+   async disconnect() {
+     devConnected--;

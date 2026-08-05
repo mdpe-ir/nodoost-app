@@ -9,10 +9,14 @@ export const makeVerifyBazaarPurchase =
 export const makeRestoreBazaarPurchase =
   (r: CatalogRepository) => (purchaseToken: string, productId: string) =>
     r.restoreBazaarPurchase(purchaseToken, productId);
+export const makeReportBazaarSweep =
+  (r: CatalogRepository) => (report: Record<string, unknown>) =>
+    r.reportBazaarSweep(report);
 
 export type CatalogUseCases = {
   getTiers: ReturnType<typeof makeGetTiers>;
   startPayment: ReturnType<typeof makeStartPayment>;
   verifyBazaarPurchase: ReturnType<typeof makeVerifyBazaarPurchase>;
   restoreBazaarPurchase: ReturnType<typeof makeRestoreBazaarPurchase>;
+  reportBazaarSweep: ReturnType<typeof makeReportBazaarSweep>;
 };

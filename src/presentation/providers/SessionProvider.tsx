@@ -73,14 +73,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (status !== 'authed') return;
 
     let alive = true;
-    const sweep = async () => {
-      const s = await restorePurchases({ restore: uc.catalog.restoreBazaarPurchase });
+    const sweep = async (trigger: string) => {
+      const s = await restorePurchases(
+        { restore: uc.catalog.restoreBazaarPurchase, report: uc.catalog.reportBazaarSweep },
+        trigger
+      );
       if (alive && s.restored > 0) await refreshUser();
     };
-    sweep();
+    sweep('launch');
 
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') sweep();
+      if (next === 'active') sweep('foreground');
     });
     return () => {
       alive = false;

@@ -8,6 +8,12 @@
 #
 # پیش‌نیاز:  NODOOST_ADMIN_KEY (همان ADMIN_API_KEY بک‌اند) در محیط تنظیم شده باشد.
 # استفاده:  NODOOST_ADMIN_KEY=... ./scripts/publish-ota.sh
+#
+# انتشار برای کانالِ نسخه‌ی دیگر (APKهای قدیمی‌تر که هنوز بیرون‌اند):
+#   NODOOST_RUNTIME_VERSION=2.3.7 NODOOST_ADMIN_KEY=... ./scripts/publish-ota.sh
+# نسخه‌ی app.json موقتاً همان مقدار می‌شود (تا expoConfig هم‌خوان باشد) و در پایان
+# — موفق یا ناموفق — برمی‌گردد. فقط وقتی امن است که از زمانِ ساختِ آن APK ماژولِ
+# نیتیوِ تازه‌ای اضافه نشده باشد.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,13 +33,39 @@ if [[ -z "${NODOOST_ADMIN_KEY:-}" ]]; then
 fi
 
 # runtimeVersion = مقدارِ version در app.json (سیاستِ appVersion).
-RTV="$(python3 -c "import json;print(json.load(open('app.json'))['expo']['version'])")"
+APP_RTV="$(python3 -c "import json;print(json.load(open('app.json'))['expo']['version'])")"
+RTV="${NODOOST_RUNTIME_VERSION:-$APP_RTV}"
 echo "==> runtimeVersion = $RTV  (platform=$PLATFORM)"
 echo "==> API / OTA server = $BACKEND_URL"
 
 OUT_DIR="$(mktemp -d)"
 ZIP_FILE="$(mktemp -u).zip"
-trap 'rm -rf "$OUT_DIR" "$ZIP_FILE"' EXIT
+
+# اگر برای کانالِ دیگری منتشر می‌کنیم، version را موقتاً عوض کن و در پایان برگردان.
+APP_JSON_BAK=""
+if [[ "$RTV" != "$APP_RTV" ]]; then
+  APP_JSON_BAK="$(mktemp)"
+  cp app.json "$APP_JSON_BAK"
+  python3 - "$RTV" <<'PY'
+import json, sys
+with open('app.json') as f:
+    d = json.load(f)
+d['expo']['version'] = sys.argv[1]
+with open('app.json', 'w') as f:
+    json.dump(d, f, ensure_ascii=False, indent=2)
+    f.write('\n')
+PY
+  echo "==> app.json version موقتاً $RTV شد (اصلی: $APP_RTV)"
+fi
+
+cleanup() {
+  rm -rf "$OUT_DIR" "$ZIP_FILE"
+  if [[ -n "$APP_JSON_BAK" ]]; then
+    mv "$APP_JSON_BAK" app.json
+    echo "==> app.json به نسخه‌ی $APP_RTV برگشت"
+  fi
+}
+trap cleanup EXIT
 
 echo "==> expo export ($PLATFORM)"
 npx expo export --platform "$PLATFORM" --output-dir "$OUT_DIR" --clear

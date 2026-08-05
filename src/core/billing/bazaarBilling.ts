@@ -114,18 +114,45 @@ function load(): PoolakeyModule | null {
   return cached;
 }
 
+const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * فاصله‌ی پیش از هر تلاشِ اتصال. تلاشِ اول فوری است؛ بعدی‌ها با کمی صبر، چون
+ * شکستِ اتصال معمولاً یعنی سرویسِ بازار هنوز بالا نیامده (cold start) و بلافاصله
+ * دوباره کوبیدن فایده ندارد.
+ */
+const CONNECT_BACKOFF_MS = [0, 1000, 3000];
+
 export const bazaarBilling = {
   /** آیا کتابخانه‌ی نیتیوِ بازار در این بیلد در دسترس است؟ (فقط اندرویدِ نیتیو) */
   get isAvailable() {
     return load() != null;
   },
 
+  /**
+   * با چند تلاش وصل می‌شود؛ فقط وقتی resolve می‌شود که اتصال واقعاً برقرار باشد.
+   *
+   * تاریخچه: wrapperِ کتابخانه دو باگ داشت که با patch-package بسته‌ایم — خطای
+   * connect را می‌بلعید («موفقِ» دروغین) و یک Promiseِ ردشده را برای همیشه کش
+   * می‌کرد (بعد از یک شکست، همه‌ی فراخوانی‌های بعدی تا مرگِ پروسه رد می‌شدند).
+   * جاروی بازیابی دقیقاً به همین دو دلیل هفته‌ها بی‌صدا مرده بود.
+   */
   async connect(): Promise<void> {
     const p = load();
     if (!p) throw new Error('bazaar-billing-unavailable');
     if (connected) return;
-    await p.connect(RSA_PUBLIC_KEY);
-    connected = true;
+    let lastErr: unknown;
+    for (const wait of CONNECT_BACKOFF_MS) {
+      if (wait > 0) await delay(wait);
+      try {
+        await p.connect(RSA_PUBLIC_KEY);
+        connected = true;
+        return;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr;
   },
 
   async disconnect(): Promise<void> {
@@ -133,6 +160,23 @@ export const bazaarBilling = {
     if (!p || !connected) return;
     await p.disconnect();
     connected = false;
+  },
+
+  /**
+   * اتصال را از نو می‌سازد. برای وقتی که سرویسِ بازار وسطِ کار قطع شده (برگشتن از
+   * صفحه‌ی پرداخت این را زیاد پیش می‌آورد) و فراخوانیِ بعدی با اتصالِ مرده‌ی
+   * «به‌ظاهر وصل» شکست می‌خورد.
+   */
+  async forceReconnect(): Promise<void> {
+    const p = load();
+    if (!p) throw new Error('bazaar-billing-unavailable');
+    try {
+      await p.disconnect();
+    } catch {
+      /* قطعِ اتصالِ مرده مهم نیست */
+    }
+    connected = false;
+    await bazaarBilling.connect();
   },
 
   /** جریانِ خریدِ یک SKU را باز می‌کند و پس از موفقیت دادهٔ امضاشده + امضا را برمی‌گرداند. */
@@ -161,11 +205,19 @@ export const bazaarBilling = {
   /**
    * خرید را مصرف‌شده اعلام می‌کند. دو کار می‌کند: از صفِ بازیابی خارجش می‌کند، و
    * SKU را دوباره قابلِ خرید می‌کند تا تمدیدِ ماهِ بعد ITEM_ALREADY_OWNED نگیرد.
+   *
+   * روی شکست یک‌بار با اتصالِ تازه دوباره تلاش می‌کند: پرتکرارترین علتِ شکست،
+   * اتصالِ مرده بعد از برگشتن از صفحه‌ی پرداختِ بازار است.
    */
   async consume(purchaseToken: string): Promise<void> {
     const p = load();
     if (!p) return;
-    await p.consumePurchase(purchaseToken);
+    try {
+      await p.consumePurchase(purchaseToken);
+    } catch {
+      await bazaarBilling.forceReconnect();
+      await p.consumePurchase(purchaseToken);
+    }
   },
 };
 
