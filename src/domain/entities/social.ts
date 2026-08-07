@@ -23,3 +23,12 @@ export interface FollowUser {
 
 /** کدام فهرست را می‌خواهیم. */
 export type FollowListKind = 'followers' | 'following';
+
+/** یک کاربرِ مسدودشده در صفحه‌ی «حریمِ خصوصی ← کاربرانِ مسدودشده». */
+export interface BlockedUser {
+  id: number;
+  name?: string;
+  photoUrl?: string;
+  verified?: boolean;
+  blockedAt: string;
+}

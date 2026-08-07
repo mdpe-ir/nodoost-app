@@ -131,6 +131,32 @@ export function useFollowListViewModel(userId: number | undefined, initialTab: F
     [uc, busyIds]
   );
 
+  /**
+   * «او دیگر مرا دنبال نکند» — فقط روی فهرستِ دنبال‌کننده‌های خودم معنا دارد.
+   * بی‌صداست: طرفِ مقابل اعلانی نمی‌گیرد (رفتارِ اینستاگرام). اگر کاربر می‌خواهد
+   * طرف بفهمد، ابزارش بلاک است نه این.
+   */
+  const removeFollower = useCallback(
+    async (target: FollowUser) => {
+      if (busyIds.includes(target.id)) return;
+      const before = followers;
+      setFollowers((s) => ({
+        ...s,
+        items: s.items.filter((u) => u.id !== target.id),
+        total: Math.max(0, s.total - 1),
+      }));
+      setBusyIds((ids) => [...ids, target.id]);
+      try {
+        await uc.follow.removeFollower(target.id);
+      } catch {
+        setFollowers(before);
+      } finally {
+        setBusyIds((ids) => ids.filter((id) => id !== target.id));
+      }
+    },
+    [uc, busyIds, followers]
+  );
+
   return {
     tab,
     setTab,
@@ -147,6 +173,7 @@ export function useFollowListViewModel(userId: number | undefined, initialTab: F
     refresh,
     loadMore,
     toggleFollow,
+    removeFollower,
     isBusy: (id: number) => busyIds.includes(id),
   };
 }

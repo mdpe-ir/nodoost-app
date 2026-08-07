@@ -5,6 +5,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import { useQuota } from '@/presentation/providers/QuotaProvider';
+import { invalidateTierCatalog } from '@/presentation/hooks/useTierCatalog';
 import { getPaymentMode } from '@/core/billing/paymentStrategy';
 import { bazaarBilling, isAlreadyOwned } from '@/core/billing/bazaarBilling';
 import { restorePurchases } from '@/core/billing/restorePurchases';
@@ -21,6 +23,7 @@ export function usePlansViewModel() {
   const uc = useCases();
   const { user, refreshUser } = useSession();
   const { install } = useRemoteConfig();
+  const { refresh: refreshQuota } = useQuota();
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
@@ -28,7 +31,11 @@ export function usePlansViewModel() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setTiers(await uc.catalog.getTiers());
+      const list = await uc.catalog.getTiers();
+      setTiers(list);
+      // کشِ مشترکِ پنجره‌ی ارتقا هم باید همین فهرست را ببیند (قابلیتِ خرید و
+      // روزهای صف با سطحِ کاربر عوض می‌شوند).
+      invalidateTierCatalog();
     } catch {
       /* نادیده */
     } finally {
@@ -166,6 +173,9 @@ export function usePlansViewModel() {
             }
             await refreshUser();
             await load(); // قابلیتِ خریدِ کارت‌ها با سطحِ تازه عوض می‌شود
+            // سقف‌های تازه باید فوراً در نوارهای سهمیه دیده شوند، وگرنه کاربر
+            // بلافاصله بعد از خرید همان «۰ مانده»ی قبلی را می‌بیند.
+            refreshQuota();
             // پیام از روی کاری که سرور واقعاً کرد نوشته می‌شود، نه حدسِ اپ.
             const msg = purchaseResultMessage(tiers, res);
             Alert.alert(msg.title, msg.message);
@@ -188,7 +198,17 @@ export function usePlansViewModel() {
         setPurchasing(null);
       }
     },
-    [uc, refreshUser, purchasing, install, tiers, user?.tier, user?.subscriptionUntil, load]
+    [
+      uc,
+      refreshUser,
+      refreshQuota,
+      purchasing,
+      install,
+      tiers,
+      user?.tier,
+      user?.subscriptionUntil,
+      load,
+    ]
   );
 
   return { user, tiers, loading, purchasing, buy, reload: load };

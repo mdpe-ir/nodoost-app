@@ -21,6 +21,13 @@ export class FollowRepositoryImpl implements FollowRepository {
     return toFollowState(d);
   }
 
+  async removeFollower(userId: number): Promise<FollowState> {
+    const d = await this.http.request<FollowStateDTO>(`/api/me/followers/${userId}`, {
+      method: 'DELETE',
+    });
+    return toFollowState(d);
+  }
+
   async getList(kind: FollowListKind, userId?: number, page = 1): Promise<Page<FollowUser>> {
     // بدونِ شناسه یعنی «خودم» — سرور مسیرِ ‎/me/…‎ را برای آن دارد.
     const base = userId ? `/api/users/${userId}` : '/api/me';

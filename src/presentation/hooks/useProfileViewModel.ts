@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { photoErrorMessage } from '@/core/media/photoErrors';
@@ -23,6 +23,10 @@ export function useProfileViewModel() {
   // — افزودنِ عکس: برگه‌ی سرچشمه + پیامِ خطای اختصاصی —
   const [pickerOpen, setPickerOpen] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // عکسی که همین حالا دارد «اصلی» می‌شود — برای لودرِ همان کاشی.
+  const [primaryBusyId, setPrimaryBusyId] = useState<number | null>(null);
+  /** عکسِ تازه، وقتی از مسیرِ «عوض‌کردنِ عکسِ پروفایل» آمده باشد، باید اصلی شود. */
+  const makePrimaryOnUpload = useRef(false);
 
   // — ویرایشِ نام، بیو و علاقه‌مندی‌ها —
   const [draftName, setDraftName] = useState('');
@@ -149,8 +153,12 @@ export function useProfileViewModel() {
     load();
   }, [load]);
 
-  /** برگه‌ی انتخابِ سرچشمه (دوربین/گالری) را باز می‌کند؛ بقیه‌ی کار با PhotoPicker است. */
-  const addPhoto = useCallback(() => {
+  /**
+   * برگه‌ی انتخابِ سرچشمه (دوربین/گالری) را باز می‌کند؛ بقیه‌ی کار با PhotoPicker است.
+   * با `makePrimary` عکسِ تازه بلافاصله عکسِ پیش‌فرضِ پروفایل می‌شود.
+   */
+  const addPhoto = useCallback((options?: { makePrimary?: boolean }) => {
+    makePrimaryOnUpload.current = options?.makePrimary === true;
     setPhotoError(null);
     setPickerOpen(true);
   }, []);
@@ -166,16 +174,49 @@ export function useProfileViewModel() {
       setBusy(true);
       setPhotoError(null);
       try {
-        await uc.profile.addPhoto(uri);
-        await load();
-        await refreshUser();
+        const created = await uc.profile.addPhoto(uri);
+        // «عوض‌کردنِ عکسِ پروفایل» با یک عکسِ تازه: بلافاصله همان را اصلی کن.
+        if (makePrimaryOnUpload.current && created && !created.isPrimary) {
+          await uc.profile.setPrimaryPhoto(created.id);
+        }
       } catch (e) {
         setPhotoError(photoErrorMessage(e));
       } finally {
+        makePrimaryOnUpload.current = false;
+        // حتی اگر مرحله‌ی «اصلی‌کردن» شکست بخورد، عکس آپلود شده و باید دیده شود.
+        await load();
+        await refreshUser().catch(() => {});
         setBusy(false);
       }
     },
     [uc, load, refreshUser]
+  );
+
+  /**
+   * عوض‌کردنِ عکسِ پیش‌فرضِ پروفایل. خوش‌بینانه عمل می‌کند تا چهره‌ی بالای صفحه
+   * بی‌درنگ عوض شود؛ با شکست، حالتِ قبلی برمی‌گردد و دلیل نشان داده می‌شود.
+   */
+  const setPrimaryPhoto = useCallback(
+    async (id: number): Promise<boolean> => {
+      const previous = photos;
+      if (previous.find((p) => p.id === id)?.isPrimary) return true;
+      setPrimaryBusyId(id);
+      setPhotoError(null);
+      setPhotos((list) => list.map((p) => ({ ...p, isPrimary: p.id === id })));
+      try {
+        await uc.profile.setPrimaryPhoto(id);
+        // نشست هم نسخه‌ی خودش از عکس‌ها را دارد (هدرِ چت، کارتِ کاوش…).
+        await refreshUser().catch(() => {});
+        return true;
+      } catch (e) {
+        setPhotos(previous);
+        setPhotoError(photoErrorMessage(e));
+        return false;
+      } finally {
+        setPrimaryBusyId(null);
+      }
+    },
+    [photos, uc, refreshUser]
   );
 
   const deletePhoto = useCallback(
@@ -210,6 +251,8 @@ export function useProfileViewModel() {
     photoError,
     setPhotoError,
     deletePhoto,
+    setPrimaryPhoto,
+    primaryBusyId,
     logout,
     draftName,
     setDraftName,

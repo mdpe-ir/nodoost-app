@@ -5,6 +5,7 @@ import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 import { InstallButton } from '@/presentation/components/InstallButton';
 import { NotificationBell } from '@/presentation/components/NotificationBell';
 import { SupportButton } from '@/presentation/components/SupportButton';
+import { MembershipChip } from '@/presentation/components/MembershipChip';
 import { Icon } from '@/presentation/components/Icon';
 
 /** حاشیه‌ی افقیِ استانداردِ صفحات — برای محاسبه‌ی عرضِ سلول‌ها هم استفاده می‌شود. */
@@ -36,6 +37,9 @@ export function ScreenContainer({ children, flush, style }: Props) {
  * در حالتِ بدونِ بازگشت (صفحه‌های تب) زنگوله‌ی اعلان‌ها همیشه هست — مثلِ اینستاگرام
  * از هر تب در دسترس است.
  * با `support` یک دکمه‌ی پشتیبانی هم سمتِ راستِ زنگوله می‌نشیند (صفحه‌ی «من»).
+ * با `membership` چیپِ وضعیتِ اشتراک هم اضافه می‌شود — ورودیِ همیشه‌دیدنیِ
+ * «سطحِ من / ارتقا»، چون رایج‌ترین شکایت این بود که کاربر اصلاً نمی‌دانست
+ * اشتراک را از کجا باید تمدید کند.
  */
 export function ScreenHeader({
   title,
@@ -43,6 +47,7 @@ export function ScreenHeader({
   action,
   onBack,
   support,
+  membership,
 }: {
   title: string;
   subtitle?: string;
@@ -50,6 +55,8 @@ export function ScreenHeader({
   onBack?: () => void;
   /** نمایشِ دکمه‌ی پشتیبانی کنارِ زنگوله — فقط در حالتِ بدونِ بازگشت. */
   support?: boolean;
+  /** نمایشِ چیپِ اشتراک — فقط در حالتِ بدونِ بازگشت. */
+  membership?: boolean;
 }) {
   if (onBack) {
     return (
@@ -76,6 +83,7 @@ export function ScreenHeader({
     <View style={styles.head}>
       <View style={styles.headActions}>
         {/* چیدمانِ row-reverse: فرزندِ اول راست‌ترین است — پشتیبانی سمتِ راستِ زنگوله. */}
+        {membership ? <MembershipChip /> : null}
         {support ? <SupportButton /> : null}
         <NotificationBell />
         {action ?? <InstallButton />}

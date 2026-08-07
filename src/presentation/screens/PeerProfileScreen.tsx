@@ -24,6 +24,8 @@ import { TierBadge } from '@/presentation/components/TierBadge';
 import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { FollowButton } from '@/presentation/components/FollowButton';
+import { ActionSheet } from '@/presentation/components/ActionSheet';
+import { useCases } from '@/core/di/DIProvider';
 import { usePeerProfileViewModel } from '@/presentation/hooks/usePeerProfileViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { mediaUrl } from '@/core/http/mediaUrl';
@@ -70,6 +72,8 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lockOpen, setLockOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
+  const uc = useCases();
   const [reportReason, setReportReason] = useState('');
   const [reportError, setReportError] = useState(false);
   const heroW = width - PAGE_PADDING * 2;
@@ -317,7 +321,40 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           <Icon name="shield" size={15} tint="ink" />
           <Text style={styles.reportLinkText}>{vm.reported ? 'گزارش ثبت شد' : 'گزارش عکس پروفایل'}</Text>
         </Pressable>
+
+        {/*
+          * مسدود کردن. اندپوینتش از ابتدا بود و هیچ دکمه‌ای صدایش نمی‌زد —
+          * همان چیزی که کاربران گزارش کردند «نمی‌شود کسی را بلاک کرد».
+          */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`مسدود کردنِ ${p.name ?? 'این کاربر'}`}
+          onPress={() => setBlockOpen(true)}
+          style={({ pressed }) => [styles.reportLink, pressed && styles.reportLinkPressed]}
+        >
+          <Icon name="lock" size={15} tint="ink" />
+          <Text style={[styles.reportLinkText, styles.blockLinkText]}>مسدود کردن</Text>
+        </Pressable>
       </ScrollView>
+
+      <ActionSheet
+        visible={blockOpen}
+        title={`${p.name ?? 'این کاربر'} مسدود شود؟`}
+        subtitle="دیگر نمی‌توانید هم را ببینید یا پیام بدهید، و دنبال‌کردن در هر دو جهت پاک می‌شود. هر وقت خواستی از تنظیمات ← حریمِ خصوصی برش می‌داری."
+        actions={[
+          {
+            key: 'yes',
+            label: 'بله، مسدود کن',
+            icon: 'lock',
+            danger: true,
+            onPress: () => {
+              setBlockOpen(false);
+              void uc.safety.block(userId).then(() => router.back());
+            },
+          },
+        ]}
+        onDismiss={() => setBlockOpen(false)}
+      />
 
       {vm.match ? (
         <MatchOverlay
@@ -438,6 +475,7 @@ const styles = StyleSheet.create({
   },
   matchTagText: { color: colors.rose, fontSize: fontSizes.xs },
   reportLink: { flexDirection: 'row-reverse', alignSelf: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg, padding: spacing.sm },
+  blockLinkText: { color: colors.rose },
   reportLinkPressed: { opacity: 0.6 },
   reportLinkText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
   modalBackdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(0,0,0,0.72)' },

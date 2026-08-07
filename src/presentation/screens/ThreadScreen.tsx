@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, StyleSheet, Platform } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
@@ -12,10 +12,15 @@ import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
 import { Button } from '@/presentation/components/Button';
 import { TierBadge, tierName } from '@/presentation/components/TierBadge';
+import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
+import { ActionSheet, type SheetAction } from '@/presentation/components/ActionSheet';
+import { useCases } from '@/core/di/DIProvider';
 import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
+import { useQuota } from '@/presentation/providers/QuotaProvider';
+import { lowWarning, isLow, isExhausted } from '@/presentation/tiers/quotaCopy';
 import { faClock, faDayLabel, dayKey } from '@/core/utils/time';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients } from '@/core/theme';
-import type { Message } from '@/domain/entities';
+import { quotaOf, type Message } from '@/domain/entities';
 
 type Row =
   | { type: 'sep'; key: string; label: string }
@@ -73,6 +78,8 @@ export function ThreadScreen({
   peerTier?: number;
 }) {
   const vm = useThreadViewModel(matchId);
+  const uc = useCases();
+  const { quota } = useQuota();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<Row>>(null);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
@@ -103,18 +110,161 @@ export function ThreadScreen({
   }));
 
   // ارسال → پریدن به تازه‌ترین پیام (در فهرستِ وارونه یعنی آفستِ صفر).
+  // در حالتِ ویرایش همان دکمه ذخیره می‌کند؛ اسکرول لازم نیست چون پیام سرِ جایش است.
   const onSend = () => {
+    if (vm.editing) {
+      void vm.submitEdit();
+      return;
+    }
     void vm.send();
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
+
+  /*
+   * برگه‌ی کنشِ پیام (نگه‌داشتنِ حباب) و دیالوگِ تأییدِ حذف.
+   *
+   * حذف دو معنی دارد و کاربر باید انتخاب کند: «برای من» فقط از دیدِ خودش پنهان
+   * می‌کند، «برای همه» جای پیام سنگِ قبر می‌گذارد. گزینه‌ی دوم فقط برای فرستنده
+   * ظاهر می‌شود — سرور هم همین را اعمال می‌کند.
+   */
+  const [actionTarget, setActionTarget] = useState<Message | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+
+  const messageActions: SheetAction[] = actionTarget
+    ? [
+        {
+          key: 'reply',
+          label: 'پاسخ',
+          icon: 'send-fill',
+          onPress: () => {
+            vm.startReply(actionTarget);
+            setActionTarget(null);
+          },
+        },
+        ...(vm.canEdit(actionTarget)
+          ? [
+              {
+                key: 'edit',
+                label: 'ویرایش',
+                hint: 'تا ۱۵ دقیقه پس از ارسال',
+                icon: 'edit' as const,
+                onPress: () => {
+                  vm.startEdit(actionTarget);
+                  setActionTarget(null);
+                },
+              },
+            ]
+          : []),
+        {
+          key: 'delete',
+          label: 'حذف',
+          icon: 'close',
+          danger: true,
+          onPress: () => {
+            setDeleteTarget(actionTarget);
+            setActionTarget(null);
+          },
+        },
+      ]
+    : [];
+
+  const deleteActions: SheetAction[] = deleteTarget
+    ? [
+        {
+          key: 'me',
+          label: 'حذف برای من',
+          hint: 'فقط از گفتگوی تو پاک می‌شود؛ او همچنان می‌بیندش',
+          icon: 'close',
+          onPress: () => {
+            void vm.remove(deleteTarget, 'me');
+            setDeleteTarget(null);
+          },
+        },
+        ...(deleteTarget.senderId === vm.myId
+          ? [
+              {
+                key: 'all',
+                label: 'حذف برای همه',
+                hint: 'جای پیام «این پیام حذف شد» می‌نشیند',
+                icon: 'close' as const,
+                danger: true,
+                onPress: () => {
+                  void vm.remove(deleteTarget, 'all');
+                  setDeleteTarget(null);
+                },
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   // قانونِ سطح: تا وقتی گفتگو پیامی ندارد، فقط هم‌سطح یا بالاتر می‌تواند شروع کند.
   // اگر طرفِ مقابل سطحِ بالاتری دارد، ورودی قفل می‌شود تا او پیامِ اول را بدهد.
   const tierLocked = !vm.loading && vm.messages.length === 0 && !!peerTier && peerTier > vm.myTier;
 
+  /*
+   * هشدارِ پیش‌از‌مصرف.
+   *
+   * قلبِ این بازطراحی همین چند خط است: کاربر باید *پیش از* فرستادنِ پیام
+   * بداند این آخرین سهمِ اوست، نه بعد از اینکه دکمه را زد و رد شد. فقط روی
+   * «شروعِ گفتگو» نشان داده می‌شود — پاسخ‌دادن هیچ‌وقت سهمیه نمی‌سوزاند و
+   * هشدار دادن در آن‌جا فقط ترسِ بی‌مورد می‌سازد.
+   */
+  const convQuota = quotaOf(quota, 'conversation');
+  const showStartWarning =
+    vm.isStarting && !tierLocked && !!convQuota && (isLow(convQuota) || isExhausted(convQuota));
+
+  // برگه‌ی ارتقا از دو مسیر باز می‌شود: کاربر روی هشدار زد، یا سرور ارسال را رد
+  // کرد. حالتِ دوم *مشتق* می‌شود تا رفتنِ یکی از آن دو، دیگری را گیج نکند.
+  const [manualSheet, setManualSheet] = useState<{ kind: 'quota' } | null>(null);
+  const blockSheet: { kind: 'quota' } | { kind: 'tier'; level: number } | null = vm.block
+    ? vm.block.kind === 'quota'
+      ? { kind: 'quota' }
+      : { kind: 'tier', level: vm.block.requiredTier ?? peerTier ?? 2 }
+    : null;
+  const sheet = blockSheet ?? manualSheet;
+  const setSheet = setManualSheet;
+
   const openPeerProfile = () => {
     if (peerId) router.push({ pathname: '/user/[id]', params: { id: String(peerId) } });
   };
+
+  /*
+   * منویِ خودِ گفتگو. «مسدود کردن» عمداً کنارِ «پاک‌کردنِ گفتگو» است: کسی که چت
+   * را پاک می‌کند اغلب واقعاً بلاک می‌خواهد، و تا امروز هیچ راهی به بلاک نداشت
+   * (اندپوینتش بود، دکمه‌اش نبود).
+   */
+  const [threadMenu, setThreadMenu] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+
+  const threadActions: SheetAction[] = [
+    {
+      key: 'clear',
+      label: 'پاک‌کردنِ گفتگو',
+      hint: 'فقط برای تو؛ او چیزی نمی‌بیند',
+      icon: 'close',
+      onPress: () => {
+        setThreadMenu(false);
+        setConfirmClear(true);
+      },
+    },
+    ...(peerId
+      ? [
+          {
+            key: 'block',
+            label: 'مسدود کردن',
+            hint: 'دیگر نه پیامی، نه دیده‌شدنی',
+            icon: 'shield' as const,
+            danger: true,
+            onPress: () => {
+              setThreadMenu(false);
+              setConfirmBlock(true);
+            },
+          },
+        ]
+      : []),
+  ];
 
   return (
     <ScreenContainer flush>
@@ -147,6 +297,15 @@ export function ThreadScreen({
             </View>
             {peerId ? <Text style={styles.headerHint}>دیدنِ پروفایل</Text> : null}
           </View>
+        </Pressable>
+        <Pressable
+          hitSlop={10}
+          onPress={() => setThreadMenu(true)}
+          accessibilityRole="button"
+          accessibilityLabel="گزینه‌های گفتگو"
+          style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+        >
+          <Icon name="more" size={20} tint="gold" />
         </Pressable>
       </View>
 
@@ -204,8 +363,27 @@ export function ThreadScreen({
               }
               const { msg, mine, firstOfGroup, lastOfGroup } = item;
               const time = faClock(msg.createdAt);
+
+              // سنگِ قبر: پیام «برای همه» حذف شده. ردیف می‌ماند تا جای خالیِ
+              // گفتگو معنا داشته باشد، ولی نه حباب دارد نه منویِ کنش.
+              if (msg.deleted) {
+                return (
+                  <View style={[styles.tombstone, mine ? styles.mine : styles.theirs]}>
+                    <Icon name="lock" size={12} tint="gold" style={styles.tombstoneIcon} />
+                    <Text style={styles.tombstoneText}>
+                      {msg.deletedByAdmin ? 'این پیام توسطِ پشتیبانی برداشته شد' : 'این پیام حذف شد'}
+                    </Text>
+                  </View>
+                );
+              }
+
               return (
-                <View
+                <Pressable
+                  onLongPress={() => setActionTarget(msg)}
+                  delayLongPress={280}
+                  accessibilityRole="button"
+                  accessibilityLabel={msg.body}
+                  accessibilityHint="نگه‌داشتن برای پاسخ، ویرایش یا حذف"
                   style={[
                     styles.bubble,
                     mine ? styles.mine : styles.theirs,
@@ -214,17 +392,30 @@ export function ThreadScreen({
                     !mine && lastOfGroup && styles.theirsTail,
                   ]}
                 >
+                  {/* نقلِ پیامی که این پیام پاسخِ آن است. */}
+                  {msg.replyTo ? (
+                    <View style={[styles.quote, mine ? styles.quoteMine : styles.quoteTheirs]}>
+                      <Text
+                        style={[styles.quoteText, msg.replyTo.deleted && styles.quoteDeleted]}
+                        numberOfLines={2}
+                      >
+                        {msg.replyTo.deleted ? 'پیامِ حذف‌شده' : msg.replyTo.body}
+                      </Text>
+                    </View>
+                  ) : null}
+
                   <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
                     {msg.body}
                   </Text>
                   {lastOfGroup && time ? (
                     <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
                       {time}
+                      {msg.editedAt ? '  · ویرایش‌شده' : ''}
                       {/* رسیدِ خواندن — سرور فقط برای طلایی+ می‌فرستد. */}
                       {mine && msg.readAt ? '  · خوانده شد' : ''}
                     </Text>
                   ) : null}
-                </View>
+                </Pressable>
               );
             }}
           />
@@ -247,13 +438,63 @@ export function ThreadScreen({
             />
           </View>
         ) : (
+        <>
+        {/*
+          * نوارِ «در حالِ پاسخ به…» / «در حالِ ویرایش». هرگز هم‌زمان نیستند و
+          * عمداً بیرونِ composer است — composer یک ردیفِ row-reverse است و این
+          * نوار باید تمامِ عرض را بگیرد.
+          */}
+        {vm.replyTo || vm.editing ? (
+          <View style={styles.contextBar}>
+            <View style={styles.contextText}>
+              <Text style={styles.contextTitle}>
+                {vm.editing ? 'ویرایشِ پیام' : 'پاسخ به پیام'}
+              </Text>
+              <Text style={styles.contextBody} numberOfLines={1}>
+                {(vm.editing ?? vm.replyTo)?.body}
+              </Text>
+            </View>
+            <Pressable
+              hitSlop={10}
+              onPress={vm.editing ? vm.cancelEdit : vm.cancelReply}
+              accessibilityRole="button"
+              accessibilityLabel={vm.editing ? 'انصراف از ویرایش' : 'انصراف از پاسخ'}
+            >
+              <Icon name="close" size={16} tint="gold" />
+            </Pressable>
+          </View>
+        ) : null}
+        {vm.editError ? (
+          <Pressable onPress={vm.clearEditError} accessibilityRole="button">
+            <Text style={styles.editError}>{vm.editError}</Text>
+          </Pressable>
+        ) : null}
+
         <View style={styles.composer}>
-          {vm.sendError ? <Text style={styles.sendError}>{vm.sendError}</Text> : null}
+          {showStartWarning && convQuota ? (
+            <Pressable
+              onPress={() => setSheet({ kind: 'quota' })}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.quotaHint,
+                isExhausted(convQuota) && styles.quotaHintOut,
+                pressed && styles.quotaHintPressed,
+              ]}
+            >
+              <Icon name={isExhausted(convQuota) ? 'lock' : 'send-fill'} size={14} tint="gold" />
+              <Text style={styles.quotaHintText}>
+                {isExhausted(convQuota)
+                  ? 'سهمِ شروعِ گفتگویت تمام شده — برای ادامه بزن'
+                  : lowWarning(convQuota)}
+              </Text>
+              <Text style={styles.quotaHintCta}>جزئیات</Text>
+            </Pressable>
+          ) : null}
           <TextInput
             style={styles.input}
             value={vm.draft}
             onChangeText={vm.setDraft}
-            placeholder="پیامت را بنویس…"
+            placeholder={vm.editing ? 'متنِ تازه…' : 'پیامت را بنویس…'}
             placeholderTextColor={colors.ink3}
             textAlign="right"
             multiline
@@ -263,7 +504,7 @@ export function ThreadScreen({
             onPress={onSend}
             disabled={!canSend}
             accessibilityRole="button"
-            accessibilityLabel="ارسال"
+            accessibilityLabel={vm.editing ? 'ذخیره‌ی ویرایش' : 'ارسال'}
           >
             <LinearGradient
               colors={gradients.gold}
@@ -271,14 +512,85 @@ export function ThreadScreen({
               end={{ x: 1, y: 1 }}
               style={[StyleSheet.absoluteFill, !canSend && styles.sendOff]}
             />
-            <Icon name="send-fill" size={20} tint="ink" />
+            <Icon name={vm.editing ? 'check' : 'send-fill'} size={20} tint="ink" />
           </Pressable>
         </View>
+        </>
         )}
 
         {/* ناحیه‌ی امنِ پایین وقتی کیبورد بسته است، و جای خودِ کیبورد وقتی باز است. */}
         <Animated.View style={bottomSpacer} />
       </View>
+
+      <ActionSheet
+        visible={threadMenu}
+        title={name || 'گفتگو'}
+        actions={threadActions}
+        onDismiss={() => setThreadMenu(false)}
+      />
+      <ActionSheet
+        visible={confirmClear}
+        title="گفتگو پاک شود؟"
+        subtitle="تاریخچه فقط از سمتِ تو پاک می‌شود. اگر او پیامِ تازه‌ای بدهد، گفتگو با همان پیامِ جدید برمی‌گردد."
+        actions={[
+          {
+            key: 'yes',
+            label: 'بله، پاک کن',
+            icon: 'close',
+            danger: true,
+            onPress: () => {
+              setConfirmClear(false);
+              void uc.chat.clearChat(matchId).then(() => router.back());
+            },
+          },
+        ]}
+        onDismiss={() => setConfirmClear(false)}
+      />
+      <ActionSheet
+        visible={confirmBlock}
+        title={`${name || 'این کاربر'} مسدود شود؟`}
+        subtitle="دیگر نمی‌توانید به هم پیام بدهید یا هم را ببینید. دنبال‌کردن هم در هر دو جهت پاک می‌شود. هر وقت خواستی، از تنظیمات ← حریمِ خصوصی برش می‌داری."
+        actions={[
+          {
+            key: 'yes',
+            label: 'بله، مسدود کن',
+            icon: 'shield',
+            danger: true,
+            onPress: () => {
+              setConfirmBlock(false);
+              if (peerId) void uc.safety.block(peerId).then(() => router.back());
+            },
+          },
+        ]}
+        onDismiss={() => setConfirmBlock(false)}
+      />
+
+      <ActionSheet
+        visible={actionTarget != null}
+        title="این پیام"
+        subtitle={actionTarget?.body}
+        actions={messageActions}
+        onDismiss={() => setActionTarget(null)}
+      />
+      <ActionSheet
+        visible={deleteTarget != null}
+        title="حذفِ پیام"
+        subtitle={deleteTarget?.body}
+        actions={deleteActions}
+        onDismiss={() => setDeleteTarget(null)}
+      />
+
+      <UpgradeSheet
+        visible={sheet != null}
+        onClose={() => {
+          setSheet(null);
+          vm.clearBlock();
+        }}
+        quotaKey={sheet?.kind === 'quota' ? 'conversation' : undefined}
+        requiredTier={sheet?.kind === 'tier' ? sheet.level : undefined}
+        feature={sheet?.kind === 'tier' ? 'شروعِ گفتگو با این کاربر' : undefined}
+        title={sheet?.kind === 'tier' ? 'گفتگو با این کاربر قفل است' : undefined}
+      />
     </ScreenContainer>
   );
 }
@@ -359,6 +671,92 @@ const styles = StyleSheet.create({
   time: { fontFamily: fonts.regular, fontSize: 10, marginTop: 3, textAlign: 'left' },
   timeMine: { color: 'rgba(42,29,18,0.6)' },
   timeTheirs: { color: colors.ink3 },
+
+  // نقلِ پیامِ مقصدِ پاسخ — یک نوارِ باریک بالای متنِ حباب.
+  quote: {
+    marginBottom: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    borderRightWidth: 2,
+  },
+  quoteMine: { backgroundColor: 'rgba(42,29,18,0.10)', borderRightColor: colors.onGold },
+  quoteTheirs: { backgroundColor: colors.surface2, borderRightColor: colors.gold },
+  quoteText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  quoteDeleted: { fontStyle: 'italic', color: colors.ink3 },
+
+  // سنگِ قبر — نه حباب است نه پس‌زمینه دارد؛ فقط جای خالی را نگه می‌دارد.
+  tombstone: {
+    maxWidth: '78%',
+    marginTop: 2,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderStyle: 'dashed',
+  },
+  tombstoneIcon: { opacity: 0.6 },
+  tombstoneText: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    fontStyle: 'italic',
+    color: colors.ink3,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+
+  // نوارِ «پاسخ به…» / «ویرایشِ…» بالای نوارِ نوشتن.
+  contextBar: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: -spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopLeftRadius: radius.md,
+    borderTopRightRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  contextText: { flex: 1 },
+  contextTitle: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.xs,
+    color: colors.gold,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  contextBody: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  editError: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.xs,
+    color: colors.rose,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   composer: {
     flexDirection: 'row-reverse',
     alignItems: 'flex-end',
@@ -413,20 +811,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl',
   },
-  sendError: {
+  /*
+   * نوارِ هشدارِ سهمیه، بالای ورودی.
+   *
+   * جانشینِ متنِ ریزِ قرمزِ قبلی است که *بعد* از رد شدنِ ارسال نشان داده می‌شد.
+   * این‌جا نکته‌ی طراحی «قابلِ فشار بودن» است: هشدار بن‌بست نیست، در است.
+   */
+  quotaHint: {
     position: 'absolute',
-    top: -34,
+    top: -40,
     left: spacing.md,
     right: spacing.md,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-    backgroundColor: colors.roseFaint,
-    color: colors.rose,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.surface2,
+  },
+  quotaHintOut: { borderColor: colors.roseSoft },
+  quotaHintPressed: { opacity: 0.8 },
+  quotaHintText: {
+    flex: 1,
     fontFamily: fonts.medium,
     fontSize: fontSizes.xs,
-    textAlign: 'center',
+    lineHeight: lineHeights.xs,
+    color: colors.ink,
+    textAlign: 'right',
     writingDirection: 'rtl',
-    overflow: 'hidden',
   },
+  quotaHintCta: { fontFamily: fonts.bold, fontSize: fontSizes.xs, color: colors.gold2 },
 });

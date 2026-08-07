@@ -46,12 +46,17 @@ export class ProfileRepositoryImpl implements ProfileRepository {
     return (d?.photos ?? []).map(toPhoto);
   }
 
-  async addPhoto(uri: string): Promise<void> {
-    await this.http.upload('/api/me/photos', uri);
+  async addPhoto(uri: string): Promise<Photo | null> {
+    const d = await this.http.upload<PhotoDTO | null>('/api/me/photos', uri);
+    return d ? toPhoto(d) : null;
   }
 
   async deletePhoto(id: number): Promise<void> {
     await this.http.request(`/api/me/photos/${id}`, { method: 'DELETE' });
+  }
+
+  async setPrimaryPhoto(id: number): Promise<void> {
+    await this.http.request(`/api/me/photos/${id}/primary`, { method: 'PUT' });
   }
 
   async requestReview(): Promise<void> {

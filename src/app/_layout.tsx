@@ -20,6 +20,7 @@ import { AndroidAppGateProvider } from '@/presentation/providers/AndroidAppGateP
 import { FetchyDeviceRegistration } from '@/presentation/providers/FetchyDeviceRegistration';
 import { LocationPrimerProvider } from '@/presentation/providers/LocationPrimerProvider';
 import { BadgesProvider } from '@/presentation/providers/BadgesProvider';
+import { QuotaProvider } from '@/presentation/providers/QuotaProvider';
 import { InAppMessagesProvider } from '@/presentation/providers/InAppMessagesProvider';
 import { InAppPopup } from '@/presentation/components/inapp/InAppPopup';
 import { isProfileComplete } from '@/domain/policies/profile';
@@ -132,6 +133,9 @@ export default function RootLayout() {
             <FetchyDeviceRegistration />
             {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
             <BadgesProvider>
+              {/* سهمیه هم مثلِ نشان‌ها بالای درختِ ناوبری است تا چیپِ کاوش،
+                  نوارِ گفتگو و کارتِ پروفایل یک عدد را نشان دهند. */}
+              <QuotaProvider>
               {/*
                * پیام‌های درون‌برنامه‌ای بالای درختِ ناوبری‌اند تا هر سه سطحشان یک
                * منبع داشته باشند: بنرِ صفحه‌ی خانه، پاپ‌آپِ ریشه و کارت‌های
@@ -158,6 +162,7 @@ export default function RootLayout() {
                 </WelcomeProvider>
               </RemoteConfigProvider>
               </InAppMessagesProvider>
+              </QuotaProvider>
             </BadgesProvider>
           </SessionProvider>
         </DIProvider>

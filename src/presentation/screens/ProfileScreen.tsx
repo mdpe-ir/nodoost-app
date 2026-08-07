@@ -25,13 +25,17 @@ import { Icon } from '@/presentation/components/Icon';
 import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
 import { InterestPicker } from '@/presentation/components/InterestPicker';
 import { PhotoPicker } from '@/presentation/components/PhotoPicker';
+import { ProfilePhotoSheet } from '@/presentation/components/ProfilePhotoSheet';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import { useQuota } from '@/presentation/providers/QuotaProvider';
+import { QuotaMeter } from '@/presentation/components/QuotaMeter';
 import { tierName } from '@/presentation/components/TierBadge';
 import { maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum } from '@/core/utils/faNum';
 import { faJalali, daysUntil } from '@/core/utils/time';
+import type { Photo } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradients } from '@/core/theme';
 
 const COLS = 3;
@@ -152,6 +156,7 @@ function PrivacyRow({
 export function ProfileScreen() {
   const vm = useProfileViewModel();
   const { interests: interestsCatalog } = useRemoteConfig();
+  const { quota } = useQuota();
   const { width } = useWindowDimensions();
   // شبکه‌ی تمام‌عرض (لبه‌تا‌لبه) مثلِ اینستاگرام — سلول‌های مربعیِ نزدیک‌به‌هم.
   const tile = (width - GRID_GAP * (COLS - 1)) / COLS;
@@ -173,7 +178,15 @@ export function ProfileScreen() {
       router.setParams({ tab: '' });
     }
   }, [params.tab]);
-  const [viewerUri, setViewerUri] = useState<string | null>(null);
+  // عکسِ بازشده در نمای تمام‌صفحه — خودِ عکس (نه فقط آدرسش) تا کنشِ «عکسِ پروفایل» را هم بشود داد.
+  const [viewer, setViewer] = useState<Photo | null>(null);
+  // برگه‌ی عوض‌کردنِ عکسِ پروفایل (از آواتارِ بالای صفحه باز می‌شود).
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
+  const setPhotoError = vm.setPhotoError;
+  const openPhotoSheet = useCallback(() => {
+    setPhotoError(null);
+    setPhotoSheetOpen(true);
+  }, [setPhotoError]);
 
   /* — نوارِ چسبانِ پشتیبانی —
      تا وقتی کاربر به ردیفِ «گفتگو با پشتیبانی» (ته‌ی زبانه‌ی تنظیمات) نرسیده،
@@ -252,7 +265,14 @@ export function ProfileScreen() {
           <ScreenHeader title="من" support />
 
           <View style={styles.idRow}>
-            <View style={[styles.avatarRing, shadow.gold]}>
+            {/* آواتار خودش دکمه‌ی عوض‌کردنِ عکسِ پروفایل است — همان‌جایی که کاربر
+                برای این کار نگاه می‌کند؛ نشانِ گوشه‌اش کار را آشکار می‌کند. */}
+            <Pressable
+              onPress={openPhotoSheet}
+              style={({ pressed }) => [styles.avatarRing, shadow.gold, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="تغییرِ عکسِ پروفایل"
+            >
               {heroUri ? (
                 <Image source={{ uri: heroUri }} style={styles.avatar} contentFit="cover" transition={200} cachePolicy="memory-disk" />
               ) : (
@@ -260,7 +280,10 @@ export function ProfileScreen() {
                   <Text style={styles.avatarInitial}>{(user?.name || '؟').charAt(0)}</Text>
                 </View>
               )}
-            </View>
+              <View style={styles.avatarBadge}>
+                <Icon name="edit" size={13} tint="ink" />
+              </View>
+            </Pressable>
             <View style={styles.stats}>
               <Stat value={faNum(vm.photos.length)} label="عکس" onPress={() => changeTab('photos')} />
               {/* شمارنده‌های دنبال‌کردن — سبکِ اینستاگرام؛ سطحِ اشتراک در کارتِ عضویتِ پایین دیده می‌شود. */}
@@ -334,6 +357,28 @@ export function ProfileScreen() {
               </View>
             </Pressable>
           )}
+
+          {/* — سهمیه‌ی من —
+              کارتِ عضویت می‌گفت «چه داری»؛ این می‌گوید «چقدر مانده». بدونِ این،
+              کاربر تا لحظه‌ی خوردن به سقف هیچ‌جا نمی‌دید که سهمیه‌ای در کار است —
+              و همین، بیشترین سوءتفاهمِ گزارش‌شده بود. با فشار، صفحه‌ی سطح‌ها
+              با همان زمینه باز می‌شود. */}
+          {quota?.items.length ? (
+            <Pressable
+              onPress={() => goToPlans()}
+              accessibilityRole="button"
+              accessibilityLabel="سهمیه‌ی من و ارتقای اشتراک"
+              style={({ pressed }) => [styles.quotaCard, pressed && styles.pressed]}
+            >
+              <View style={styles.quotaHead}>
+                <Text style={styles.quotaTitle}>سهمیه‌ی من</Text>
+                <Text style={styles.quotaMore}>سطح‌ها</Text>
+              </View>
+              {quota.items.map((it) => (
+                <QuotaMeter key={it.key} item={it} quota={quota} />
+              ))}
+            </Pressable>
+          ) : null}
         </View>
 
         {/* ۱ — نوارِ زبانه‌ها (چسبان) — */}
@@ -369,7 +414,7 @@ export function ProfileScreen() {
                   <Pressable
                     key={p.id}
                     style={({ pressed }) => [styles.tile, { width: tile, height: tile }, pressed && styles.tilePressed]}
-                    onPress={() => uri && setViewerUri(uri)}
+                    onPress={() => uri && setViewer(p)}
                     disabled={!uri}
                     accessibilityRole="imagebutton"
                     accessibilityLabel="نمایشِ کاملِ عکس"
@@ -405,7 +450,7 @@ export function ProfileScreen() {
               {countedPhotos < maxPhotos ? (
                 <Pressable
                   style={({ pressed }) => [styles.tile, styles.addTile, { width: tile, height: tile }, pressed && styles.addTilePressed]}
-                  onPress={vm.addPhoto}
+                  onPress={() => vm.addPhoto()}
                   disabled={vm.busy}
                   accessibilityRole="button"
                   accessibilityLabel="افزودنِ عکس"
@@ -534,6 +579,29 @@ export function ProfileScreen() {
                   />
                 )}
               </View>
+            </View>
+
+            {/*
+              * — حریمِ خصوصی: کنترل‌های رایگان —
+              * فهرستِ مسدودشده‌ها بالای گروهِ «ویژه» می‌نشیند و هیچ قفلِ سطحی
+              * ندارد: بلاک یک ابزارِ ایمنی است، نه یک قابلیتِ فروختنی. تا امروز
+              * هیچ راهی برای دیدنِ این فهرست نبود، پس رفعِ بلاک هم ممکن نبود.
+              */}
+            <Text style={styles.groupLabel}>حریمِ خصوصی</Text>
+            <View style={styles.group}>
+              <Pressable
+                style={styles.rowInner}
+                onPress={() => router.push('/blocked' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="کاربرانِ مسدودشده"
+              >
+                <View style={styles.rowChip}><Icon name="shield" size={18} tint="gold" /></View>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>کاربرانِ مسدودشده</Text>
+                  <Text style={styles.rowHint}>ببین چه کسانی را مسدود کرده‌ای و رفعِ مسدودی کن</Text>
+                </View>
+                <Icon name="chevron-prev" size={16} tint="gold" />
+              </Pressable>
             </View>
 
             {/* — حریمِ خصوصیِ ویژه: پنهان‌سازیِ آنلاین/فاصله (طلایی+) و ناشناس (الماس) — */}
@@ -697,21 +765,50 @@ export function ProfileScreen() {
 
       {/* — نمایِ تمام‌صفحه‌ی عکس — */}
       <Modal
-        visible={viewerUri != null}
+        visible={viewer != null}
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setViewerUri(null)}
+        onRequestClose={() => setViewer(null)}
       >
-        <Pressable style={styles.viewerBackdrop} onPress={() => setViewerUri(null)}>
-          {viewerUri ? (
-            <Image source={{ uri: viewerUri }} style={styles.viewerImage} contentFit="contain" transition={150} cachePolicy="memory-disk" />
+        <Pressable style={styles.viewerBackdrop} onPress={() => setViewer(null)}>
+          {viewer ? (
+            <Image source={{ uri: mediaUrl(viewer.url) }} style={styles.viewerImage} contentFit="contain" transition={150} cachePolicy="memory-disk" />
           ) : null}
-          <Pressable style={styles.viewerClose} onPress={() => setViewerUri(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="بستن">
+          <Pressable style={styles.viewerClose} onPress={() => setViewer(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="بستن">
             <Icon name="close" size={20} tint="white" />
           </Pressable>
+          {/* همان کنشِ برگه‌ی آواتار، این‌بار سرِ راهِ کسی که از شبکه‌ی عکس‌ها آمده. */}
+          {viewer && !viewer.isPrimary && viewer.status !== 'rejected' ? (
+            <View style={styles.viewerDock}>
+              <Button
+                label="عکسِ پروفایلم شود"
+                icon="check"
+                loading={vm.primaryBusyId === viewer.id}
+                onPress={async () => {
+                  const ok = await vm.setPrimaryPhoto(viewer.id);
+                  if (ok) setViewer(null);
+                }}
+              />
+            </View>
+          ) : null}
         </Pressable>
       </Modal>
+
+      {/* برگه‌ی «عکسِ پروفایل» — انتخاب از میانِ عکس‌های موجود یا گرفتنِ عکسِ تازه. */}
+      <ProfilePhotoSheet
+        visible={photoSheetOpen}
+        photos={vm.photos}
+        busyId={vm.primaryBusyId}
+        error={vm.photoError}
+        canAdd={countedPhotos < maxPhotos}
+        onSelect={vm.setPrimaryPhoto}
+        onAddNew={() => {
+          setPhotoSheetOpen(false);
+          vm.addPhoto({ makePrimary: true });
+        }}
+        onDismiss={() => setPhotoSheetOpen(false)}
+      />
 
       {/* برگه‌ی دوربین/گالری + ویرایشگرِ برش — همان جریانی که در تکمیلِ پروفایل است. */}
       <PhotoPicker
@@ -742,6 +839,20 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 74, height: 74, borderRadius: 37, backgroundColor: colors.surface2 },
   avatarEmpty: { alignItems: 'center', justifyContent: 'center' },
+  // نشانِ «ویرایش» روی لبه‌ی آواتار؛ حلقه‌ی هم‌رنگِ زمینه آن را از عکس جدا می‌کند.
+  avatarBadge: {
+    position: 'absolute',
+    bottom: -2,
+    left: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.gold,
+    borderWidth: 2,
+    borderColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarInitial: { fontFamily: fonts.bold, fontSize: 32, color: colors.goldSoft },
   stats: { flex: 1, flexDirection: 'row-reverse', justifyContent: 'space-around', alignItems: 'center' },
   statPress: { flex: 1 },
@@ -804,6 +915,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(42,29,18,0.9)',
   },
   ctaPillText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
+
+  // — کارتِ سهمیه —
+  quotaCard: {
+    marginTop: spacing.md,
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
+  quotaHead: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quotaTitle: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.sm,
+    color: colors.ink,
+    writingDirection: 'rtl',
+  },
+  quotaMore: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
 
   // — کارتِ وضعیتِ اشتراک (کاربرِ مشترک) — جزئیات و خرید در /plans —
   memberCard: {
@@ -1076,5 +1210,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  viewerDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: spacing.xl,
+    paddingHorizontal: PAGE_PADDING,
   },
 });

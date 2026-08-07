@@ -1,5 +1,6 @@
 import type { Tier } from '@/domain/entities';
 import type { IconName } from '@/presentation/components/Icon';
+import type { TierRules } from '@/core/config/tierRules';
 import { faNum } from '@/core/utils/faNum';
 
 /**
@@ -26,7 +27,16 @@ interface Row {
   label: string;
   value: (t: Tier) => string;
   enabled: (t: Tier) => boolean;
+  /**
+   * عددِ قابلِ مقایسه‌ی همین امکان — تنها مبنای «چه چیزی نسبت به سطحِ فعلی‌ات
+   * بهتر می‌شود». نامحدود = بی‌نهایت، بولی = ۰/۱. بدونِ این، فهرستِ «چه چیزی
+   * اضافه می‌شود» باید با if‌های دستی برای هر امکان نوشته می‌شد و اولین امکانِ
+   * تازه‌ای که PM اضافه می‌کرد از قلم می‌افتاد.
+   */
+  rank: (t: Tier) => number;
 }
+
+const cap = (n: number | null): number => (n == null ? Number.POSITIVE_INFINITY : n);
 
 /** سقفِ روزانه؛ null = نامحدود. */
 const perDay = (n: number | null): string => (n == null ? 'نامحدود' : `${faNum(n)} در روز`);
@@ -48,8 +58,9 @@ export const TIER_FEATURE_ROWS: Row[] = [
     key: 'conversation',
     icon: 'send-fill',
     label: 'شروعِ گفتگو',
-    value: (t) => perDay(t.dailyConversationLimit),
+    value: (t) => (t.level <= 1 ? freeConversationValue(t) : perDay(t.dailyConversationLimit)),
     enabled: () => true,
+    rank: (t) => cap(t.dailyConversationLimit),
   },
   {
     key: 'random',
@@ -57,6 +68,7 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'چتِ شانسی',
     value: (t) => perDay(t.dailyRandomLimit),
     enabled: () => true,
+    rank: (t) => cap(t.dailyRandomLimit),
   },
   {
     key: 'likes',
@@ -64,6 +76,15 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'دیدنِ پسندکنندگان',
     value: (t) => (t.canSeeLikes ? 'دارد' : 'ندارد'),
     enabled: (t) => t.canSeeLikes,
+    rank: (t) => (t.canSeeLikes ? 1 : 0),
+  },
+  {
+    key: 'swipe',
+    icon: 'heart-fill',
+    label: 'پسندِ روزانه',
+    value: (t) => perDay(t.dailySwipeLimit),
+    enabled: () => true,
+    rank: (t) => cap(t.dailySwipeLimit),
   },
   {
     key: 'super',
@@ -71,6 +92,7 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'سوپرلایک',
     value: (t) => (t.superLikesPerDay > 0 ? perDay(t.superLikesPerDay) : '—'),
     enabled: (t) => t.superLikesPerDay > 0,
+    rank: (t) => t.superLikesPerDay,
   },
   {
     key: 'gender',
@@ -78,6 +100,7 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'فیلترِ جنسیت در چتِ شانسی',
     value: (t) => (t.canFilterRandomGender ? 'دارد' : 'ندارد'),
     enabled: (t) => t.canFilterRandomGender,
+    rank: (t) => (t.canFilterRandomGender ? 1 : 0),
   },
   {
     key: 'radius',
@@ -85,6 +108,7 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'شعاعِ جست‌وجو',
     value: (t) => (t.maxRadiusKm > 0 ? `${faNum(t.maxRadiusKm)} کیلومتر` : '—'),
     enabled: (t) => t.maxRadiusKm > 0,
+    rank: (t) => t.maxRadiusKm,
   },
   {
     key: 'boost',
@@ -92,6 +116,7 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'بوستِ ماهانه',
     value: (t) => (t.boostPerMonth > 0 ? `${faNum(t.boostPerMonth)} بار` : '—'),
     enabled: (t) => t.boostPerMonth > 0,
+    rank: (t) => t.boostPerMonth,
   },
   {
     key: 'photos',
@@ -99,8 +124,66 @@ export const TIER_FEATURE_ROWS: Row[] = [
     label: 'تعدادِ عکس',
     value: (t) => `${faNum(maxPhotosForTier(t.level))} عکس`,
     enabled: () => true,
+    rank: (t) => maxPhotosForTier(t.level),
   },
 ];
+
+/**
+ * سهمِ گفتگوی سطحِ رایگان *روزانه نیست* — کلاً یک‌بار در عمرِ حساب است
+ * (chat/handler.go کلِ گفتگوهای آغازشده را می‌شمارد، نه گفتگوهای امروز).
+ * نوشتنِ «۱ در روز» روی ستونِ رایگان یعنی همان انتظارِ غلطی که کاربر را
+ * منتظرِ فردایی می‌گذاشت که هرگز نمی‌آمد.
+ */
+const freeConversationValue = (t: Tier): string =>
+  t.dailyConversationLimit == null
+    ? 'نامحدود'
+    : `${faNum(t.dailyConversationLimit)} بار (یک‌بار برای همیشه)`;
+
+/**
+ * ستونِ «عادی (رایگان)» را می‌سازد. سطحِ ۱ ردیفی در جدولِ tiers ندارد، پس در
+ * ‎/api/tiers‎ هم نمی‌آید؛ سقف‌هایش از `rules`ِ ‎/api/config‎ می‌آید و بقیه‌ی
+ * امکانات طبقِ تعریف خاموش‌اند.
+ */
+export const freeTier = (rules: TierRules): Tier => ({
+  id: 'free',
+  level: 1,
+  name: 'عادی',
+  priceToman: 0,
+  perks: [],
+  dailySwipeLimit: rules.freeDailySwipeLimit,
+  dailyConversationLimit: rules.freeConversationLimit,
+  dailyRandomLimit: rules.freeDailyRandomLimit,
+  superLikesPerDay: 0,
+  canSeeLikes: false,
+  canFilterRandomGender: false,
+  // آینه‌ی tiers.FreeMaxRadiusKm در بک‌اند.
+  maxRadiusKm: 30,
+  boostPerMonth: 0,
+  purchasable: false,
+});
+
+/** یک تفاوتِ ملموس بینِ سطحِ فعلی و سطحِ هدف. */
+export interface TierGain {
+  key: string;
+  icon: IconName;
+  label: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * «با این ارتقا دقیقاً چه چیزی بهتر می‌شود» — فقط ردیف‌هایی که واقعاً بالا
+ * می‌روند. قاب‌بندیِ تفاوتی مهم‌ترین چیزی است که کاربر می‌خواهد بداند؛ فهرستِ
+ * کاملِ امکانات (که بیشترش با سطحِ فعلی یکی است) این پیام را گم می‌کند.
+ */
+export const tierGains = (current: Tier, target: Tier): TierGain[] =>
+  TIER_FEATURE_ROWS.filter((r) => r.rank(target) > r.rank(current)).map((r) => ({
+    key: r.key,
+    icon: r.icon,
+    label: r.label,
+    from: r.value(current),
+    to: r.value(target),
+  }));
 
 /** فهرستِ امکاناتِ یک سطح — برای جدولِ مقایسه و کارتِ کامل. */
 export const tierFeatures = (t: Tier): TierFeature[] =>

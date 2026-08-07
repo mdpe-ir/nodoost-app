@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { router } from 'expo-router';
 import { useCases } from '@/core/di/DIProvider';
+import { useQuota } from '@/presentation/providers/QuotaProvider';
+import { quotaKeyForError } from '@/presentation/tiers/quotaCopy';
 import { ApiError } from '@/core/http/ApiError';
 import type { RandomMatch } from '@/domain/entities';
 
@@ -10,6 +12,9 @@ export function useRandomViewModel() {
   const [gender, setGender] = useState<'' | 'f' | 'm'>('');
   const [state, setState] = useState<'idle' | 'waiting'>('idle');
   const [error, setError] = useState<string | null>(null);
+  /** سقفِ روزانه‌ی شانسی خورد — صفحه با آن برگه‌ی ارتقا را باز می‌کند. */
+  const [limitHit, setLimitHit] = useState(false);
+  const { consume: consumeQuota, refresh: refreshQuota } = useQuota();
 
   const join = useCallback(async () => {
     setError(null);
@@ -18,6 +23,7 @@ export function useRandomViewModel() {
       const r: RandomMatch = await uc.random.join({ gender: gender || undefined });
       if (r.status === 'matched' && r.matchId) {
         setState('idle');
+        consumeQuota('random');
         router.push({
           pathname: '/thread/[id]',
           params: {
@@ -31,13 +37,16 @@ export function useRandomViewModel() {
       }
     } catch (e) {
       setState('idle');
-      setError(
-        e instanceof ApiError && e.code === 'random_limit_reached'
-          ? 'سهمِ چتِ تصادفیِ امروزت پر شده — برای بیشتر، سطحت را ارتقا بده.'
-          : 'پیوستن ناموفق بود. دوباره تلاش کن.'
-      );
+      // سقفِ سهمیه خطای شبکه نیست: به‌جای متنِ قرمزِ ریز، برگه‌ی ارتقا باز
+      // می‌شود که می‌گوید چقدر مصرف شده، کِی تازه می‌شود و چه چیزی بازش می‌کند.
+      if (e instanceof ApiError && quotaKeyForError(e.code) === 'random') {
+        setLimitHit(true);
+        refreshQuota();
+        return;
+      }
+      setError('پیوستن ناموفق بود. دوباره تلاش کن.');
     }
-  }, [gender, uc]);
+  }, [gender, uc, consumeQuota, refreshQuota]);
 
   const leave = useCallback(async () => {
     try {
@@ -46,5 +55,14 @@ export function useRandomViewModel() {
     setState('idle');
   }, [uc]);
 
-  return { gender, setGender, state, error, join, leave };
+  return {
+    gender,
+    setGender,
+    state,
+    error,
+    join,
+    leave,
+    limitHit,
+    dismissLimit: () => setLimitHit(false),
+  };
 }

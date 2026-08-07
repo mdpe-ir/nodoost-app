@@ -10,8 +10,11 @@ export interface ProfileRepository {
   /** خروج از حالتِ سفر و بازگشت به موقعیتِ واقعی. */
   clearTravel(lat: number, lng: number): Promise<void>;
   getPhotos(): Promise<Photo[]>;
-  addPhoto(uri: string): Promise<void>;
+  /** عکسِ تازه را آپلود می‌کند و همان عکسِ ساخته‌شده را برمی‌گرداند. */
+  addPhoto(uri: string): Promise<Photo | null>;
   deletePhoto(id: number): Promise<void>;
+  /** عکسِ پیش‌فرضِ پروفایل (چهره‌ی کاربر در همه‌ی صفحه‌ها) را عوض می‌کند. */
+  setPrimaryPhoto(id: number): Promise<void>;
   requestReview(): Promise<void>;
   registerDevice(token: string, platform: string): Promise<void>;
 }

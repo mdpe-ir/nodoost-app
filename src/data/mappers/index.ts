@@ -2,6 +2,7 @@ import type {
   AppNotification,
   AuthResult,
   Badges,
+  BlockedUser,
   Candidate,
   Conversation,
   FollowState,
@@ -28,6 +29,7 @@ import type {
 import type {
   AuthDTO,
   BadgesDTO,
+  BlockedUserDTO,
   CandidateDTO,
   ConversationDTO,
   FollowStateDTO,
@@ -213,6 +215,17 @@ export const toMessage = (d: MessageDTO): Message => ({
   body: d.body,
   createdAt: d.created_at,
   readAt: undefIfNull(d.read_at),
+  editedAt: undefIfNull(d.edited_at),
+  replyTo: d.reply_to
+    ? {
+        id: d.reply_to.id,
+        senderId: d.reply_to.sender_id,
+        body: d.reply_to.body ?? '',
+        deleted: Boolean(d.reply_to.deleted),
+      }
+    : undefined,
+  deleted: Boolean(d.deleted),
+  deletedByAdmin: Boolean(d.deleted_by_admin),
 });
 
 export const toTier = (d: TierDTO): Tier => {
@@ -286,6 +299,14 @@ export const toFollowUser = (d: FollowUserDTO): FollowUser => ({
   tier: d.tier,
   verified: d.verified,
   isFollowing: Boolean(d.is_following),
+});
+
+export const toBlockedUser = (d: BlockedUserDTO): BlockedUser => ({
+  id: d.id,
+  name: undefIfNull(d.name),
+  photoUrl: undefIfNull(d.photo_url),
+  verified: d.verified,
+  blockedAt: d.blocked_at,
 });
 
 // — اعلان‌ها —

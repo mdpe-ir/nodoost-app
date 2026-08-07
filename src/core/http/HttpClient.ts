@@ -63,13 +63,25 @@ export class HttpClient {
       if (await this.tryRefresh()) return this.request<T>(path, opts, true);
       throw new ApiError(401);
     }
-    if (res.status === 402) throw new ApiError(402, 'free_limit_reached');
     if (!res.ok) {
-      let code: string | undefined;
+      // بدنه‌ی خطا کاملاً خوانده می‌شود، نه فقط کدش: سرور کنارِ کد، زمینه هم
+      // می‌دهد (`limit`، `required_tier`) و پنجره‌ی ارتقا از همان تغذیه می‌شود.
+      //
+      // ۴۰۲ تا پیش از این همیشه به `free_limit_reached` نگاشت می‌شد؛ یعنی سقفِ
+      // شانسی و سقفِ لایک هم با متنِ «گفتگوی رایگانت تمام شد» نشان داده می‌شدند
+      // (و شرطِ random_limit_reached در ویومدل هرگز درست نمی‌شد). حالا کدِ خودِ
+      // سرور می‌ماند و فقط اگر بدنه‌ای نبود، به همان پیش‌فرضِ قدیمی می‌افتیم.
+      let body: Record<string, unknown> | undefined;
       try {
-        code = (await res.json())?.error;
+        body = (await res.json()) as Record<string, unknown>;
       } catch {}
-      throw new ApiError(res.status, code);
+      const code =
+        typeof body?.error === 'string'
+          ? (body.error as string)
+          : res.status === 402
+            ? 'free_limit_reached'
+            : undefined;
+      throw new ApiError(res.status, code, body);
     }
     if (res.status === 204) return null as T;
     return (await res.json().catch(() => null)) as T;

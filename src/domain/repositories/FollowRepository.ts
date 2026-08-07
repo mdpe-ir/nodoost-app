@@ -6,4 +6,6 @@ export interface FollowRepository {
   unfollow(userId: number): Promise<FollowState>;
   /** فهرستِ دنبال‌کننده‌ها/دنبال‌شده‌های یک کاربر؛ `userId` تهی یعنی خودم. */
   getList(kind: FollowListKind, userId?: number, page?: number): Promise<Page<FollowUser>>;
+  /** «او دیگر مرا دنبال نکند» — رابطه از سمتِ مقابل قطع می‌شود، بی‌صدا. */
+  removeFollower(userId: number): Promise<FollowState>;
 }

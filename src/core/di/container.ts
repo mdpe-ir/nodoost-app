@@ -14,6 +14,7 @@ import { NotificationsRepositoryImpl } from '@/data/repositories/NotificationsRe
 import { InAppMessagesRepositoryImpl } from '@/data/repositories/InAppMessagesRepositoryImpl';
 import { FollowRepositoryImpl } from '@/data/repositories/FollowRepositoryImpl';
 import { SupportRepositoryImpl } from '@/data/repositories/SupportRepositoryImpl';
+import { QuotaRepositoryImpl } from '@/data/repositories/QuotaRepositoryImpl';
 
 import * as auth from '@/domain/usecases/authUseCases';
 import * as profile from '@/domain/usecases/profileUseCases';
@@ -27,6 +28,7 @@ import * as notifications from '@/domain/usecases/notificationsUseCases';
 import * as inAppMessages from '@/domain/usecases/inAppMessagesUseCases';
 import * as follow from '@/domain/usecases/followUseCases';
 import * as support from '@/domain/usecases/supportUseCases';
+import * as quota from '@/domain/usecases/quotaUseCases';
 
 /**
  * Composition root: زیرساخت → repository → use case را یک‌بار می‌سازد.
@@ -48,6 +50,7 @@ export function createContainer() {
   const inAppMessagesRepo = new InAppMessagesRepositoryImpl(http);
   const followRepo = new FollowRepositoryImpl(http);
   const supportRepo = new SupportRepositoryImpl(http);
+  const quotaRepo = new QuotaRepositoryImpl(http);
 
   const useCases = {
     auth: {
@@ -65,6 +68,7 @@ export function createContainer() {
       getPhotos: profile.makeGetPhotos(profileRepo),
       addPhoto: profile.makeAddPhoto(profileRepo),
       deletePhoto: profile.makeDeletePhoto(profileRepo),
+      setPrimaryPhoto: profile.makeSetPrimaryPhoto(profileRepo),
       deleteAccount: profile.makeDeleteAccount(profileRepo),
       requestReview: profile.makeRequestReview(profileRepo),
       registerDevice: profile.makeRegisterDevice(profileRepo),
@@ -87,6 +91,9 @@ export function createContainer() {
       getMessages: chat.makeGetMessages(chatRepo),
       sendMessage: chat.makeSendMessage(chatRepo),
       startDirect: chat.makeStartDirect(chatRepo),
+      editMessage: chat.makeEditMessage(chatRepo),
+      deleteMessage: chat.makeDeleteMessage(chatRepo),
+      clearChat: chat.makeClearChat(chatRepo),
     },
     random: {
       join: random.makeJoinRandom(randomRepo),
@@ -101,6 +108,8 @@ export function createContainer() {
     },
     safety: {
       block: safety.makeBlockUser(safetyRepo),
+      unblock: safety.makeUnblockUser(safetyRepo),
+      getBlocks: safety.makeGetBlocks(safetyRepo),
       report: safety.makeReportUser(safetyRepo),
     },
     notifications: {
@@ -120,12 +129,16 @@ export function createContainer() {
       follow: follow.makeFollow(followRepo),
       unfollow: follow.makeUnfollow(followRepo),
       getList: follow.makeGetFollowList(followRepo),
+      removeFollower: follow.makeRemoveFollower(followRepo),
     },
     support: {
       getOverview: support.makeGetSupportOverview(supportRepo),
       startThread: support.makeStartSupportThread(supportRepo),
       getMessages: support.makeGetSupportMessages(supportRepo),
       sendMessage: support.makeSendSupportMessage(supportRepo),
+    },
+    quota: {
+      get: quota.makeGetQuota(quotaRepo),
     },
   };
 

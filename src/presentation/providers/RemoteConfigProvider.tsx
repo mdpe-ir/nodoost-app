@@ -15,6 +15,7 @@ import {
   parseVersionConfig,
   type VersionConfig,
 } from '@/core/config/appUpdate';
+import { defaultTierRules, parseTierRules, type TierRules } from '@/core/config/tierRules';
 
 /**
  * پیکربندیِ زمانِ اجرا که یک‌بار از `GET /api/config` خوانده و در کلِ اپ به اشتراک
@@ -26,6 +27,8 @@ interface RemoteConfigValue {
   install: InstallConfig;
   interests: InterestItem[];
   version: VersionConfig;
+  /** سقف‌های سطحِ رایگان — ستونِ «عادی» در جدولِ مقایسه از این‌جا ساخته می‌شود. */
+  rules: TierRules;
   loaded: boolean;
 }
 
@@ -33,6 +36,7 @@ const RemoteConfigContext = createContext<RemoteConfigValue>({
   install: emptyInstallConfig,
   interests: defaultInterestsCatalog,
   version: emptyVersionConfig,
+  rules: defaultTierRules,
   loaded: false,
 });
 
@@ -42,6 +46,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   const [install, setInstall] = useState<InstallConfig>(emptyInstallConfig);
   const [interests, setInterests] = useState<InterestItem[]>(defaultInterestsCatalog);
   const [version, setVersion] = useState<VersionConfig>(emptyVersionConfig);
+  const [rules, setRules] = useState<TierRules>(defaultTierRules);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -50,10 +55,15 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
       try {
         const res = await fetch(`${env.apiBaseUrl}/api/config`);
         if (!res.ok) return;
-        const cfg = (await res.json()) as { install?: unknown; interests?: unknown };
+        const cfg = (await res.json()) as {
+          install?: unknown;
+          interests?: unknown;
+          rules?: unknown;
+        };
         if (!alive) return;
         setInstall(parseInstallConfig(cfg.install));
         setInterests(parseInterestsCatalog(cfg.interests));
+        setRules(parseTierRules(cfg.rules));
         // فیلدهای نسخه در ریشه‌ی پاسخ‌اند (نه زیرِ install)، پس کلِ cfg را می‌دهیم.
         setVersion(parseVersionConfig(cfg));
       } catch {
@@ -68,7 +78,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <RemoteConfigContext.Provider value={{ install, interests, version, loaded }}>
+    <RemoteConfigContext.Provider value={{ install, interests, version, rules, loaded }}>
       {children}
     </RemoteConfigContext.Provider>
   );

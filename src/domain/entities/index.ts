@@ -30,7 +30,7 @@ export type {
   InAppEvent,
   InAppMessage,
 } from './inappMessages';
-export type { FollowState, FollowUser, FollowListKind } from './social';
+export type { FollowState, FollowUser, FollowListKind, BlockedUser } from './social';
 export type { Conversation, Message } from './chat';
 export type {
   SupportTopic,
@@ -46,3 +46,5 @@ export type {
   PurchaseResult,
 } from './catalog';
 export type { AuthResult } from './auth';
+export type { Quota, QuotaItem, QuotaKey, QuotaScope } from './quota';
+export { quotaOf } from './quota';

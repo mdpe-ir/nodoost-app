@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, FlatList, RefreshControl, ActivityIndicator, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
@@ -10,6 +10,7 @@ import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
 import { TierBadge } from '@/presentation/components/TierBadge';
 import { FollowButton } from '@/presentation/components/FollowButton';
+import { ActionSheet } from '@/presentation/components/ActionSheet';
 import { useFollowListViewModel } from '@/presentation/hooks/useFollowListViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { faNum } from '@/core/utils/faNum';
@@ -25,12 +26,17 @@ function FollowRow({
   item,
   isMe,
   busy,
+  canRemove,
   onToggle,
+  onRemove,
 }: {
   item: FollowUser;
   isMe: boolean;
   busy: boolean;
+  /** فقط در تبِ «دنبال‌کننده‌ها»ی خودم — «او دیگر مرا دنبال نکند». */
+  canRemove: boolean;
   onToggle: () => void;
+  onRemove: () => void;
 }) {
   return (
     <Pressable
@@ -50,6 +56,18 @@ function FollowRow({
           {item.tier ? <TierBadge tier={item.tier} height={15} /> : null}
         </View>
       </View>
+      {canRemove ? (
+        <Pressable
+          hitSlop={8}
+          disabled={busy}
+          onPress={onRemove}
+          accessibilityRole="button"
+          accessibilityLabel={`حذفِ ${item.name ?? 'این کاربر'} از دنبال‌کننده‌ها`}
+          style={({ pressed }) => [styles.remove, (pressed || busy) && styles.removePressed]}
+        >
+          <Text style={styles.removeText}>حذف</Text>
+        </Pressable>
+      ) : null}
       {/* دنبال‌کردن رایگان است — روی خودم دکمه‌ای نشان نمی‌دهیم. */}
       {isMe ? null : (
         <FollowButton isFollowing={item.isFollowing} busy={busy} onPress={onToggle} size="sm" />
@@ -74,6 +92,7 @@ export function FollowersScreen({
   const vm = useFollowListViewModel(userId, initialTab);
   const { user } = useSession();
   const myId = user?.id;
+  const [confirmRemove, setConfirmRemove] = useState<FollowUser | null>(null);
 
   const title = peerName ? `دنبال‌کننده‌های ${peerName}` : 'دنبال‌کننده‌ها';
 
@@ -103,7 +122,10 @@ export function FollowersScreen({
               item={item}
               isMe={item.id === myId}
               busy={vm.isBusy(item.id)}
+              // فقط فهرستِ دنبال‌کننده‌های خودم؛ روی پروفایلِ دیگران معنا ندارد.
+              canRemove={!userId && vm.tab === 'followers' && item.id !== myId}
               onToggle={() => vm.toggleFollow(item)}
+              onRemove={() => setConfirmRemove(item)}
             />
           )}
           showsVerticalScrollIndicator={false}
@@ -131,6 +153,25 @@ export function FollowersScreen({
           }
         />
       )}
+
+      <ActionSheet
+        visible={confirmRemove != null}
+        title={`${confirmRemove?.name ?? 'این کاربر'} دیگر دنبالت نکند؟`}
+        subtitle="از فهرستِ دنبال‌کننده‌هایت برداشته می‌شود. به او خبری داده نمی‌شود، ولی اگر بخواهد می‌تواند دوباره دنبالت کند — برای بستنِ کامل، مسدودش کن."
+        actions={[
+          {
+            key: 'yes',
+            label: 'بله، حذف کن',
+            icon: 'close',
+            danger: true,
+            onPress: () => {
+              if (confirmRemove) void vm.removeFollower(confirmRemove);
+              setConfirmRemove(null);
+            },
+          },
+        ]}
+        onDismiss={() => setConfirmRemove(null)}
+      />
     </ScreenContainer>
   );
 }
@@ -159,6 +200,20 @@ const styles = StyleSheet.create({
     lineHeight: lineHeights.md,
     color: colors.ink,
     textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  remove: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  removePressed: { opacity: 0.6 },
+  removeText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.xs,
+    color: colors.ink2,
     writingDirection: 'rtl',
   },
   footer: { paddingVertical: spacing.lg },

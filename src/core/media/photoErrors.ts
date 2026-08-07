@@ -48,6 +48,10 @@ export function photoErrorMessage(e: unknown): string {
       case 'store failed':
       case 'save failed':
         return 'ذخیره‌ی عکس روی سرور انجام نشد. چند لحظه بعد دوباره تلاش کن.';
+      case 'update failed':
+        return 'تغییرِ عکس انجام نشد. چند لحظه بعد دوباره تلاش کن.';
+      case 'photo not approved':
+        return 'این عکس هنوز تأیید نشده یا رد شده و نمی‌تواند عکسِ پروفایلت باشد. عکسِ دیگری انتخاب کن.';
       case 'server error':
         return 'سرور موقتاً پاسخ نمی‌دهد. کمی بعد دوباره تلاش کن.';
     }

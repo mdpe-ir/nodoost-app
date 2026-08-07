@@ -1,4 +1,8 @@
-import type { ChatRepository, MessagePageOptions } from '@/domain/repositories/ChatRepository';
+import type {
+  ChatRepository,
+  DeleteScope,
+  MessagePageOptions,
+} from '@/domain/repositories/ChatRepository';
 import type { Conversation, Message, Page } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
 import type { ConversationDTO, MessageDTO } from '@/data/dto';
@@ -39,11 +43,27 @@ export class ChatRepositoryImpl implements ChatRepository {
     return d.match_id;
   }
 
-  async sendMessage(matchId: number, body: string): Promise<Message> {
+  async sendMessage(matchId: number, body: string, replyToId?: number): Promise<Message> {
     const dto = await this.http.request<MessageDTO>(`/api/matches/${matchId}/messages`, {
       method: 'POST',
-      body: { body },
+      body: { body, reply_to_id: replyToId },
     });
     return toMessage(dto);
+  }
+
+  async editMessage(messageId: number, body: string): Promise<{ body: string; editedAt?: string }> {
+    const d = await this.http.request<{ body?: string; edited_at?: string }>(
+      `/api/messages/${messageId}`,
+      { method: 'PATCH', body: { body } }
+    );
+    return { body: d?.body ?? body, editedAt: d?.edited_at };
+  }
+
+  async deleteMessage(messageId: number, scope: DeleteScope): Promise<void> {
+    await this.http.request(`/api/messages/${messageId}?scope=${scope}`, { method: 'DELETE' });
+  }
+
+  async clearChat(matchId: number): Promise<void> {
+    await this.http.request(`/api/matches/${matchId}/messages`, { method: 'DELETE' });
   }
 }

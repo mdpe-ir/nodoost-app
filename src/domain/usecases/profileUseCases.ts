@@ -13,6 +13,7 @@ export const makeClearTravel = (r: ProfileRepository) => (lat: number, lng: numb
 export const makeGetPhotos = (r: ProfileRepository) => () => r.getPhotos();
 export const makeAddPhoto = (r: ProfileRepository) => (uri: string) => r.addPhoto(uri);
 export const makeDeletePhoto = (r: ProfileRepository) => (id: number) => r.deletePhoto(id);
+export const makeSetPrimaryPhoto = (r: ProfileRepository) => (id: number) => r.setPrimaryPhoto(id);
 export const makeDeleteAccount = (r: ProfileRepository) => () => r.deleteAccount();
 export const makeRequestReview = (r: ProfileRepository) => () => r.requestReview();
 export const makeRegisterDevice =
@@ -28,6 +29,7 @@ export type ProfileUseCases = {
   getPhotos: ReturnType<typeof makeGetPhotos>;
   addPhoto: ReturnType<typeof makeAddPhoto>;
   deletePhoto: ReturnType<typeof makeDeletePhoto>;
+  setPrimaryPhoto: ReturnType<typeof makeSetPrimaryPhoto>;
   deleteAccount: ReturnType<typeof makeDeleteAccount>;
   requestReview: ReturnType<typeof makeRequestReview>;
   registerDevice: ReturnType<typeof makeRegisterDevice>;

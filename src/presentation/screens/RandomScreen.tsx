@@ -13,9 +13,13 @@ import { Button } from '@/presentation/components/Button';
 import { Chip } from '@/presentation/components/Chip';
 import { Icon } from '@/presentation/components/Icon';
 import { TierLockModal } from '@/presentation/components/TierLockModal';
+import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
+import { QuotaMeter } from '@/presentation/components/QuotaMeter';
 import { useRandomViewModel } from '@/presentation/hooks/useRandomViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
-import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
+import { useQuota } from '@/presentation/providers/QuotaProvider';
+import { quotaOf } from '@/domain/entities';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
 const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
   { key: '', label: 'فرقی نداره' },
@@ -26,6 +30,8 @@ const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
 export function RandomScreen() {
   const vm = useRandomViewModel();
   const { user } = useSession();
+  const { quota } = useQuota();
+  const randomQuota = quotaOf(quota, 'random');
   const waiting = vm.state === 'waiting';
   // فیلترِ جنسیت فقط برای برنزی به بالا — سرور هم برای سطحِ ۱ آن را نادیده می‌گیرد.
   const canFilter = (user?.tier ?? 1) >= 2;
@@ -91,6 +97,12 @@ export function RandomScreen() {
           {!canFilter ? (
             <Text style={styles.lockHint}>فیلترِ جنسیت از سطحِ برنزی باز می‌شود — برای فعال‌سازی سطحت را ارتقا بده.</Text>
           ) : null}
+          {/* سهمیه *قبل از* زدنِ دکمه دیده می‌شود، نه بعد از رد شدن. */}
+          {randomQuota && !randomQuota.unlimited ? (
+            <View style={styles.quotaBox}>
+              <QuotaMeter item={randomQuota} quota={quota} />
+            </View>
+          ) : null}
           <Button label="شروعِ گفتگوی تصادفی" icon="lightning-fill" onPress={vm.join} style={styles.action} />
         </>
       ) : (
@@ -106,11 +118,21 @@ export function RandomScreen() {
         feature="فیلترِ جنسیتِ هم‌صحبت"
         onClose={() => setGenderLock(false)}
       />
+
+      <UpgradeSheet visible={vm.limitHit} onClose={vm.dismissLimit} quotaKey="random" />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  quotaBox: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   orbWrap: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center' },
   pulseRing: {

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
+import { useQuota } from '@/presentation/providers/QuotaProvider';
+import { quotaKeyForError } from '@/presentation/tiers/quotaCopy';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import { recordInstallNagAction } from '@/core/installNag';
@@ -22,6 +24,9 @@ export function useDiscoverViewModel() {
   const [match, setMatch] = useState<MatchResult | null>(null);
   const [needsLocation, setNeedsLocation] = useState(false);
   const [locating, setLocating] = useState(false);
+  /** سقفِ پسندِ روزانه همین حالا خورد — صفحه با آن برگه‌ی ارتقا را باز می‌کند. */
+  const [limitHit, setLimitHit] = useState(false);
+  const { consume: consumeQuota, refresh: refreshQuota } = useQuota();
 
   const load = useCallback(
     async (silent = false) => {
@@ -89,13 +94,25 @@ export function useDiscoverViewModel() {
       setIndex((i) => i + 1);
       try {
         const result = await uc.discovery.swipe(target.id, action);
-        if (action === 'like') recordInstallNagAction();
+        if (action === 'like') {
+          recordInstallNagAction();
+          consumeQuota('like');
+        }
         if (action === 'like' && (result.peer || result.matchId)) {
           setMatch({ matchId: result.matchId, peer: result.peer ?? target });
         }
-      } catch {}
+      } catch (e) {
+        // سقفِ پسندِ روزانه تا امروز بی‌صدا بلعیده می‌شد: کارت رد می‌شد، هیچ
+        // اتفاقی نمی‌افتاد و کاربر فکر می‌کرد اپ خراب است. حالا کارت برمی‌گردد
+        // و برگه‌ی ارتقا دلیل را می‌گوید.
+        if (e instanceof ApiError && quotaKeyForError(e.code) === 'like') {
+          setIndex((i) => Math.max(0, i - 1));
+          setLimitHit(true);
+          refreshQuota();
+        }
+      }
     },
-    [cards, index, uc]
+    [cards, index, uc, consumeQuota, refreshQuota]
   );
 
   const enableLocation = useCallback(async () => {
@@ -115,6 +132,8 @@ export function useDiscoverViewModel() {
     locating,
     swipe,
     enableLocation,
+    limitHit,
+    dismissLimit: () => setLimitHit(false),
     reload: () => load(),
     dismissMatch: () => setMatch(null),
   };

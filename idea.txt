@@ -7,3 +7,10 @@ adding logout
 full test
 redisgn all of pages
 fix discover page 
+
+-=----
+
+
+
+ساده سازی فرایند اشتراک و بهتر کردن لیست مقایسه ها
+

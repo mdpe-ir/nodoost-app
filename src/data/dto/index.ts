@@ -230,6 +230,13 @@ export interface SupportOverviewDTO {
   unread?: number;
 }
 
+export interface MessageReplyDTO {
+  id: number;
+  sender_id: number;
+  body: string;
+  deleted?: boolean;
+}
+
 export interface MessageDTO {
   id?: number;
   match_id: number;
@@ -238,6 +245,20 @@ export interface MessageDTO {
   created_at?: string;
   /** رسیدِ خواندن — فقط روی پیام‌های خودم و از سطحِ طلایی برمی‌گردد. */
   read_at?: string | null;
+  edited_at?: string | null;
+  reply_to?: MessageReplyDTO | null;
+  /** سنگِ قبر: «برای همه» حذف شده؛ body خالی می‌آید. */
+  deleted?: boolean;
+  deleted_by_admin?: boolean;
+}
+
+/** یک سطر در فهرستِ کاربرانِ مسدودشده (‎GET /api/me/blocks‎). */
+export interface BlockedUserDTO {
+  id: number;
+  name?: string | null;
+  photo_url?: string | null;
+  verified?: boolean;
+  blocked_at: string;
 }
 
 export interface TierDTO {

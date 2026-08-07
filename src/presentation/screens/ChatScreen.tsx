@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
@@ -7,14 +7,23 @@ import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
 import { TierBadge } from '@/presentation/components/TierBadge';
+import { ActionSheet } from '@/presentation/components/ActionSheet';
+import { useCases } from '@/core/di/DIProvider';
 import { useChatViewModel } from '@/presentation/hooks/useChatViewModel';
 import { useSupportEntry } from '@/presentation/hooks/useSupportEntry';
 import { timeAgo } from '@/core/utils/time';
 import { faNum } from '@/core/utils/faNum';
+import type { Conversation } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
 export function ChatScreen() {
   const vm = useChatViewModel();
+  const uc = useCases();
+  // منویِ نگه‌داشتنِ ردیف و دیالوگِ تأییدِ آن. پشتیبانی هیچ‌کدام را ندارد.
+  const [rowMenu, setRowMenu] = useState<Conversation | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: 'clear' | 'block'; item: Conversation } | null>(
+    null
+  );
   const support = useSupportEntry();
 
   // گفتگوی پشتیبانی از فهرستِ عادی جدا می‌شود تا به‌عنوان ردیفِ سنجاق‌شده بالای
@@ -29,7 +38,7 @@ export function ChatScreen() {
   if (vm.loading) {
     return (
       <ScreenContainer>
-        <ScreenHeader title="گفتگو" />
+        <ScreenHeader title="گفتگو" membership />
         <RowsSkeleton count={7} />
       </ScreenContainer>
     );
@@ -89,7 +98,7 @@ export function ChatScreen() {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="گفتگو" />
+      <ScreenHeader title="گفتگو" membership />
       {/*
        * فهرست همیشه رندر می‌شود (حتی خالی) تا ردیفِ سنجاق‌شده‌ی پشتیبانی در
        * حالتِ «هنوز گفتگویی نداری» ناپدید نشود.
@@ -128,6 +137,10 @@ export function ChatScreen() {
               <Pressable
                 style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
                 accessibilityRole="button"
+                accessibilityHint={item.isSupport ? undefined : 'نگه‌داشتن برای پاک‌کردن یا مسدود کردن'}
+                // پشتیبانی مستثناست: نه پاک می‌شود نه بلاک — تنها راهِ کمک‌گرفتن است.
+                onLongPress={item.isSupport ? undefined : () => setRowMenu(item)}
+                delayLongPress={280}
                 onPress={() =>
                   router.push({
                     pathname: '/thread/[id]',
@@ -182,6 +195,77 @@ export function ChatScreen() {
               </Pressable>
             );
           }}
+      />
+
+      <ActionSheet
+        visible={rowMenu != null}
+        title={rowMenu?.otherName ?? 'گفتگو'}
+        actions={
+          rowMenu
+            ? [
+                {
+                  key: 'clear',
+                  label: 'پاک‌کردنِ گفتگو',
+                  hint: 'فقط برای تو؛ او چیزی نمی‌بیند',
+                  icon: 'close',
+                  onPress: () => {
+                    const target = rowMenu;
+                    setRowMenu(null);
+                    setConfirm({ kind: 'clear', item: target });
+                  },
+                },
+                {
+                  key: 'block',
+                  label: 'مسدود کردن',
+                  hint: 'دیگر نه پیامی، نه دیده‌شدنی',
+                  icon: 'shield',
+                  danger: true,
+                  onPress: () => {
+                    const target = rowMenu;
+                    setRowMenu(null);
+                    setConfirm({ kind: 'block', item: target });
+                  },
+                },
+              ]
+            : []
+        }
+        onDismiss={() => setRowMenu(null)}
+      />
+
+      <ActionSheet
+        visible={confirm != null}
+        title={
+          confirm?.kind === 'block'
+            ? `${confirm.item.otherName ?? 'این کاربر'} مسدود شود؟`
+            : 'گفتگو پاک شود؟'
+        }
+        subtitle={
+          confirm?.kind === 'block'
+            ? 'دیگر نمی‌توانید به هم پیام بدهید یا هم را ببینید. دنبال‌کردن هم در هر دو جهت پاک می‌شود. هر وقت خواستی از تنظیمات ← حریمِ خصوصی برش می‌داری.'
+            : 'تاریخچه فقط از سمتِ تو پاک می‌شود. اگر او پیامِ تازه‌ای بدهد، گفتگو با همان پیامِ جدید برمی‌گردد.'
+        }
+        actions={
+          confirm
+            ? [
+                {
+                  key: 'yes',
+                  label: confirm.kind === 'block' ? 'بله، مسدود کن' : 'بله، پاک کن',
+                  icon: confirm.kind === 'block' ? 'shield' : 'close',
+                  danger: true,
+                  onPress: () => {
+                    const c = confirm;
+                    setConfirm(null);
+                    const run =
+                      c.kind === 'block'
+                        ? uc.safety.block(c.item.otherId)
+                        : uc.chat.clearChat(c.item.matchId);
+                    void run.then(() => vm.refresh());
+                  },
+                },
+              ]
+            : []
+        }
+        onDismiss={() => setConfirm(null)}
       />
     </ScreenContainer>
   );

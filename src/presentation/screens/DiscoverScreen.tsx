@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
+import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
 import { SwipeCard, type SwipeCardHandle } from '@/presentation/components/SwipeCard';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { NudgeBanner } from '@/presentation/components/NudgeBanner';
@@ -23,7 +24,7 @@ export function DiscoverScreen() {
   if (vm.loading) {
     return (
       <ScreenContainer flush style={styles.wrap}>
-        <ScreenHeader title="کاوش" />
+        <ScreenHeader title="کاوش" membership />
         <CardSkeleton />
       </ScreenContainer>
     );
@@ -31,7 +32,7 @@ export function DiscoverScreen() {
 
   return (
     <ScreenContainer flush style={styles.wrap}>
-      <ScreenHeader title="کاوش" />
+      <ScreenHeader title="کاوش" membership />
 
       {/* بنرِ ادمین بالای همه‌چیز می‌نشیند، ولی زیرِ نیازهای عملیاتیِ خودِ اپ
           (مثلِ روشن‌کردنِ موقعیت) نمی‌آید — آن یکی مسدودکننده‌ی واقعیِ تجربه است. */}
@@ -126,6 +127,9 @@ export function DiscoverScreen() {
           onDismiss={vm.dismissMatch}
         />
       ) : null}
+
+      {/* سقفِ پسندِ روزانه — تا پیش از این بی‌صدا رد می‌شد. */}
+      <UpgradeSheet visible={vm.limitHit} onClose={vm.dismissLimit} quotaKey="like" />
     </ScreenContainer>
   );
 }
