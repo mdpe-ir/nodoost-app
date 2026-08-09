@@ -38,6 +38,26 @@ export interface UserDTO {
     travel_mode?: boolean;
     [key: string]: unknown;
   };
+  /** امتیاز و رتبه — فقط در پروفایلِ خودم. */
+  points?: PointsDTO | null;
+}
+
+/** یک پلهٔ رتبه، همان‌طور که سرور می‌فرستد. */
+export interface RankDTO {
+  level: number;
+  name: string;
+  min_points: number;
+  color?: string;
+  icon?: string;
+}
+
+export interface PointsDTO {
+  balance?: number;
+  earned?: number;
+  rank_level?: number;
+  rank?: RankDTO | null;
+  next_rank?: RankDTO | null;
+  to_next?: number;
 }
 
 export interface CandidateDTO {
@@ -78,6 +98,7 @@ export interface PeerProfileDTO {
   interests?: string[];
   photos?: string[];
   photo_ids?: number[];
+  rank?: { level: number; name: string; min_points: number; color?: string; icon?: string } | null;
 }
 
 /** پاسخِ مشترکِ ‎POST/DELETE /api/users/{id}/follow‎. */

@@ -4,6 +4,7 @@ import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import { recordInstallNagAction } from '@/core/installNag';
+import { recordReviewMoment } from '@/core/reviewMoments';
 import type { Candidate, MatchResult, ActiveFilter } from '@/domain/entities';
 
 const PAGE_SIZE = 24;
@@ -145,7 +146,10 @@ export function useExploreViewModel() {
       setItems((prev) => prev.filter((c) => c.id !== target.id));
       try {
         const result = await uc.discovery.swipe(target.id, action);
-        if (action === 'like') recordInstallNagAction();
+        if (action === 'like') {
+          recordInstallNagAction();
+          recordReviewMoment('action');
+        }
         if (action === 'like' && (result.peer || result.matchId)) {
           setMatch({ matchId: result.matchId, peer: result.peer ?? target });
         }
@@ -176,6 +180,11 @@ export function useExploreViewModel() {
     select: setSelected,
     dismissSelected: () => setSelected(null),
     swipe,
-    dismissMatch: () => setMatch(null),
+    // بستنِ پنجره‌ی مَچ، نه ساختنش: پنجره‌ی درخواستِ نظر نباید روی خودِ
+    // جشنِ مَچ بیفتد.
+    dismissMatch: () => {
+      setMatch(null);
+      recordReviewMoment('match');
+    },
   };
 }

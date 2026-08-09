@@ -1,4 +1,5 @@
 import type { QueuedSubscription } from './catalog';
+import type { PointsState } from './missions';
 
 export type Gender = 'f' | 'm' | 'x';
 export type AccountStatus = 'active' | 'banned' | 'pending_review';
@@ -40,6 +41,8 @@ export interface User {
   interests?: string[];
   photos?: Photo[];
   prefs?: UserPreferences;
+  /** امتیاز و رتبه — فقط در پروفایلِ خودم. عددِ خام برای دیگران فرستاده نمی‌شود. */
+  points?: PointsState;
 }
 
 export interface UserPreferences {

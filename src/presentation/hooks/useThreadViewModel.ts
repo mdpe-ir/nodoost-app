@@ -4,6 +4,7 @@ import { useSession } from '@/presentation/providers/SessionProvider';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { ApiError } from '@/core/http/ApiError';
 import { recordInstallNagAction } from '@/core/installNag';
+import { recordReviewMoment } from '@/core/reviewMoments';
 import { quotaKeyForError } from '@/presentation/tiers/quotaCopy';
 import type { Message } from '@/domain/entities';
 import type { DeleteScope } from '@/domain/repositories/ChatRepository';
@@ -140,6 +141,7 @@ export function useThreadViewModel(matchId: number) {
       const msg = await uc.chat.sendMessage(matchId, body, replyId);
       setMessages((prev) => [...prev, msg]);
       recordInstallNagAction();
+      recordReviewMoment('action');
       if (isStarting) consumeQuota('conversation');
     } catch (e) {
       setDraft(body);

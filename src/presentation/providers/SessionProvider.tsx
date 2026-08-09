@@ -2,6 +2,9 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { AppState } from 'react-native';
 import { useCases } from '@/core/di/DIProvider';
 import { restorePurchases } from '@/core/billing/restorePurchases';
+import { flushPendingReceipts } from '@/core/billing/pendingReceipts';
+import { flushPendingConsumes } from '@/core/billing/pendingConsumes';
+import { recordReviewMoment } from '@/core/reviewMoments';
 import type { User, AuthResult } from '@/domain/entities';
 
 type Status = 'loading' | 'authed' | 'guest';
@@ -46,7 +49,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [uc]);
 
-  const dismissCelebration = useCallback(() => setCelebrateTier(null), []);
+  // بستنِ تبریکِ خرید قوی‌ترین «لحظه‌ی خوش» است — کاربری که همین حالا پول
+  // داده و امکاناتش باز شده. ReviewPromptProvider منتظرِ همین سیگنال است.
+  const dismissCelebration = useCallback(() => {
+    setCelebrateTier(null);
+    recordReviewMoment('purchase');
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -62,10 +70,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [uc, refreshUser]);
 
   // بازیابیِ خریدهای گم‌شده: هر بار که نشستِ معتبر داریم و هر بار که اپ از پس‌زمینه
-  // برمی‌گردد، صفِ خریدهای مصرف‌نشده‌ی بازار خالی می‌شود.
+  // برمی‌گردد، سه صف خالی می‌شوند. ترتیبشان معنا دارد.
   //
-  // چرا لازم است: اگر اندروید پروسه را وسطِ پرداخت بکشد، رسید هرگز به سرور نمی‌رسد و
-  // کاربر پول داده ولی اشتراک ندارد. این تنها مسیرِ خودترمیمِ آن حالت است.
+  // ۱) صفِ محلیِ رسیدها — رسیدِ امضاشده‌ای که خریدش انجام شده ولی تأییدِ سرور
+  //    نگرفته. به هیچ APIی از بازار وابسته نیست، پس همیشه کار می‌کند. اول می‌آید
+  //    چون هر رسیدی که این‌جا پذیرفته شود، خودش یک ردیفِ تازه به صفِ مصرف می‌دهد.
+  // ۲) صفِ مصرف — توکن‌هایی که سرور ثبتشان کرده ولی بازار هنوز «مصرف‌شده»
+  //    نمی‌داندشان. تا این خالی نشود، تمدیدِ ماهِ بعدِ همان SKU با
+  //    ITEM_ALREADY_OWNED رد می‌شود. این تنها جایی است که با اتصالِ آرام و
+  //    باکیفیت اجرا می‌شود — برخلافِ لحظه‌ی برگشت از صفحه‌ی پرداخت.
+  // ۳) صفِ خودِ بازار (`getPurchasedProducts`) — پوششِ حالتِ «اپ پاک/عوض شد».
+  //    در تولید این فراخوانی روی دستگاهِ کاربران رد می‌شود، پس دیگر تنها امیدِ
+  //    بازیابی نیست؛ ولی برای دستگاه‌هایی که جواب می‌دهد نگه داشته شده.
   //
   // اگر چیزی واقعاً فعال شود، refreshUser بالا رفتنِ سطح را می‌بیند و همان پنجره‌ی
   // تبریکِ همیشگی را نشان می‌دهد.
@@ -74,11 +90,30 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     let alive = true;
     const sweep = async (trigger: string) => {
+      const pending = await flushPendingReceipts({
+        verify: uc.catalog.verifyBazaarPurchase,
+      });
+      const consumes = await flushPendingConsumes();
+      // نرخِ واقعیِ consume تا امروز نامعلوم بود، چون فقط شکست‌ها گزارش می‌شدند و
+      // فقط در بدترین لحظه. این beacon موفقیت را هم می‌فرستد تا معلوم شود
+      // «مصرفِ به‌تعویق‌افتاده» واقعاً مشکل را حل کرده یا نه.
+      if (consumes.consumed > 0 || consumes.kept > 0) {
+        uc.catalog
+          .reportBazaarSweep({
+            trigger: 'consume-queue',
+            connect_ok: consumes.consumed > 0 || consumes.errors.length === 0,
+            owned: consumes.consumed + consumes.kept,
+            consumed: consumes.consumed,
+            failed: consumes.kept,
+            errors: consumes.errors,
+          })
+          .catch(() => {});
+      }
       const s = await restorePurchases(
         { restore: uc.catalog.restoreBazaarPurchase, report: uc.catalog.reportBazaarSweep },
         trigger
       );
-      if (alive && s.restored > 0) await refreshUser();
+      if (alive && (s.restored > 0 || pending.accepted > 0)) await refreshUser();
     };
     sweep('launch');
 

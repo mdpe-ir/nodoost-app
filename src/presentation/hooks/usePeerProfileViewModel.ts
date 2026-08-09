@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { recordInstallNagAction } from '@/core/installNag';
+import { recordReviewMoment } from '@/core/reviewMoments';
 import type { PeerProfile, MatchResult } from '@/domain/entities';
 
 type MySwipe = 'like' | 'super' | 'nope' | undefined;
@@ -58,6 +59,7 @@ export function usePeerProfileViewModel(userId: number) {
       const r = await uc.discovery.swipe(userId, 'like');
       setMySwipe('like');
       recordInstallNagAction();
+      recordReviewMoment('action');
       if (r.matchId) {
         setMatch(r);
         setProfile((p) => (p ? { ...p, isMatch: true, matchId: r.matchId } : p));
@@ -178,6 +180,11 @@ export function usePeerProfileViewModel(userId: number) {
     reportPhoto,
     reporting,
     reported,
-    dismissMatch: () => setMatch(null),
+    // بستنِ پنجره‌ی مَچ، نه ساختنش: پنجره‌ی درخواستِ نظر نباید روی خودِ
+    // جشنِ مَچ بیفتد.
+    dismissMatch: () => {
+      setMatch(null);
+      recordReviewMoment('match');
+    },
   };
 }

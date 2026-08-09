@@ -48,3 +48,28 @@ export type {
 export type { AuthResult } from './auth';
 export type { Quota, QuotaItem, QuotaKey, QuotaScope } from './quota';
 export { quotaOf } from './quota';
+export type {
+  MissionVerifyKind,
+  MissionRepeatMode,
+  MissionState,
+  MissionLockReason,
+  Mission,
+  Rank,
+  PointsState,
+  PointEntry,
+  ReferralCard,
+  MissionsOverview,
+  RewardKind,
+  RewardBlockReason,
+  Reward,
+  RewardSubCap,
+  RewardsOverview,
+  RedemptionStatus,
+  Redemption,
+  RedeemResult,
+  ReferralStatus,
+  Invitee,
+  ReferralSummary,
+  ReferralOverview,
+} from './missions';
+export { rankFor } from './missions';

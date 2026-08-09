@@ -21,6 +21,8 @@ import { Icon } from '@/presentation/components/Icon';
 import { Button } from '@/presentation/components/Button';
 import { Scrim } from '@/presentation/components/Scrim';
 import { TierBadge } from '@/presentation/components/TierBadge';
+import { RankBadge } from '@/presentation/components/RankBadge';
+import { RankSheet } from '@/presentation/components/RankSheet';
 import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { FollowButton } from '@/presentation/components/FollowButton';
@@ -73,6 +75,7 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
   const [lockOpen, setLockOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
+  const [rankSheet, setRankSheet] = useState(false);
   const uc = useCases();
   const [reportReason, setReportReason] = useState('');
   const [reportError, setReportError] = useState(false);
@@ -169,6 +172,9 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           </Text>
           {p.verified ? <Icon name="shield-check" size={20} tint="gold" /> : null}
           {p.tier ? <TierBadge tier={p.tier} /> : null}
+          {/* نشانِ رتبه، بدونِ عدد. زدنش توضیح می‌دهد از کجا آمده و به صفحه‌ی
+              ماموریت‌ها دعوت می‌کند — همان‌جا که چرخه‌ی ویروسی بسته می‌شود. */}
+          <RankBadge rank={p.rank} onPress={() => setRankSheet(true)} />
         </View>
 
         <View style={styles.metaRow}>
@@ -415,6 +421,13 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           </View>
         </View>
       </Modal>
+
+      <RankSheet
+        visible={rankSheet}
+        rank={p.rank}
+        peerName={p.name || 'این کاربر'}
+        onDismiss={() => setRankSheet(false)}
+      />
     </ScreenContainer>
   );
 }

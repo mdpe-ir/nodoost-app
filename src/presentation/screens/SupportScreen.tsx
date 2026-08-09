@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
@@ -119,6 +119,17 @@ export function SupportScreen() {
   const listRef = useRef<FlatList<Row>>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
+
+  // متنِ آماده از صفحه‌ی ارجاع‌دهنده (مثلاً بن‌بستِ «این محصول از قبل خریداری شده»).
+  // فقط یک‌بار و فقط وقتی کاربر خودش چیزی ننوشته — تایپِ کاربر مقدس است.
+  const { draft: draftParam } = useLocalSearchParams<{ draft?: string }>();
+  const seeded = useRef(false);
+  const { setDraft } = vm;
+  useEffect(() => {
+    if (seeded.current || !draftParam) return;
+    seeded.current = true;
+    setDraft((current: string) => (current.trim() ? current : draftParam));
+  }, [draftParam, setDraft]);
 
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   const bottomSpacer = useAnimatedStyle(() => ({

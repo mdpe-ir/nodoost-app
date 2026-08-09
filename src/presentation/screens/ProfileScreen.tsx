@@ -23,6 +23,7 @@ import { ProfileSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
+import { useReviewPrompt } from '@/presentation/providers/ReviewPromptProvider';
 import { InterestPicker } from '@/presentation/components/InterestPicker';
 import { PhotoPicker } from '@/presentation/components/PhotoPicker';
 import { ProfilePhotoSheet } from '@/presentation/components/ProfilePhotoSheet';
@@ -30,6 +31,8 @@ import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { QuotaMeter } from '@/presentation/components/QuotaMeter';
 import { tierName } from '@/presentation/components/TierBadge';
+import { RankBadge } from '@/presentation/components/RankBadge';
+import { RankSheet } from '@/presentation/components/RankSheet';
 import { maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
@@ -157,6 +160,7 @@ export function ProfileScreen() {
   const vm = useProfileViewModel();
   const { interests: interestsCatalog } = useRemoteConfig();
   const { quota } = useQuota();
+  const reviewPrompt = useReviewPrompt();
   const { width } = useWindowDimensions();
   // شبکه‌ی تمام‌عرض (لبه‌تا‌لبه) مثلِ اینستاگرام — سلول‌های مربعیِ نزدیک‌به‌هم.
   const tile = (width - GRID_GAP * (COLS - 1)) / COLS;
@@ -164,6 +168,8 @@ export function ProfileScreen() {
   // زبانه‌ی فعال؛ با پارامترِ ‎?tab=…‎ قابلِ کنترل از هر جای اپ.
   const params = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>(asTab(params.tab) ?? 'photos');
+  // برگه‌ی توضیحِ نشانِ رتبه — با زدن روی نشانِ کنارِ نام باز می‌شود.
+  const [rankSheet, setRankSheet] = useState(false);
   useEffect(() => {
     // «عضویت» دیگر زبانه‌ی پروفایل نیست — لینک‌های قدیمیِ ?tab=plans به صفحه‌ی سطح‌ها می‌روند.
     if (params.tab === 'plans') {
@@ -297,6 +303,8 @@ export function ProfileScreen() {
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{user?.name ?? 'بدونِ نام'}</Text>
             {user?.verified ? <Icon name="shield-check" size={16} tint="gold" /> : null}
+            {/* نشانِ رتبه — همان چیزی که دیگران هم در پروفایلت می‌بینند. */}
+            <RankBadge rank={user?.points?.rank} height={20} onPress={() => setRankSheet(true)} />
           </View>
           {user?.bio ? <Text style={styles.bio} numberOfLines={2}>{user.bio}</Text> : null}
           {user?.phone ? (
@@ -377,6 +385,28 @@ export function ProfileScreen() {
               {quota.items.map((it) => (
                 <QuotaMeter key={it.key} item={it} quota={quota} />
               ))}
+            </Pressable>
+          ) : null}
+
+          {/* — امتیاز و ماموریت —
+              راهِ غیرپولیِ رسیدن به امکاناتِ پولی. عمداً کنارِ کارتِ سهمیه است:
+              همان‌جایی که کاربر می‌فهمد چیزی کم دارد، راهِ رایگانش را هم ببیند. */}
+          {user?.points ? (
+            <Pressable
+              onPress={() => router.push('/missions' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="امتیاز و ماموریت‌های من"
+              style={({ pressed }) => [styles.quotaCard, pressed && styles.pressed]}
+            >
+              <View style={styles.quotaHead}>
+                <Text style={styles.quotaTitle}>امتیاز و ماموریت</Text>
+                <Text style={styles.quotaMore}>{faNum(user.points.balance)} امتیاز</Text>
+              </View>
+              <Text style={styles.missionHint}>
+                {user.points.nextRank
+                  ? `${faNum(user.points.toNext)} امتیاز تا «${user.points.nextRank.name}» — با ماموریت‌ها امتیاز بگیر و اشتراک رایگان بگیر.`
+                  : 'با انجامِ ماموریت‌ها امتیاز بگیر و آن را به اشتراک تبدیل کن.'}
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -719,6 +749,27 @@ export function ProfileScreen() {
               </View>
             </View>
 
+            {/* — نظر و امتیاز: فقط در بیلدِ کافه‌بازار معنا دارد (وب فروشگاهی
+                ندارد). راهِ همیشگی، مستقل از پنجره‌ای که خودش در لحظه‌های خوش
+                بالا می‌آید. */}
+            {reviewPrompt.available ? (
+              <View style={styles.group}>
+                <Pressable
+                  style={styles.rowInner}
+                  onPress={reviewPrompt.open}
+                  accessibilityRole="button"
+                  accessibilityLabel="نظر و امتیاز به نودوست"
+                >
+                  <View style={styles.rowChip}><Icon name="star" size={18} tint="gold" /></View>
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>نظر و امتیاز به نودوست</Text>
+                    <Text style={styles.rowHint}>نظرت را در کافه‌بازار ثبت کن</Text>
+                  </View>
+                  <Icon name="chevron-prev" size={16} tint="gold" />
+                </Pressable>
+              </View>
+            ) : null}
+
             <AppVersionInfo />
             <Button label="خروج از حساب" variant="danger" onPress={vm.logout} style={styles.logout} />
             {/* جای خالی زیرِ نوارِ چسبان تا دکمه‌ی خروج پشتش پنهان نشود. */}
@@ -816,6 +867,15 @@ export function ProfileScreen() {
         onClose={vm.closePicker}
         onPicked={vm.onPhotoPicked}
         onError={vm.setPhotoError}
+      />
+
+      <RankSheet
+        visible={rankSheet}
+        rank={vm.user?.points?.rank}
+        earned={vm.user?.points?.earned}
+        nextRank={vm.user?.points?.nextRank}
+        toNext={vm.user?.points?.toNext}
+        onDismiss={() => setRankSheet(false)}
       />
     </ScreenContainer>
   );
@@ -938,6 +998,15 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   quotaMore: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
+  missionHint: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.xs,
+    lineHeight: lineHeights.xs,
+    color: colors.ink3,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: spacing.xs,
+  },
 
   // — کارتِ وضعیتِ اشتراک (کاربرِ مشترک) — جزئیات و خرید در /plans —
   memberCard: {

@@ -1,3 +1,5 @@
+import type { Rank } from './missions';
+
 /** کاندیدای کاوش. */
 export interface Candidate {
   id: number;
@@ -119,6 +121,8 @@ export interface PeerProfile {
   photos: string[];
   /** شناسه‌ها هم‌ردیف photos، برای گزارش دقیق همان تصویر. */
   photoIds: number[];
+  /** نشانِ رتبه — عمداً بدونِ عددِ امتیاز؛ مقایسه‌ی مستقیمِ عدد ضدانگیزه است. */
+  rank?: Rank;
 }
 
 /** نتیجه‌ی پیوستن به چتِ تصادفی. */

@@ -8,8 +8,14 @@ import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { invalidateTierCatalog } from '@/presentation/hooks/useTierCatalog';
 import { getPaymentMode } from '@/core/billing/paymentStrategy';
-import { bazaarBilling, isAlreadyOwned } from '@/core/billing/bazaarBilling';
-import { restorePurchases } from '@/core/billing/restorePurchases';
+import {
+  bazaarBilling,
+  isAlreadyOwned,
+  type BazaarPurchaseResult,
+} from '@/core/billing/bazaarBilling';
+import { restorePurchases, type RestoreDeps } from '@/core/billing/restorePurchases';
+import { clearPendingReceipt, savePendingReceipt } from '@/core/billing/pendingReceipts';
+import { flushPendingConsumes, pendingConsumeFor, queueConsume } from '@/core/billing/pendingConsumes';
 import { purchaseResultMessage, upgradeConfirm } from '@/presentation/tiers/subscriptionCopy';
 import type { Tier } from '@/domain/entities';
 
@@ -95,82 +101,34 @@ export function usePlansViewModel() {
         if (getPaymentMode() === 'bazaar') {
           // بیلدِ کافه‌بازار: خریدِ درون‌برنامه‌ای (Poolakey) سپس اعتبارسنجیِ سرور.
           await bazaarBilling.connect();
-          let purchase;
-          try {
-            purchase = await bazaarBilling.purchase(bazaarSku || plan);
-          } catch (err) {
-            // «از قبل مالکش هستی» یعنی خریدِ قبلی هرگز به سرور نرسیده و consume نشده.
-            // پیش از این این خطا هم مثلِ لغو بی‌صدا بلعیده می‌شد و کاربر برای همیشه
-            // گیر می‌کرد؛ حالا همان خرید را بازیابی می‌کنیم.
-            if (isAlreadyOwned(err)) {
-              const s = await restorePurchases(
-                {
-                  restore: uc.catalog.restoreBazaarPurchase,
-                  report: uc.catalog.reportBazaarSweep,
-                },
-                'already-owned'
-              );
-              await refreshUser();
-              if (s.restored > 0) {
-                Alert.alert(
-                  'اشتراکِ شما فعال شد',
-                  'خریدِ قبلیِ شما ثبت نشده بود و همین حالا فعال شد.'
-                );
-                return;
-              }
-              // بن‌بستِ واقعی: پول رفته ولی بازیابی هم جواب نداده. تا پیش از این
-              // فقط می‌گفتیم «با پشتیبانی تماس بگیرید» بی‌آنکه راهی وجود داشته
-              // باشد؛ حالا دکمه مستقیم تیکت را با موضوعِ پرداخت باز می‌کند.
-              Alert.alert(
-                'خریدِ قبلی پیدا نشد',
-                'این محصول در بازار به نامِ شماست ولی فعال‌سازی نشد. پشتیبانی می‌تواند دستی بررسی‌اش کند.',
-                [
-                  { text: 'بعداً', style: 'cancel' },
-                  {
-                    text: 'تماس با پشتیبانی',
-                    // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ تازه تا اجرای بعدیِ expo start شناخته نمی‌شود.
-                    onPress: () => router.push('/support' as Href),
-                  },
-                ]
-              );
-              return;
-            }
-            // لغوِ کاربر یا نبودِ اتصالِ بازار — بی‌صدا (کاربر خودش می‌داند).
-            return;
-          }
+          const sku = bazaarSku || plan;
+          const purchase = await openPurchase(sku, {
+            restore: uc.catalog.restoreBazaarPurchase,
+            report: uc.catalog.reportBazaarSweep,
+            refreshUser,
+          });
+          if (!purchase) return; // لغو، بن‌بستِ اعلام‌شده، یا خطای اعلام‌شده
+          // پیش از هر چیز، رسیدِ امضاشده روی دیسک. اگر اپ همین‌جا کشته شود یا
+          // تأیید نگیرد، همین ردیف تنها ردِ باقی‌مانده از پرداخت است — و برخلافِ
+          // صفِ بازار، خواندنش به هیچ APIی وابسته نیست.
+          savePendingReceipt({
+            originalJson: purchase.originalJson,
+            dataSignature: purchase.dataSignature,
+            productId: sku,
+            purchaseToken: purchase.purchaseToken,
+          });
           try {
             const res = await uc.catalog.verifyBazaarPurchase(
               purchase.originalJson,
               purchase.dataSignature
             );
-            // فقط بعد از ثبتِ موفق در سرور. اگر این‌جا شکست بخورد، خرید مصرف‌نشده
-            // می‌ماند و جاروی بازیابی دفعه‌ی بعد سراغش می‌رود — ولی شکستش دیگر
-            // بی‌صدا نیست: با beacon گزارش می‌شود (درسِ باگِ نامرئیِ ۲۰۲۶-۰۸).
-            if (purchase.purchaseToken) {
-              try {
-                await bazaarBilling.consume(purchase.purchaseToken);
-              } catch (e) {
-                uc.catalog
-                  .reportBazaarSweep({
-                    trigger: 'purchase-consume',
-                    connect_ok: true,
-                    owned: 1,
-                    consumed: 0,
-                    errors: [String((e as Error)?.message ?? e).slice(0, 300)],
-                  })
-                  .catch(() => {});
-              }
-            } else {
-              uc.catalog
-                .reportBazaarSweep({
-                  trigger: 'purchase-consume',
-                  connect_ok: true,
-                  owned: 1,
-                  consumed: 0,
-                  errors: ['empty purchaseToken in originalJson'],
-                })
-                .catch(() => {});
-            }
+            clearPendingReceipt(purchase.originalJson);
+            // فقط بعد از ثبتِ موفق در سرور. مصرف به صفِ خودش می‌رود به‌جای صدا
+            // زدنِ همین‌جا: هر ۱۰ شکستِ ثبت‌شده‌ی consume در تولید دقیقاً در همین
+            // لحظه رخ داده بود — تا وقتی اتصالِ بازار بعد از برگشت از صفحه‌ی
+            // پرداخت جا نیفتاده. صف در آرامشِ پیش‌زمینه و با تکرار همان کار را می‌کند.
+            queueConsume(purchase.purchaseToken, sku);
+            void flushPendingConsumes();
             await refreshUser();
             await load(); // قابلیتِ خریدِ کارت‌ها با سطحِ تازه عوض می‌شود
             // سقف‌های تازه باید فوراً در نوارهای سهمیه دیده شوند، وگرنه کاربر
@@ -212,6 +170,77 @@ export function usePlansViewModel() {
   );
 
   return { user, tiers, loading, purchasing, buy, reload: load };
+}
+
+/**
+ * جریانِ خرید را باز می‌کند و رسیدِ امضاشده را برمی‌گرداند — یا null اگر چیزی برای
+ * تأیید نماند (لغوِ کاربر، یا حالتی که خودش به کاربر اعلام شده).
+ *
+ * سختیِ واقعی این‌جاست: `ITEM_ALREADY_OWNED`. چون consume روی دستگاهِ کاربران
+ * معمولاً شکست می‌خورد، خریدِ ماهِ قبل در بازار «مالِ کاربر» می‌ماند و **تمدید را
+ * مسدود می‌کند**. تا پیش از این، تنها پاسخ‌مان جاروی بازار بود که خودش هم روی
+ * همان دستگاه‌ها جواب نمی‌دهد؛ یعنی بن‌بستِ کامل.
+ */
+async function openPurchase(
+  sku: string,
+  deps: RestoreDeps & { refreshUser: () => Promise<unknown> | void }
+): Promise<BazaarPurchaseResult | null> {
+  try {
+    return await bazaarBilling.purchase(sku);
+  } catch (err) {
+    if (!isAlreadyOwned(err)) return null; // لغوِ کاربر یا نبودِ بازار — بی‌صدا
+  }
+
+  // ۱) محتمل‌ترین حالت: خریدِ قبلی ثبت شده ولی مصرف نشده، و خودمان توکنش را داریم.
+  // آزادش کن و بلافاصله همان خرید را دوباره باز کن. (صفِ مصرف فقط رسیدهای
+  // *پذیرفته‌شده‌ی سرور* را نگه می‌دارد، پس مصرفشان هیچ پولی را از بین نمی‌برد.)
+  if (pendingConsumeFor(sku)) {
+    await flushPendingConsumes();
+    if (!pendingConsumeFor(sku)) {
+      try {
+        return await bazaarBilling.purchase(sku);
+      } catch {
+        /* باز هم نشد — برو سراغِ مسیرهای بعدی */
+      }
+    }
+  }
+
+  // ۲) شاید خریدِ قبلی اصلاً به سرور نرسیده بود. روی دستگاه‌هایی که صفِ بازار
+  // خوانده می‌شود، همین‌جا فعال می‌شود.
+  const s = await restorePurchases(deps, 'already-owned');
+  await deps.refreshUser();
+  if (s.restored > 0) {
+    Alert.alert('اشتراکِ شما فعال شد', 'خریدِ قبلیِ شما ثبت نشده بود و همین حالا فعال شد.');
+    return null;
+  }
+
+  // ۳) بن‌بست — ولی نه بن‌بستِ خالی: تیکت با متنِ از پیش پرشده باز می‌شود تا
+  // پشتیبانی SKU را داشته باشد و کاربر مجبور نباشد ماجرا را توضیح بدهد.
+  Alert.alert(
+    'این محصول از قبل به نامِ شماست',
+    'بازار می‌گوید این محصول را قبلاً خریده‌اید، ولی فعال‌سازی‌اش این‌جا ممکن نشد. پشتیبانی می‌تواند دستی بررسی و فعالش کند.',
+    [
+      { text: 'بعداً', style: 'cancel' },
+      {
+        text: 'تماس با پشتیبانی',
+        // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ تازه تا اجرای بعدیِ expo start شناخته نمی‌شود.
+        onPress: () =>
+          router.push({
+            pathname: '/support',
+            params: { draft: alreadyOwnedTicket(sku) },
+          } as Href),
+      },
+    ]
+  );
+  return null;
+}
+
+/** متنِ آماده‌ی تیکت — همان چیزی که پشتیبانی برای جبرانِ دستی لازم دارد. */
+function alreadyOwnedTicket(sku: string): string {
+  return (
+    `سلام. هنگامِ خریدِ «${sku}» پیامِ «این محصول از قبل خریداری شده» می‌گیرم ` +
+    `و اشتراکم فعال نمی‌شود. لطفاً بررسی کنید.\n(کدِ پیگیری: already-owned/${sku})`
+  );
 }
 
 /**

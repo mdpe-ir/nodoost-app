@@ -18,6 +18,7 @@ import type {
   NotificationPrefs,
   PeerProfile,
   Photo,
+  Rank,
   ProfileDraft,
   PurchaseResult,
   QueuedSubscription,
@@ -45,6 +46,7 @@ import type {
   PeerProfileDTO,
   PhotoDTO,
   PurchaseResultDTO,
+  RankDTO,
   SubscriptionSegmentDTO,
   SupportOverviewDTO,
   TierDTO,
@@ -91,7 +93,21 @@ export const toUser = (d: UserDTO): User => ({
     incognito: d.prefs?.incognito ?? false,
     travelMode: d.prefs?.travel_mode ?? false,
   },
+  points: d.points
+    ? {
+        balance: d.points.balance ?? 0,
+        earned: d.points.earned ?? 0,
+        rankLevel: d.points.rank_level ?? 0,
+        rank: toRank(d.points.rank),
+        nextRank: toRank(d.points.next_rank),
+        toNext: d.points.to_next ?? 0,
+      }
+    : undefined,
 });
+
+/** پلهٔ رتبه — سرورِ قدیمی این را نمی‌فرستد، پس undefined هم معتبر است. */
+const toRank = (r?: RankDTO | null): Rank | undefined =>
+  r ? { level: r.level, name: r.name, minPoints: r.min_points, color: r.color, icon: r.icon } : undefined;
 
 export const fromProfileDraft = (draft: ProfileDraft) => ({
   name: draft.name,
@@ -172,6 +188,15 @@ export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
   interests: d.interests ?? [],
   photos: d.photos ?? [],
   photoIds: d.photo_ids ?? [],
+  rank: d.rank
+    ? {
+        level: d.rank.level,
+        name: d.rank.name,
+        minPoints: d.rank.min_points,
+        color: d.rank.color,
+        icon: d.rank.icon,
+      }
+    : undefined,
 });
 
 export const toConversation = (d: ConversationDTO): Conversation => ({

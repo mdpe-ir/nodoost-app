@@ -10,6 +10,8 @@ import { Icon } from '@/presentation/components/Icon';
 import { InterestPicker } from '@/presentation/components/InterestPicker';
 import { PhotoPicker } from '@/presentation/components/PhotoPicker';
 import { useOnboarding } from '@/presentation/hooks/useOnboarding';
+import { normalizeInviteCode } from '@/presentation/hooks/useInviteViewModel';
+import { useCases } from '@/core/di/DIProvider';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { enNum, faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
@@ -19,12 +21,21 @@ const GENDERS: { key: Gender; label: string }[] = [
   { key: 'f', label: 'زن' },
   { key: 'm', label: 'مرد' },
 ];
-const STEPS = 6;
+/**
+ * گامِ آخر (کدِ دعوت) فقط وقتی نشان داده می‌شود که سرور دعوت را روشن کرده باشد،
+ * پس شمارِ گام‌ها متغیر است. عمداً *آخرین* گام است: کاربرِ تازه اول باید حسابش
+ * را بسازد؛ پرسیدنِ کد در گامِ اول، ریزشِ ثبت‌نام می‌سازد.
+ */
+const BASE_STEPS = 6;
 const BIO_MAX = 160;
 
 export function OnboardingScreen() {
   const vm = useOnboarding();
-  const { interests: interestsCatalog } = useRemoteConfig();
+  const { interests: interestsCatalog, missions: missionsCfg } = useRemoteConfig();
+  const uc = useCases();
+  const referralStep = missionsCfg.enabled && missionsCfg.referralEnabled;
+  const STEPS = BASE_STEPS + (referralStep ? 1 : 0);
+  const [inviteCode, setInviteCode] = useState('');
   // از اولین گامِ ناقص شروع کن تا کاربرِ نیمه‌کامل مجبور به تکرارِ همه‌چیز نشود.
   const [step, setStep] = useState(() => {
     if (vm.name.trim().length < 2) return 0;
@@ -60,6 +71,14 @@ export function OnboardingScreen() {
       setStep((s) => s + 1);
       return;
     }
+    // کدِ دعوت اختیاری است و شکستش نباید تکمیلِ پروفایل را نگه دارد؛ اگر کد
+    // اشتباه باشد کاربر بعداً از صفحه‌ی «دعوت از دوستان» دوباره امتحان می‌کند.
+    if (referralStep) {
+      const clean = normalizeInviteCode(inviteCode);
+      if (clean.length >= 4) {
+        void uc.missions.redeemReferralCode(clean).catch(() => undefined);
+      }
+    }
     vm.submit();
   }
 
@@ -70,6 +89,7 @@ export function OnboardingScreen() {
     'یک جمله درباره‌ات',
     'به چه چیزهایی علاقه داری؟',
     'یک عکس اضافه کن',
+    ...(referralStep ? ['کدِ دعوت داری؟'] : []),
   ];
   const subs = [
     'این نامی است که دیگران می‌بینند.',
@@ -78,6 +98,13 @@ export function OnboardingScreen() {
     'اختیاری — اما کمک می‌کند بهتر دیده شوی.',
     'اختیاری — اما با انتخابش افرادِ هم‌سلیقه‌ات را خیلی بهتر پیدا می‌کنیم.',
     'برای استفاده از اپ حداقل یک عکس معتبر لازم است؛ عکس تازه بلافاصله فعال می‌شود.',
+    ...(referralStep
+      ? [
+          `اختیاری — اگر کسی تو را دعوت کرده، کدش را وارد کن و ${faNum(
+            missionsCfg.referralInviteePoints
+          )} امتیازِ هدیه بگیر.`,
+        ]
+      : []),
   ];
   const err = local || vm.error;
 
@@ -202,6 +229,19 @@ export function OnboardingScreen() {
             </View>
           ) : null}
 
+          {referralStep && step === BASE_STEPS ? (
+            <TextInput
+              value={inviteCode}
+              onChangeText={setInviteCode}
+              placeholder="مثلاً AB3D4F"
+              placeholderTextColor={colors.ink3}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={12}
+              style={styles.inviteInput}
+            />
+          ) : null}
+
           {err ? <Text style={styles.error}>{err}</Text> : null}
         </Animated.View>
 
@@ -288,6 +328,20 @@ const styles = StyleSheet.create({
   genderRow: { flexDirection: 'row-reverse', gap: spacing.md },
   genderChip: { flex: 1, minHeight: 56 },
   photoStep: { alignItems: 'center' },
+  inviteInput: {
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    color: colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.lg,
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
   photoTile: {
     width: 168,
     height: 210,

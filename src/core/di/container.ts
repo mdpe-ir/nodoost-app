@@ -15,6 +15,8 @@ import { InAppMessagesRepositoryImpl } from '@/data/repositories/InAppMessagesRe
 import { FollowRepositoryImpl } from '@/data/repositories/FollowRepositoryImpl';
 import { SupportRepositoryImpl } from '@/data/repositories/SupportRepositoryImpl';
 import { QuotaRepositoryImpl } from '@/data/repositories/QuotaRepositoryImpl';
+import { ReviewPromptRepositoryImpl } from '@/data/repositories/ReviewPromptRepositoryImpl';
+import { MissionsRepositoryImpl } from '@/data/repositories/MissionsRepositoryImpl';
 
 import * as auth from '@/domain/usecases/authUseCases';
 import * as profile from '@/domain/usecases/profileUseCases';
@@ -29,6 +31,8 @@ import * as inAppMessages from '@/domain/usecases/inAppMessagesUseCases';
 import * as follow from '@/domain/usecases/followUseCases';
 import * as support from '@/domain/usecases/supportUseCases';
 import * as quota from '@/domain/usecases/quotaUseCases';
+import * as reviewPrompt from '@/domain/usecases/reviewPromptUseCases';
+import * as missions from '@/domain/usecases/missionsUseCases';
 
 /**
  * Composition root: زیرساخت → repository → use case را یک‌بار می‌سازد.
@@ -51,6 +55,8 @@ export function createContainer() {
   const followRepo = new FollowRepositoryImpl(http);
   const supportRepo = new SupportRepositoryImpl(http);
   const quotaRepo = new QuotaRepositoryImpl(http);
+  const reviewPromptRepo = new ReviewPromptRepositoryImpl(http);
+  const missionsRepo = new MissionsRepositoryImpl(http);
 
   const useCases = {
     auth: {
@@ -139,6 +145,21 @@ export function createContainer() {
     },
     quota: {
       get: quota.makeGetQuota(quotaRepo),
+    },
+    reviewPrompt: {
+      get: reviewPrompt.makeGetReviewPrompt(reviewPromptRepo),
+      report: reviewPrompt.makeReportReviewPrompt(reviewPromptRepo),
+    },
+    missions: {
+      getMissions: missions.makeGetMissions(missionsRepo),
+      startMission: missions.makeStartMission(missionsRepo),
+      claimMission: missions.makeClaimMission(missionsRepo),
+      getPoints: missions.makeGetPoints(missionsRepo),
+      getRewards: missions.makeGetRewards(missionsRepo),
+      redeemReward: missions.makeRedeemReward(missionsRepo),
+      getRedemptions: missions.makeGetRedemptions(missionsRepo),
+      getReferral: missions.makeGetReferral(missionsRepo),
+      redeemReferralCode: missions.makeRedeemReferralCode(missionsRepo),
     },
   };
 

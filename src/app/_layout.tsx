@@ -17,6 +17,7 @@ import { PwaInstallProvider } from '@/presentation/providers/PwaInstallProvider'
 import { UpdateGateProvider } from '@/presentation/providers/UpdateGateProvider';
 import { RemoteConfigProvider } from '@/presentation/providers/RemoteConfigProvider';
 import { AndroidAppGateProvider } from '@/presentation/providers/AndroidAppGateProvider';
+import { ReviewPromptProvider } from '@/presentation/providers/ReviewPromptProvider';
 import { FetchyDeviceRegistration } from '@/presentation/providers/FetchyDeviceRegistration';
 import { LocationPrimerProvider } from '@/presentation/providers/LocationPrimerProvider';
 import { BadgesProvider } from '@/presentation/providers/BadgesProvider';
@@ -148,14 +149,18 @@ export default function RootLayout() {
                   <PwaInstallProvider>
                     <UpdateGateProvider>
                       <AndroidAppGateProvider>
-                        <StatusBar style="light" />
-                        <AuthGate />
-                        <CelebrationModal />
-                        {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
-                            ارتقای سطح — که لحظه‌ای‌تر است — رویش نیفتد. */}
-                        <InAppPopup />
-                        <LocationPrimerProvider />
-                        {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+                        {/* درخواستِ ثبتِ نظر در بازار آخرین حلقه است: خودش صبر
+                            می‌کند تا تبریک و پاپ‌آپِ ادمین از صحنه بروند. */}
+                        <ReviewPromptProvider>
+                          <StatusBar style="light" />
+                          <AuthGate />
+                          <CelebrationModal />
+                          {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
+                              ارتقای سطح — که لحظه‌ای‌تر است — رویش نیفتد. */}
+                          <InAppPopup />
+                          <LocationPrimerProvider />
+                          {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+                        </ReviewPromptProvider>
                       </AndroidAppGateProvider>
                     </UpdateGateProvider>
                   </PwaInstallProvider>

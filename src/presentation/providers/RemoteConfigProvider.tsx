@@ -16,6 +16,16 @@ import {
   type VersionConfig,
 } from '@/core/config/appUpdate';
 import { defaultTierRules, parseTierRules, type TierRules } from '@/core/config/tierRules';
+import {
+  emptyReviewConfig,
+  parseReviewConfig,
+  type ReviewConfig,
+} from '@/core/config/reviewConfig';
+import {
+  emptyMissionsConfig,
+  parseMissionsConfig,
+  type MissionsConfig,
+} from '@/core/config/missionsConfig';
 
 /**
  * پیکربندیِ زمانِ اجرا که یک‌بار از `GET /api/config` خوانده و در کلِ اپ به اشتراک
@@ -29,6 +39,10 @@ interface RemoteConfigValue {
   version: VersionConfig;
   /** سقف‌های سطحِ رایگان — ستونِ «عادی» در جدولِ مقایسه از این‌جا ساخته می‌شود. */
   rules: TierRules;
+  /** متن‌ها و سوییچِ درخواستِ ثبتِ نظر در کافه‌بازار. */
+  review: ReviewConfig;
+  /** پرچم‌های سیستمِ امتیاز و نردبانِ رتبه. */
+  missions: MissionsConfig;
   loaded: boolean;
 }
 
@@ -37,6 +51,8 @@ const RemoteConfigContext = createContext<RemoteConfigValue>({
   interests: defaultInterestsCatalog,
   version: emptyVersionConfig,
   rules: defaultTierRules,
+  review: emptyReviewConfig,
+  missions: emptyMissionsConfig,
   loaded: false,
 });
 
@@ -47,6 +63,8 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   const [interests, setInterests] = useState<InterestItem[]>(defaultInterestsCatalog);
   const [version, setVersion] = useState<VersionConfig>(emptyVersionConfig);
   const [rules, setRules] = useState<TierRules>(defaultTierRules);
+  const [review, setReview] = useState<ReviewConfig>(emptyReviewConfig);
+  const [missions, setMissions] = useState<MissionsConfig>(emptyMissionsConfig);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -59,11 +77,15 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
           install?: unknown;
           interests?: unknown;
           rules?: unknown;
+          review?: unknown;
+          missions?: unknown;
         };
         if (!alive) return;
         setInstall(parseInstallConfig(cfg.install));
         setInterests(parseInterestsCatalog(cfg.interests));
         setRules(parseTierRules(cfg.rules));
+        setReview(parseReviewConfig(cfg.review));
+        setMissions(parseMissionsConfig(cfg.missions));
         // فیلدهای نسخه در ریشه‌ی پاسخ‌اند (نه زیرِ install)، پس کلِ cfg را می‌دهیم.
         setVersion(parseVersionConfig(cfg));
       } catch {
@@ -78,7 +100,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <RemoteConfigContext.Provider value={{ install, interests, version, rules, loaded }}>
+    <RemoteConfigContext.Provider value={{ install, interests, version, rules, review, missions, loaded }}>
       {children}
     </RemoteConfigContext.Provider>
   );

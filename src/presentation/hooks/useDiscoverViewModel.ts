@@ -6,6 +6,7 @@ import { quotaKeyForError } from '@/presentation/tiers/quotaCopy';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import { recordInstallNagAction } from '@/core/installNag';
+import { recordReviewMoment } from '@/core/reviewMoments';
 import type { Candidate, MatchResult } from '@/domain/entities';
 
 /**
@@ -96,6 +97,7 @@ export function useDiscoverViewModel() {
         const result = await uc.discovery.swipe(target.id, action);
         if (action === 'like') {
           recordInstallNagAction();
+          recordReviewMoment('action');
           consumeQuota('like');
         }
         if (action === 'like' && (result.peer || result.matchId)) {
@@ -135,6 +137,11 @@ export function useDiscoverViewModel() {
     limitHit,
     dismissLimit: () => setLimitHit(false),
     reload: () => load(),
-    dismissMatch: () => setMatch(null),
+    // بستنِ پنجره‌ی مَچ، نه ساختنش: پنجره‌ی درخواستِ نظر نباید روی خودِ
+    // جشنِ مَچ بیفتد.
+    dismissMatch: () => {
+      setMatch(null);
+      recordReviewMoment('match');
+    },
   };
 }
