@@ -92,6 +92,11 @@ function AuthGate() {
       <Stack.Screen name="support" />
       <Stack.Screen name="followers" />
       <Stack.Screen name="plans" />
+      {/* مقصدهای صفحه‌ی «من» — هرکدام جای یکی از زبانه‌های قدیمیِ پروفایل. */}
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="interests" />
+      <Stack.Screen name="photos" />
       <Stack.Screen name="get-app" />
       <Stack.Screen name="user/[id]" />
       <Stack.Screen name="thread/[id]" />

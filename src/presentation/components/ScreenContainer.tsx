@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, type Href } from 'expo-router';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 import { InstallButton } from '@/presentation/components/InstallButton';
 import { NotificationBell } from '@/presentation/components/NotificationBell';
@@ -48,6 +49,7 @@ export function ScreenHeader({
   onBack,
   support,
   membership,
+  settings,
 }: {
   title: string;
   subtitle?: string;
@@ -57,6 +59,8 @@ export function ScreenHeader({
   support?: boolean;
   /** نمایشِ چیپِ اشتراک — فقط در حالتِ بدونِ بازگشت. */
   membership?: boolean;
+  /** نمایشِ دکمه‌ی تنظیمات — جای قراردادیِ آن، هدرِ صفحه‌ی «من» است. */
+  settings?: boolean;
 }) {
   if (onBack) {
     return (
@@ -86,6 +90,7 @@ export function ScreenHeader({
         {membership ? <MembershipChip /> : null}
         {support ? <SupportButton /> : null}
         <NotificationBell />
+        {settings ? <SettingsButton /> : null}
         {action ?? <InstallButton />}
       </View>
       <View style={styles.headText}>
@@ -93,6 +98,21 @@ export function ScreenHeader({
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
     </View>
+  );
+}
+
+/** دکمه‌ی تنظیماتِ هدر — منوی همبرگری، جای قراردادیِ «بقیه‌ی چیزها». */
+function SettingsButton() {
+  return (
+    <Pressable
+      onPress={() => router.push('/settings' as Href)}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel="تنظیمات"
+      style={({ pressed }) => [styles.headBtn, pressed && styles.headBtnPressed]}
+    >
+      <Icon name="menu" size={22} tint="gold" />
+    </Pressable>
   );
 }
 
@@ -119,6 +139,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backPressed: { backgroundColor: colors.surface, opacity: 0.9 },
+  headBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  headBtnPressed: { backgroundColor: colors.surface },
   headTrailing: { alignItems: 'flex-start' },
   headText: { flex: 1, alignItems: 'flex-end' },
   title: {

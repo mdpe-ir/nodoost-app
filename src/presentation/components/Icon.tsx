@@ -1,10 +1,16 @@
 import React from 'react';
 import { ImageStyle, StyleProp } from 'react-native';
 import { Image } from 'expo-image';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 /**
  * آیکن‌های برندِ نودوست (PNGِ شفاف، ۳ رنگ).
  * gold → پس‌زمینه‌ی تیره · white → روی عکس · ink → پس‌زمینه‌ی روشن/طلایی
+ *
+ * چند نام در مجموعه‌ی PNGِ برند وجود ندارند (هدست، منوی همبرگری، شورونِ پایین).
+ * به‌جای ساختنِ دارایی تازه، همان‌ها از Ionicons می‌آیند — هم سبکِ خطیِ یکسان
+ * دارند و هم با همان API (نام/اندازه/رنگ) صدا زده می‌شوند، پس صفحه‌ها نمی‌فهمند
+ * آیکن از کدام منبع آمده.
  */
 export type IconName =
   | 'bell'
@@ -16,13 +22,16 @@ export type IconName =
   | 'diamond-fill'
   | 'edit'
   | 'filter'
+  | 'headset'
   | 'heart-fill'
   | 'lightning-fill'
   | 'lightning'
   | 'lock'
   | 'map'
+  | 'menu'
   | 'moon'
   | 'more'
+  | 'chevron-down'
   | 'next-arrows'
   | 'phone'
   | 'plus'
@@ -39,9 +48,25 @@ export type IconName =
 
 export type IconTint = 'gold' | 'white' | 'ink';
 
+/** نام‌هایی که دارایی PNG ندارند و از Ionicons می‌آیند. */
+const VECTOR = {
+  headset: 'headset-outline',
+  menu: 'menu-outline',
+  'chevron-down': 'chevron-down',
+} as const satisfies Partial<Record<IconName, React.ComponentProps<typeof Ionicons>['name']>>;
+
+type PngName = Exclude<IconName, keyof typeof VECTOR>;
+
+/** رنگِ متناظرِ هر ته‌رنگ — عددها از خودِ فایل‌های PNGِ برند نمونه‌برداری شده‌اند. */
+const TINT_COLOR: Record<IconTint, string> = {
+  gold: '#DAB877',
+  white: '#FFFFFF',
+  ink: '#241B15',
+};
+
 // نگاشتِ ایستا — require باید رشته‌ی ثابت باشد تا Metro آن را بسته‌بندی کند
 /* eslint-disable @typescript-eslint/no-require-imports */
-const SOURCES: Record<IconTint, Record<IconName, number>> = {
+const SOURCES: Record<IconTint, Record<PngName, number>> = {
   gold: {
     bell: require('../../../assets/icons/gold/bell.png'),
     check: require('../../../assets/icons/gold/check.png'),
@@ -146,9 +171,19 @@ interface Props {
 }
 
 export function Icon({ name, size = 24, tint = 'gold', style }: Props) {
+  if (name in VECTOR) {
+    return (
+      <Ionicons
+        name={VECTOR[name as keyof typeof VECTOR]}
+        size={size}
+        color={TINT_COLOR[tint]}
+        style={style}
+      />
+    );
+  }
   return (
     <Image
-      source={SOURCES[tint][name]}
+      source={SOURCES[tint][name as PngName]}
       style={[{ width: size, height: size }, style]}
       contentFit="contain"
     />

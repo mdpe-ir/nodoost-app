@@ -20,7 +20,9 @@ export function SupportButton() {
       style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
     >
       <View style={styles.chip}>
-        <Icon name="shield-check" size={20} tint="gold" />
+        {/* هدست، نه سپر: سپر «تأییدشده» معنی می‌دهد و همان‌جا کنارِ نامِ حسابِ
+            پشتیبانی هم به همان معنا به کار می‌رود. */}
+        <Icon name="headset" size={20} tint="gold" />
       </View>
     </Pressable>
   );

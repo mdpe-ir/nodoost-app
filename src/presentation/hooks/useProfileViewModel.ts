@@ -3,13 +3,18 @@ import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { photoErrorMessage } from '@/core/media/photoErrors';
 import { resolveLocation } from '@/core/utils/location';
+import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import type { Photo, UserPreferences } from '@/domain/entities';
 
 /**
  * ویومدلِ پروفایل: عکس‌ها، ویرایشِ نام/بیو، آپلود/حذفِ عکس، حریمِ خصوصی، خروج.
  * تایرها و خرید این‌جا نیست — تنها سطحِ خرید usePlansViewModel/صفحه‌ی /plans است.
+ *
+ * `skipMedia` برای صفحاتی است که فقط به کاربر و تنظیماتش کار دارند (تنظیمات،
+ * ویرایشِ پروفایل): بدونِ آن، هر بار بازکردنِ آن صفحات سه درخواستِ بی‌مصرفِ
+ * عکس/بازدید/دنبال‌کننده می‌فرستاد.
  */
-export function useProfileViewModel() {
+export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean } = {}) {
   const uc = useCases();
   const { user, refreshUser, logout } = useSession();
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -17,7 +22,7 @@ export function useProfileViewModel() {
   // شمارنده‌های دنبال‌کردن برای ردیفِ آمارِ بالای پروفایل (سبکِ اینستاگرام).
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skipMedia);
   const [busy, setBusy] = useState(false);
   const [travelBusy, setTravelBusy] = useState(false);
   // — افزودنِ عکس: برگه‌ی سرچشمه + پیامِ خطای اختصاصی —
@@ -46,28 +51,50 @@ export function useProfileViewModel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  /*
+   * نام/بیو و علاقه‌مندی‌ها دو صفحه‌ی جدا شده‌اند، پس دو پیش‌نویسِ مستقل‌اند و
+   * هرکدام فقط فیلدِ خودش را می‌فرستد. اگر یکی‌شان کلِ سه فیلد را می‌فرستاد،
+   * ذخیره‌ی علاقه‌مندی‌ها نامِ ویرایش‌نشده‌ی صفحه‌ی دیگر را هم پس می‌فرستاد و
+   * تغییرِ ذخیره‌نشده‌ی آن صفحه بی‌صدا از بین می‌رفت.
+   */
   const dirty =
-    draftName.trim() !== (user?.name ?? '') ||
-    draftBio.trim() !== (user?.bio ?? '') ||
+    draftName.trim() !== (user?.name ?? '') || draftBio.trim() !== (user?.bio ?? '');
+
+  const interestsDirty =
     [...draftInterests].sort().join('|') !== [...(user?.interests ?? [])].sort().join('|');
 
-  const saveProfile = useCallback(async () => {
-    if (draftName.trim().length < 2) return;
+  /** true یعنی ذخیره شد — صفحه‌ی ویرایش با همین مقدار تصمیم می‌گیرد که برگردد یا نه. */
+  const saveProfile = useCallback(async (): Promise<boolean> => {
+    if (draftName.trim().length < 2) return false;
     setSaving(true);
     setSaveError(false);
     try {
-      await uc.profile.updateProfile({
-        name: draftName.trim(),
-        bio: draftBio.trim(),
-        interests: draftInterests,
-      });
+      await uc.profile.updateProfile({ name: draftName.trim(), bio: draftBio.trim() });
       await refreshUser();
+      return true;
     } catch {
       setSaveError(true);
+      return false;
     } finally {
       setSaving(false);
     }
-  }, [draftName, draftBio, draftInterests, uc, refreshUser]);
+  }, [draftName, draftBio, uc, refreshUser]);
+
+  /** ذخیره‌ی صفحه‌ی علاقه‌مندی‌ها — فقط همین یک فیلد. */
+  const saveInterests = useCallback(async (): Promise<boolean> => {
+    setSaving(true);
+    setSaveError(false);
+    try {
+      await uc.profile.updateProfile({ interests: draftInterests });
+      await refreshUser();
+      return true;
+    } catch {
+      setSaveError(true);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, [draftInterests, uc, refreshUser]);
 
   /** به‌روزرسانیِ هر زیرمجموعه‌ای از تنظیماتِ حریمِ خصوصی (سرور prefs را merge می‌کند). */
   const updatePrefs = useCallback(async (partial: Partial<UserPreferences>, key?: string) => {
@@ -129,8 +156,14 @@ export function useProfileViewModel() {
     }
   }, [uc, refreshUser]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  /**
+   * `silent` یعنی بدونِ اسکلتِ تمام‌صفحه — برای تازه‌سازی‌هایی که کاربر خودش
+   * درخواستشان نکرده (بازگشت از صفحه‌ی عکس‌ها، حذف/افزودنِ عکس). بدونِ آن، هر
+   * بار برگشتن به صفحه‌ی «من» کلِ محتوا یک لحظه با اسکلت جایگزین می‌شد.
+   */
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (skipMedia) return;
+    if (!silent) setLoading(true);
     try {
       const [p, v, fr, fg] = await Promise.all([
         uc.profile.getPhotos(),
@@ -147,11 +180,21 @@ export function useProfileViewModel() {
     } finally {
       setLoading(false);
     }
-  }, [uc]);
+  }, [uc, skipMedia]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  /*
+   * عکس‌ها حالا در صفحه‌ی جداگانه‌ی ‎/photos‎ مدیریت می‌شوند؛ بدونِ این، بازگشت
+   * به صفحه‌ی «من» هنوز شبکه‌ی قبلی را نشان می‌داد و عکسِ تازه‌آپلودشده در
+   * نوارِ پیش‌نمایش نبود.
+   */
+  const reload = useCallback(() => {
+    void load({ silent: true });
+  }, [load]);
+  useRefetchOnFocus(reload);
 
   /**
    * برگه‌ی انتخابِ سرچشمه (دوربین/گالری) را باز می‌کند؛ بقیه‌ی کار با PhotoPicker است.
@@ -184,7 +227,7 @@ export function useProfileViewModel() {
       } finally {
         makePrimaryOnUpload.current = false;
         // حتی اگر مرحله‌ی «اصلی‌کردن» شکست بخورد، عکس آپلود شده و باید دیده شود.
-        await load();
+        await load({ silent: true });
         await refreshUser().catch(() => {});
         setBusy(false);
       }
@@ -225,7 +268,7 @@ export function useProfileViewModel() {
       setPhotoError(null);
       try {
         await uc.profile.deletePhoto(id);
-        await load();
+        await load({ silent: true });
         await refreshUser();
       } catch (e) {
         setPhotoError(photoErrorMessage(e));
@@ -244,6 +287,7 @@ export function useProfileViewModel() {
     followingCount,
     loading,
     busy,
+    reload,
     addPhoto,
     pickerOpen,
     closePicker,
@@ -261,9 +305,11 @@ export function useProfileViewModel() {
     draftInterests,
     setDraftInterests,
     dirty,
+    interestsDirty,
     saving,
     saveError,
     saveProfile,
+    saveInterests,
     privacySaving,
     savingPref,
     updateMapPrivacy,
