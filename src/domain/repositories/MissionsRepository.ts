@@ -1,6 +1,9 @@
 import type {
   MissionsOverview,
   Mission,
+  MissionProof,
+  Leaderboard,
+  LeaderWindow,
   PointEntry,
   PointsState,
   RedeemResult,
@@ -12,8 +15,16 @@ import type {
 export interface MissionsRepository {
   /** ماموریت‌ها + وضعیتِ من + امتیاز + کارتِ دعوت. */
   getMissions(): Promise<MissionsOverview>;
-  /** honor: «برو انجام بده» — تایمرِ بررسی را مسلح می‌کند. */
+  /** جدولِ رتبه‌بندیِ یک بازه + جایگاهِ خودِ من. */
+  getLeaderboard(window: LeaderWindow): Promise<Leaderboard>;
+  /** صفحه‌ی جزئیات: توضیح، مراحل، قوانین، مدرک‌ها و وضعیتِ من. */
+  getMission(missionId: number): Promise<Mission>;
+  /** honor: «برو انجام بده». manual: ردیفِ دوره را می‌سازد تا مدرک جا داشته باشد. */
   startMission(missionId: number): Promise<Mission>;
+  /** یک عکسِ مدرک برای ماموریتِ دستی. قبل از claim صدا زده می‌شود. */
+  uploadProof(missionId: number, uri: string): Promise<MissionProof>;
+  /** برداشتنِ عکس پیش از ارسال یا بعد از رد شدن. */
+  deleteProof(proofId: number): Promise<void>;
   /** honor: دریافتِ امتیاز، یا manual: فرستادنِ مدرک. */
   claimMission(missionId: number, proof?: string): Promise<{ mission: Mission; points: PointsState }>;
 

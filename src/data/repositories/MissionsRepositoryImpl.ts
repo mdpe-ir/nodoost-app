@@ -2,9 +2,15 @@ import type { MissionsRepository } from '@/domain/repositories/MissionsRepositor
 import type {
   Invitee,
   Mission,
+  Leaderboard,
+  LeaderEntry,
+  LeaderWindow,
   MissionLockReason,
+  MissionProof,
+  MissionProofKind,
   MissionRepeatMode,
   MissionState,
+  MissionStep,
   MissionVerifyKind,
   MissionsOverview,
   PointEntry,
@@ -40,11 +46,27 @@ interface PointsDTO {
   to_next?: number;
 }
 
+interface MissionStepDTO {
+  title?: string;
+  body?: string;
+  href?: string;
+}
+
+interface MissionProofDTO {
+  id: number;
+  url: string;
+  created_at: string;
+}
+
 interface MissionDTO {
   id: number;
   code: string;
   title: string;
+  summary?: string;
   description?: string;
+  badge_url?: string;
+  steps?: MissionStepDTO[] | null;
+  rules?: string[] | null;
   cta_label?: string;
   cta_url?: string;
   verify_kind: string;
@@ -61,6 +83,16 @@ interface MissionDTO {
   claimable?: boolean;
   locked?: boolean;
   lock_reason?: string;
+  proof_kind?: string;
+  proof_label?: string;
+  proof_min_images?: number;
+  proof_max_images?: number;
+  proofs?: MissionProofDTO[] | null;
+  proof?: string;
+  review_note?: string;
+  attempt?: number;
+  attempts_left?: number;
+  review_sla_hours?: number;
 }
 
 interface RewardDTO {
@@ -121,11 +153,66 @@ const toPoints = (d?: PointsDTO | null): PointsState => ({
   toNext: d?.to_next ?? 0,
 });
 
+// مرحله‌ی بی‌عنوان در سرور حذف می‌شود، ولی اپ هم دفاع می‌کند: پاسخِ کهنه از
+// نسخه‌ی قدیمیِ سرور نباید ردیفِ خالی رندر کند.
+const toStep = (d: MissionStepDTO): MissionStep => ({
+  title: d.title ?? '',
+  body: d.body || undefined,
+  href: d.href || undefined,
+});
+
+const toProof = (d: MissionProofDTO): MissionProof => ({
+  id: d.id,
+  url: mediaUrl(d.url) ?? d.url,
+  createdAt: d.created_at,
+});
+
+interface LeaderEntryDTO {
+  rank: number;
+  user_id: number;
+  name?: string;
+  photo_url?: string;
+  points: number;
+  is_me?: boolean;
+}
+
+interface LeaderboardDTO {
+  window: string;
+  label?: string;
+  entries?: LeaderEntryDTO[] | null;
+  me?: { rank?: number; points?: number; in_top?: boolean };
+  total?: number;
+  resets_at?: string | null;
+}
+
+const toLeaderEntry = (d: LeaderEntryDTO): LeaderEntry => ({
+  rank: d.rank,
+  userId: d.user_id,
+  name: d.name || '',
+  photoUrl: d.photo_url ? mediaUrl(d.photo_url) : undefined,
+  points: d.points,
+  isMe: Boolean(d.is_me),
+});
+
 const toMission = (d: MissionDTO): Mission => ({
   id: d.id,
   code: d.code,
   title: d.title,
+  summary: d.summary ?? d.description ?? '',
   description: d.description ?? '',
+  badgeUrl: d.badge_url ? mediaUrl(d.badge_url) : undefined,
+  steps: (d.steps ?? []).map(toStep).filter((s) => s.title !== ''),
+  rules: (d.rules ?? []).filter((r) => typeof r === 'string' && r.trim() !== ''),
+  proofKind: (d.proof_kind ?? 'none') as MissionProofKind,
+  proofLabel: d.proof_label || undefined,
+  proofMinImages: d.proof_min_images ?? 0,
+  proofMaxImages: d.proof_max_images ?? 0,
+  proofs: (d.proofs ?? []).map(toProof),
+  proof: d.proof || undefined,
+  reviewNote: d.review_note || undefined,
+  attempt: d.attempt ?? 0,
+  attemptsLeft: d.attempts_left ?? 0,
+  reviewSlaHours: d.review_sla_hours ?? 24,
   ctaLabel: d.cta_label || undefined,
   ctaUrl: d.cta_url || undefined,
   verifyKind: d.verify_kind as MissionVerifyKind,
@@ -209,6 +296,43 @@ export class MissionsRepositoryImpl implements MissionsRepository {
           }
         : undefined,
     };
+  }
+
+  async getLeaderboard(window: LeaderWindow): Promise<Leaderboard> {
+    const d = await this.http.request<LeaderboardDTO>(
+      `/api/me/leaderboard?window=${window}`
+    );
+    return {
+      window: (d?.window ?? window) as LeaderWindow,
+      label: d?.label ?? '',
+      entries: (d?.entries ?? []).map(toLeaderEntry),
+      me: {
+        rank: d?.me?.rank ?? 0,
+        points: d?.me?.points ?? 0,
+        inTop: Boolean(d?.me?.in_top),
+      },
+      total: d?.total ?? 0,
+      resetsAt: d?.resets_at ?? undefined,
+    };
+  }
+
+  async getMission(missionId: number): Promise<Mission> {
+    const d = await this.http.request<{ mission: MissionDTO }>(
+      `/api/me/missions/${missionId}`
+    );
+    return toMission(d.mission);
+  }
+
+  async uploadProof(missionId: number, uri: string): Promise<MissionProof> {
+    const d = await this.http.upload<{ proof: MissionProofDTO }>(
+      `/api/me/missions/${missionId}/proof`,
+      uri
+    );
+    return toProof(d.proof);
+  }
+
+  async deleteProof(proofId: number): Promise<void> {
+    await this.http.request(`/api/me/mission-proofs/${proofId}`, { method: 'DELETE' });
   }
 
   async startMission(missionId: number): Promise<Mission> {

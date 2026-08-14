@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 
 import { Button } from './Button';
 import { RankBadge } from './RankBadge';
@@ -105,7 +105,7 @@ export function RankSheet({
             icon="star"
             onPress={() => {
               onDismiss();
-              router.push('/missions');
+              router.push('/arena' as Href);
             }}
             style={{ marginTop: spacing.lg }}
           />

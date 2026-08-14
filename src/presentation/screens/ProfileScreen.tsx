@@ -294,14 +294,14 @@ export function ProfileScreen() {
                   : 'به بالاترین رتبه رسیده‌ای.'}
               </Text>
               <Text style={styles.pointsLead}>
-                ماموریت‌ها را انجام بده، امتیاز بگیر و آن را به اشتراکِ رایگان تبدیل کن.
+                ماموریت‌ها، جوایز و جدولِ رتبه‌بندی به تبِ «قهرمانی» منتقل شده‌اند.
               </Text>
               <Button
-                label="دیدنِ ماموریت‌ها"
+                label="رفتن به قهرمانی"
                 icon="star"
                 size="md"
                 variant="ghost"
-                onPress={() => router.push('/missions' as Href)}
+                onPress={() => router.push('/arena' as Href)}
               />
             </View>
           </>

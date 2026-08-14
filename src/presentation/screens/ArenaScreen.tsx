@@ -11,10 +11,9 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 
-import { ScreenContainer } from '@/presentation/components/ScreenContainer';
-import { StackHeader } from '@/presentation/components/StackHeader';
+import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { SegmentedControl } from '@/presentation/components/SegmentedControl';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Button } from '@/presentation/components/Button';
@@ -22,6 +21,7 @@ import { Icon } from '@/presentation/components/Icon';
 import { RankBadge } from '@/presentation/components/RankBadge';
 import { RankSheet } from '@/presentation/components/RankSheet';
 import { RowsSkeleton } from '@/presentation/components/Skeleton';
+import { LeaderboardPanel } from '@/presentation/components/LeaderboardPanel';
 import { tierName } from '@/presentation/components/TierBadge';
 import { useMissionsViewModel } from '@/presentation/hooks/useMissionsViewModel';
 import { faNum } from '@/core/utils/faNum';
@@ -29,11 +29,12 @@ import { timeAgo } from '@/core/utils/time';
 import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
 import type { Mission, PointsState, Redemption, Reward } from '@/domain/entities';
 
-type Tab = 'missions' | 'rewards' | 'points';
+type Tab = 'missions' | 'rewards' | 'ranking' | 'points';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'missions', label: 'ماموریت‌ها' },
   { key: 'rewards', label: 'جوایز' },
+  { key: 'ranking', label: 'رتبه‌بندی' },
   { key: 'points', label: 'امتیازِ من' },
 ];
 
@@ -59,13 +60,17 @@ const REDEMPTION_TEXT: Record<Redemption['status'], string> = {
 };
 
 /**
- * صفحه‌ی امتیاز و ماموریت — سه بخش: کارهایی که می‌شود کرد، چیزهایی که می‌شود
- * گرفت، و دفترِ خودِ کاربر.
+ * «قهرمانی» — خانه‌ی همه‌ی چیزهایی که کاربر با تلاشش به دست می‌آورد:
+ * کارهایی که می‌شود کرد، چیزهایی که می‌شود گرفت، جای خودش بینِ بقیه، و
+ * دفترِ خودش.
+ *
+ * جای تبِ میانیِ برجسته را گرفت (گفتگوی تصادفی به «اطراف» رفت) چون این
+ * حلقه — ماموریت ← امتیاز ← جایزه — چیزی است که کاربر باید هر روز ببیند.
  *
  * سرور تصمیم می‌گیرد هر دکمه فعال باشد یا نه (claimable/redeemable) و اپ فقط
  * روایتش می‌کند؛ هیچ سقفی این‌جا دوباره حساب نمی‌شود.
  */
-export function MissionsScreen() {
+export function ArenaScreen() {
   const vm = useMissionsViewModel();
   const [tab, setTab] = useState<Tab>('missions');
   const [rankSheet, setRankSheet] = useState(false);
@@ -92,7 +97,7 @@ export function MissionsScreen() {
 
   return (
     <ScreenContainer>
-      <StackHeader title="امتیاز و ماموریت" />
+      <ScreenHeader title="قهرمانی" subtitle="ماموریت بده، امتیاز بگیر، بالا برو" />
 
       {vm.overview && !vm.overview.enabled ? (
         <EmptyState
@@ -134,6 +139,7 @@ export function MissionsScreen() {
                 <MissionsTab vm={vm} now={now} onInvite={() => router.push('/invite')} />
               )}
               {tab === 'rewards' && <RewardsTab vm={vm} />}
+              {tab === 'ranking' && <LeaderboardPanel />}
               {tab === 'points' && <PointsTab vm={vm} />}
             </ScrollView>
           )}
@@ -247,26 +253,39 @@ function MissionsTab({ vm, now, onInvite }: { vm: VM; now: number; onInvite: () 
   );
 }
 
+/**
+ * کارتِ ماموریت. کلِ کارت به صفحه‌ی جزئیات می‌رود، ولی کنشِ سریعِ ماموریت‌های
+ * ساده (auto/honor) روی خودِ کارت می‌ماند: «امروز سر زدی» نباید کاربر را
+ * مجبور کند برای یک تپ واردِ صفحه شود. ماموریتِ مدرک‌دار برعکس، فقط از صفحه‌ی
+ * جزئیات ارسال می‌شود چون آن‌جا قوانین و مراحل هم جلوی چشم است.
+ */
 function MissionCard({ mission, vm, now }: { mission: Mission; vm: VM; now: number }) {
-  const [proof, setProof] = useState('');
   const busy = vm.busyMission === mission.id;
   const doneState = mission.state === 'completed';
   const pending = mission.state === 'pending_review';
+  const rejected = mission.state === 'rejected';
 
   const readyIn = mission.readyAt
     ? Math.max(0, Math.ceil((new Date(mission.readyAt).getTime() - now) / 1000))
     : 0;
 
   return (
-    <Animated.View
-      entering={FadeInDown.duration(240)}
-      style={[styles.card, (doneState || mission.locked) && styles.cardDim]}
-    >
+    <Animated.View entering={FadeInDown.duration(240)}>
+      <Pressable
+        onPress={() => router.push(`/mission/${mission.id}` as Href)}
+        accessibilityRole="button"
+        accessibilityLabel={`جزئیاتِ ${mission.title}`}
+        style={({ pressed }) => [
+          styles.card,
+          (doneState || mission.locked) && styles.cardDim,
+          pressed && styles.cardPressed,
+        ]}
+      >
       <View style={styles.cardHead}>
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{mission.title}</Text>
-          {mission.description ? (
-            <Text style={styles.cardDesc}>{mission.description}</Text>
+          {mission.summary ? (
+            <Text style={styles.cardDesc}>{mission.summary}</Text>
           ) : null}
         </View>
         <Text style={[styles.reward, doneState && styles.rewardDone]}>
@@ -304,24 +323,14 @@ function MissionCard({ mission, vm, now }: { mission: Mission; vm: VM; now: numb
       ) : doneState ? null : mission.verifyKind === 'honor' ? (
         <HonorActions mission={mission} vm={vm} busy={busy} readyIn={readyIn} />
       ) : mission.verifyKind === 'manual' ? (
-        <View style={styles.manual}>
-          <TextInput
-            value={proof}
-            onChangeText={setProof}
-            placeholder="توضیح یا لینکِ مدرک"
-            placeholderTextColor={colors.ink3}
-            style={styles.input}
-            multiline
-          />
-          <Button
-            label="ارسال برای بررسی"
-            size="sm"
-            variant="outline"
-            loading={busy}
-            onPress={() => vm.claim(mission.id, proof.trim())}
-          />
+        <View style={styles.cardCta}>
+          <Text style={[styles.cardCtaText, rejected && styles.cardCtaWarn]}>
+            {rejected ? 'تأیید نشد — دلیلش را ببین و دوباره بفرست' : 'ارسالِ مدرک'}
+          </Text>
+          <Icon name="chevron-prev" size={14} tint="gold" />
         </View>
       ) : null}
+      </Pressable>
     </Animated.View>
   );
 }
@@ -563,6 +572,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
+  cardPressed: { opacity: 0.7 },
+  cardCta: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  cardCtaText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.gold,
+    writingDirection: 'rtl',
+  },
+  cardCtaWarn: { color: colors.ink2 },
   cardDim: { opacity: 0.55 },
   inviteCard: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
   pressed: { opacity: 0.8 },

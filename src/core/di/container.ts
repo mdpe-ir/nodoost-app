@@ -152,7 +152,11 @@ export function createContainer() {
     },
     missions: {
       getMissions: missions.makeGetMissions(missionsRepo),
+      getMission: missions.makeGetMission(missionsRepo),
+      getLeaderboard: missions.makeGetLeaderboard(missionsRepo),
       startMission: missions.makeStartMission(missionsRepo),
+      uploadProof: missions.makeUploadProof(missionsRepo),
+      deleteProof: missions.makeDeleteProof(missionsRepo),
       claimMission: missions.makeClaimMission(missionsRepo),
       getPoints: missions.makeGetPoints(missionsRepo),
       getRewards: missions.makeGetRewards(missionsRepo),

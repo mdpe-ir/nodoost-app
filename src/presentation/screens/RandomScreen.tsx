@@ -27,7 +27,11 @@ const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
   { key: 'm', label: 'مرد' },
 ];
 
-export function RandomScreen() {
+/**
+ * نمای گفتگوی تصادفی — داخلِ صفحه‌ی «اطراف» رندر می‌شود (هدر و قابِ صفحه را
+ * میزبان می‌دهد). هم‌الگوی ExploreView و MapView.
+ */
+export function RandomView() {
   const vm = useRandomViewModel();
   const { user } = useSession();
   const { quota } = useQuota();
@@ -56,9 +60,7 @@ export function RandomScreen() {
   }));
 
   return (
-    <ScreenContainer>
-      <ScreenHeader title="تصادفی" subtitle="با یک غریبه‌ی نزدیک، گفتگوی زنده را شروع کن" />
-
+    <View style={styles.root}>
       <View style={styles.center}>
         <View style={styles.orbWrap}>
           {waiting ? <Animated.View style={[styles.pulseRing, ringStyle]} /> : null}
@@ -120,11 +122,25 @@ export function RandomScreen() {
       />
 
       <UpgradeSheet visible={vm.limitHit} onClose={vm.dismissLimit} quotaKey="random" />
+    </View>
+  );
+}
+
+/**
+ * مسیرِ مستقلِ گفتگوی تصادفی. تبِ خودش را از دست داده و به «اطراف» منتقل شده،
+ * ولی مسیر می‌ماند تا لینک‌های قدیمی (اعلان، پیامِ درون‌برنامه‌ای) نشکنند.
+ */
+export function RandomScreen() {
+  return (
+    <ScreenContainer>
+      <ScreenHeader title="تصادفی" subtitle="با یک غریبه‌ی نزدیک، گفتگوی زنده را شروع کن" />
+      <RandomView />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   quotaBox: {
     marginTop: spacing.md,
     padding: spacing.md,

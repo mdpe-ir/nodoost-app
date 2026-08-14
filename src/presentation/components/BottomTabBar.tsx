@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Icon, type IconName } from './Icon';
 import { CountBadge } from './CountBadge';
 import { useBadges } from '@/presentation/providers/BadgesProvider';
@@ -12,13 +13,12 @@ import { colors, fonts, gradients, radius, shadow } from '@/core/theme';
 const ICONS: Record<string, IconName> = {
   discover: 'tab-discover',
   nearby: 'map',
-  random: 'lightning-fill',
   chat: 'tab-chat',
   profile: 'tab-profile',
 };
 
-/** تبِ میانی — کنشِ برجسته‌ی «تصادفی». */
-const CENTER_ROUTE = 'random';
+/** تبِ میانی — کنشِ برجسته‌ی «قهرمانی». */
+const CENTER_ROUTE = 'arena';
 
 interface Route {
   key: string;
@@ -77,7 +77,9 @@ export function BottomTabBar({ state, descriptors, navigation }: TabBarProps) {
                     end={{ x: 1, y: 1 }}
                     style={StyleSheet.absoluteFill}
                   />
-                  <Icon name={iconName} size={26} tint="ink" />
+                  {/* جامِ قهرمانی در پکِ آیکونِ برند نیست؛ تنها جای اپ که از
+                      آیکونِ برداری استفاده می‌کنیم، و همین یک نقطه است. */}
+                  <Ionicons name="trophy" size={26} color={colors.bg} />
                 </Pressable>
               </View>
             );

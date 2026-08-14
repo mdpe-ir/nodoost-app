@@ -20,11 +20,33 @@ export type MissionState =
 /** دلیلِ قفل‌بودنِ ماموریت — کارت را خاکستری می‌کند ولی پنهانش نمی‌کند. */
 export type MissionLockReason = 'tier' | 'profile';
 
+/** چه مدرکی برای ماموریتِ دستی لازم است. */
+export type MissionProofKind = 'none' | 'text' | 'image' | 'image_and_text';
+
+/** یک مرحله از «چطور انجامش بدهم». نمایشی است؛ href آن را قابلِ زدن می‌کند. */
+export interface MissionStep {
+  title: string;
+  body?: string;
+  /** مسیرِ داخلیِ اپ (مثل /photos) یا نشانیِ وب. */
+  href?: string;
+}
+
+/** یک عکسِ مدرکِ ارسال‌شده. نشانی امضاشده و منقضی‌شونده است. */
+export interface MissionProof {
+  id: number;
+  url: string;
+  createdAt: string;
+}
+
 export interface Mission {
   id: number;
   code: string;
   title: string;
+  /** یک‌خطی برای کارتِ فهرست. */
+  summary: string;
+  /** متنِ بلندِ صفحه‌ی جزئیات — در پاسخِ فهرست خالی است. */
   description: string;
+  badgeUrl?: string;
   ctaLabel?: string;
   ctaUrl?: string;
   verifyKind: MissionVerifyKind;
@@ -43,6 +65,25 @@ export interface Mission {
   claimable: boolean;
   locked: boolean;
   lockReason?: MissionLockReason;
+
+  /** مراحل و قوانین فقط در پاسخِ جزئیات می‌آیند. */
+  steps: MissionStep[];
+  rules: string[];
+
+  proofKind: MissionProofKind;
+  proofLabel?: string;
+  proofMinImages: number;
+  proofMaxImages: number;
+  /** عکس‌های همین دوره — فقط در پاسخِ جزئیات. */
+  proofs: MissionProof[];
+  /** متنِ مدرکی که قبلاً فرستاده شده. */
+  proof?: string;
+  /** دلیلِ ردِ ادمین. کاربر باید بداند چه چیزی را درست کند. */
+  reviewNote?: string;
+  attempt: number;
+  attemptsLeft: number;
+  /** مهلتِ اعلام‌شده‌ی بازبینی، برای متنِ «معمولاً تا ۲۴ ساعت». */
+  reviewSlaHours: number;
 }
 
 export interface Rank {
@@ -198,6 +239,40 @@ export interface ReferralOverview {
   summary: ReferralSummary;
   invitees: Invitee[];
   total: number;
+}
+
+// ── رتبه‌بندیِ دوره‌ای ────────────────────────────────────────────────────────
+
+/** بازه‌های جدولِ رتبه‌بندی. تقویمی‌اند (به وقتِ تهران و تقویمِ شمسی)، نه غلتان. */
+export type LeaderWindow = 'daily' | 'weekly' | 'monthly' | 'all';
+
+export interface LeaderEntry {
+  rank: number;
+  userId: number;
+  name: string;
+  photoUrl?: string;
+  points: number;
+  isMe: boolean;
+}
+
+/** جایگاهِ خودِ کاربر — جدا از فهرست، چون معمولاً در صدرِ جدول نیست. */
+export interface MyStanding {
+  /** ۰ یعنی در این بازه امتیازی نگرفته و اصلاً رتبه‌ای ندارد. */
+  rank: number;
+  points: number;
+  /** در همان فهرستی که نشان داده می‌شود هست یا نه. */
+  inTop: boolean;
+}
+
+export interface Leaderboard {
+  window: LeaderWindow;
+  /** عنوانِ فارسیِ بازه — «این هفته»، «مرداد»… */
+  label: string;
+  entries: LeaderEntry[];
+  me: MyStanding;
+  total: number;
+  /** لحظه‌ی صفر شدنِ بازه (ISO)؛ برای بازه‌ی کلی وجود ندارد. */
+  resetsAt?: string;
 }
 
 /** رتبه از روی امتیازِ طولِ عمر — برای وقتی که فقط کاتالوگ در دست است. */
