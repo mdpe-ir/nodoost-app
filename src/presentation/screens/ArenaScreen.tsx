@@ -10,6 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { AnimatedNumber } from '@/presentation/components/AnimatedNumber';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, type Href } from 'expo-router';
 
@@ -181,7 +183,7 @@ function PointsHeader({
       <View style={styles.headRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headLabel}>امتیازِ من</Text>
-          <Text style={styles.headValue}>{faNum(points.balance)}</Text>
+          <AnimatedNumber value={points.balance} style={styles.headValue} />
         </View>
         <RankBadge rank={points.rank} height={26} onPress={onRankPress} />
       </View>
@@ -214,9 +216,11 @@ function MissionsTab({ vm, now, onInvite }: { vm: VM; now: number; onInvite: () 
     <>
       {ov.referralCard ? (
         <Animated.View entering={FadeInDown.duration(240)}>
-          <Pressable
+          <PressableScale
+            scaleTo={0.98}
+            feedback="select"
             onPress={onInvite}
-            style={({ pressed }) => [styles.card, styles.inviteCard, pressed && styles.pressed]}
+            style={[styles.card, styles.inviteCard]}
           >
             <View style={styles.cardHead}>
               <View style={{ flex: 1 }}>
@@ -229,7 +233,7 @@ function MissionsTab({ vm, now, onInvite }: { vm: VM; now: number; onInvite: () 
               <Icon name="chevron-prev" size={16} tint="gold" />
               <Text style={styles.inviteCtaText}>{ov.referralCard.ctaLabel}</Text>
             </View>
-          </Pressable>
+          </PressableScale>
         </Animated.View>
       ) : null}
 
@@ -271,15 +275,13 @@ function MissionCard({ mission, vm, now }: { mission: Mission; vm: VM; now: numb
 
   return (
     <Animated.View entering={FadeInDown.duration(240)}>
-      <Pressable
+      <PressableScale
+        scaleTo={0.98}
+        feedback="select"
         onPress={() => router.push(`/mission/${mission.id}` as Href)}
         accessibilityRole="button"
         accessibilityLabel={`جزئیاتِ ${mission.title}`}
-        style={({ pressed }) => [
-          styles.card,
-          (doneState || mission.locked) && styles.cardDim,
-          pressed && styles.cardPressed,
-        ]}
+        style={[styles.card, (doneState || mission.locked) && styles.cardDim]}
       >
       <View style={styles.cardHead}>
         <View style={{ flex: 1 }}>
@@ -330,7 +332,7 @@ function MissionCard({ mission, vm, now }: { mission: Mission; vm: VM; now: numb
           <Icon name="chevron-prev" size={14} tint="gold" />
         </View>
       ) : null}
-      </Pressable>
+      </PressableScale>
     </Animated.View>
   );
 }
@@ -496,11 +498,11 @@ function PointsTab({ vm }: { vm: VM }) {
         <View style={styles.statRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.statLabel}>موجودیِ خرج‌شدنی</Text>
-            <Text style={styles.statValue}>{faNum(p.balance)}</Text>
+            <AnimatedNumber value={p.balance} style={styles.statValue} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.statLabel}>مجموعِ کسب‌شده</Text>
-            <Text style={styles.statValue}>{faNum(p.earned)}</Text>
+            <AnimatedNumber value={p.earned} style={styles.statValue} />
           </View>
         </View>
         <Text style={styles.cardDesc}>
@@ -534,6 +536,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.lg,
@@ -569,10 +572,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
-  cardPressed: { opacity: 0.7 },
   cardCta: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -588,7 +591,6 @@ const styles = StyleSheet.create({
   cardCtaWarn: { color: colors.ink2 },
   cardDim: { opacity: 0.55 },
   inviteCard: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
-  pressed: { opacity: 0.8 },
   cardHead: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: spacing.md },
   cardTitle: {
     fontFamily: fonts.bold,
@@ -686,6 +688,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -727,6 +730,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,

@@ -5,12 +5,12 @@ import {
   ScrollView,
   StyleSheet,
   Modal,
-  Pressable,
   TextInput,
   useWindowDimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { ScreenContainer, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
@@ -54,15 +54,17 @@ function FollowStat({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.9}
+      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${faNum(value)}`}
-      style={({ pressed }) => [styles.followStat, pressed && styles.followStatPressed]}
+      style={styles.followStat}
     >
       <Text style={styles.followStatValue}>{faNum(value)}</Text>
       <Text style={styles.followStatLabel}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -318,29 +320,33 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           />
         ) : null}
 
-        <Pressable
+        <PressableScale
+          scaleTo={0.9}
+          feedback="select"
           accessibilityRole="button"
           accessibilityLabel="گزارش عکس پروفایل"
           onPress={() => setReportOpen(true)}
-          style={({ pressed }) => [styles.reportLink, pressed && styles.reportLinkPressed]}
+          style={styles.reportLink}
         >
           <Icon name="shield" size={15} tint="ink" />
           <Text style={styles.reportLinkText}>{vm.reported ? 'گزارش ثبت شد' : 'گزارش عکس پروفایل'}</Text>
-        </Pressable>
+        </PressableScale>
 
         {/*
           * مسدود کردن. اندپوینتش از ابتدا بود و هیچ دکمه‌ای صدایش نمی‌زد —
           * همان چیزی که کاربران گزارش کردند «نمی‌شود کسی را بلاک کرد».
           */}
-        <Pressable
+        <PressableScale
+          scaleTo={0.9}
+          feedback="select"
           accessibilityRole="button"
           accessibilityLabel={`مسدود کردنِ ${p.name ?? 'این کاربر'}`}
           onPress={() => setBlockOpen(true)}
-          style={({ pressed }) => [styles.reportLink, pressed && styles.reportLinkPressed]}
+          style={styles.reportLink}
         >
           <Icon name="lock" size={15} tint="ink" />
           <Text style={[styles.reportLinkText, styles.blockLinkText]}>مسدود کردن</Text>
-        </Pressable>
+        </PressableScale>
       </ScrollView>
 
       <ActionSheet
@@ -441,6 +447,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   noPhoto: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
   noPhotoText: { fontFamily: fonts.bold, fontSize: 72, color: colors.goldSoft },
@@ -489,13 +496,12 @@ const styles = StyleSheet.create({
   matchTagText: { color: colors.rose, fontSize: fontSizes.xs },
   reportLink: { flexDirection: 'row-reverse', alignSelf: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg, padding: spacing.sm },
   blockLinkText: { color: colors.rose },
-  reportLinkPressed: { opacity: 0.6 },
   reportLinkText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
   modalBackdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(0,0,0,0.72)' },
-  reportModal: { borderRadius: radius.xl, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, padding: spacing.lg },
+  reportModal: { borderRadius: radius.xl, borderWidth: 1, borderColor: colors.line, borderTopColor: colors.rim, backgroundColor: colors.surface, padding: spacing.lg },
   reportTitle: { fontFamily: fonts.bold, fontSize: fontSizes.lg, color: colors.ink, textAlign: 'right' },
   reportHint: { marginTop: spacing.xs, fontFamily: fonts.regular, fontSize: fontSizes.sm, color: colors.ink2, textAlign: 'right' },
-  reportInput: { minHeight: 110, marginTop: spacing.md, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: spacing.md, fontFamily: fonts.regular, color: colors.ink, backgroundColor: colors.surface2, textAlignVertical: 'top' },
+  reportInput: { minHeight: 110, marginTop: spacing.md, borderWidth: 1, borderColor: colors.line, borderTopColor: colors.rim, borderRadius: radius.lg, padding: spacing.md, fontFamily: fonts.regular, color: colors.ink, backgroundColor: colors.surface2, textAlignVertical: 'top' },
   reportError: { marginTop: spacing.xs, fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.rose, textAlign: 'right' },
   modalActions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.md },
   modalButton: { flex: 1 },
@@ -525,6 +531,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   interestText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
   interestShared: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
@@ -547,7 +554,6 @@ const styles = StyleSheet.create({
   followCounts: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center' },
   followDivider: { width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: spacing.md },
   followStat: { alignItems: 'center' },
-  followStatPressed: { opacity: 0.6 },
   followStatValue: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.ink },
   followStatLabel: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3 },
   followBtn: { minWidth: 132 },

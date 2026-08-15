@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Modal, Pressable, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import { PressableScale } from './PressableScale';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from './Button';
 import { Icon } from './Icon';
@@ -133,9 +134,9 @@ export function ProofPicker({ visible, onClose, onPicked, onError }: Props) {
                 }}
                 style={styles.cardBtn}
               />
-              <Pressable onPress={close} hitSlop={8} accessibilityRole="button">
+              <PressableScale onPress={close} hitSlop={8} accessibilityRole="button" scaleTo={0.85} feedback="select">
                 <Text style={styles.later}>الان نه</Text>
-              </Pressable>
+              </PressableScale>
             </View>
           </View>
         </View>
@@ -170,6 +171,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     padding: spacing.xl,
     alignItems: 'center',

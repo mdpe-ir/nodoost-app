@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { PressableScale } from './PressableScale';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Icon, type IconName } from './Icon';
 import { colors, fonts, fontSizes, spacing, radius } from '@/core/theme';
@@ -24,24 +25,25 @@ export function NudgeBanner({ icon = 'shield', title, hint, ctaLabel, onPress, b
       <View style={styles.body}>
         <Text style={styles.title}>{title}</Text>
         {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-        <Pressable
+        <PressableScale
           style={styles.cta}
           onPress={onPress}
           disabled={busy}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}
+          scaleTo={0.94}
         >
           {busy ? (
             <ActivityIndicator size="small" color={colors.gold2} />
           ) : (
             <Text style={styles.ctaText}>{ctaLabel}</Text>
           )}
-        </Pressable>
+        </PressableScale>
       </View>
       {onDismiss ? (
-        <Pressable onPress={onDismiss} hitSlop={10} accessibilityLabel="بستن">
+        <PressableScale onPress={onDismiss} hitSlop={10} accessibilityLabel="بستن" scaleTo={0.85} feedback="select">
           <Icon name="close" size={16} tint="ink" />
-        </Pressable>
+        </PressableScale>
       ) : null}
     </Animated.View>
   );

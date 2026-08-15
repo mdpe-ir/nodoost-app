@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, type Href } from 'expo-router';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
@@ -8,6 +14,13 @@ import { NotificationBell } from '@/presentation/components/NotificationBell';
 import { SupportButton } from '@/presentation/components/SupportButton';
 import { MembershipChip } from '@/presentation/components/MembershipChip';
 import { Icon } from '@/presentation/components/Icon';
+import { PressableScale } from '@/presentation/components/PressableScale';
+
+/** حالتِ رهای پس‌زمینه‌ی دکمه‌های هدر — `surface` با آلفای صفر. */
+const HEAD_IDLE = 'rgba(22,18,28,0)';
+
+/** مسافتِ اسکرولی که در آن عنوان به کوچک‌ترین حالتش می‌رسد. */
+const COLLAPSE_RANGE = 90;
 
 /** حاشیه‌ی افقیِ استانداردِ صفحات — برای محاسبه‌ی عرضِ سلول‌ها هم استفاده می‌شود. */
 export const PAGE_PADDING = 18;
@@ -50,11 +63,17 @@ export function ScreenHeader({
   support,
   membership,
   settings,
+  titleSlot,
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
   onBack?: () => void;
+  /**
+   * جایگزینِ بلوکِ عنوان — برای صفحه‌ای که عنوانش با اسکرول جمع می‌شود.
+   * `title` را همچنان بده؛ برای دسترس‌پذیری و حالتِ بازگشت‌دار لازم است.
+   */
+  titleSlot?: React.ReactNode;
   /** نمایشِ دکمه‌ی پشتیبانی کنارِ زنگوله — فقط در حالتِ بدونِ بازگشت. */
   support?: boolean;
   /** نمایشِ چیپِ اشتراک — فقط در حالتِ بدونِ بازگشت. */
@@ -65,16 +84,20 @@ export function ScreenHeader({
   if (onBack) {
     return (
       <View style={[styles.head, styles.headBack]}>
-        <Pressable
+        <PressableScale
           onPress={onBack}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="بازگشت"
-          style={({ pressed }) => [styles.backBtn, pressed && styles.backPressed]}
+          scaleTo={0.88}
+          feedback="select"
+          bg={HEAD_IDLE}
+          bgPressed={colors.surface}
+          style={styles.backBtn}
         >
           {/* در RTL بازگشت به سمتِ راست است — شورونِ رو به راست */}
           <Icon name="chevron-next" size={22} tint="gold" />
-        </Pressable>
+        </PressableScale>
         <View style={styles.headText}>
           <Text style={styles.title}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -93,10 +116,60 @@ export function ScreenHeader({
         {settings ? <SettingsButton /> : null}
         {action ?? <InstallButton />}
       </View>
-      <View style={styles.headText}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </View>
+      {titleSlot ?? (
+        <View style={styles.headText}>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * هدرِ جمع‌شونده — همان `ScreenHeader`، ولی عنوانش با اسکرول کوچک می‌شود.
+ *
+ * `scrollY` را از یک `Animated.ScrollView` بده:
+ *   const y = useSharedValue(0);
+ *   const onScroll = useAnimatedScrollHandler((e) => { y.value = e.contentOffset.y; });
+ *
+ * چرا فقط عنوان کوچک می‌شود و کلِ هدر جمع نمی‌شود: کنش‌های هدر (زنگوله،
+ * پشتیبانی، چیپِ اشتراک) باید همیشه در دسترس بمانند — همان چیزی که در
+ * بازطراحیِ قبلی عمداً به هدر آورده شد. جمع‌کردنِ کاملِ هدر آن‌ها را برمی‌دارد
+ * و دستاوردِ قبلی را پس می‌گیرد.
+ */
+export function CollapsingHeaderTitle({
+  title,
+  subtitle,
+  scrollY,
+}: {
+  title: string;
+  subtitle?: string;
+  scrollY: SharedValue<number>;
+}) {
+  const style = useAnimatedStyle(() => {
+    const t = interpolate(scrollY.value, [0, COLLAPSE_RANGE], [0, 1], Extrapolation.CLAMP);
+    return {
+      transform: [{ scale: 1 - t * 0.26 }, { translateY: -t * 6 }],
+      // مبدأ در RTL سمتِ راست است تا عنوان به لبه‌ی خودش بچسبد، نه به وسط.
+      transformOrigin: 'right center',
+    };
+  });
+  const subStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, COLLAPSE_RANGE * 0.6], [1, 0], Extrapolation.CLAMP),
+    height: interpolate(scrollY.value, [0, COLLAPSE_RANGE * 0.6], [lineHeights.sm + 2, 0], Extrapolation.CLAMP),
+  }));
+
+  return (
+    <View style={styles.headText}>
+      <Animated.Text style={[styles.title, style]} numberOfLines={1}>
+        {title}
+      </Animated.Text>
+      {subtitle ? (
+        <Animated.Text style={[styles.subtitle, subStyle]} numberOfLines={1}>
+          {subtitle}
+        </Animated.Text>
+      ) : null}
     </View>
   );
 }
@@ -104,15 +177,19 @@ export function ScreenHeader({
 /** دکمه‌ی تنظیماتِ هدر — منوی همبرگری، جای قراردادیِ «بقیه‌ی چیزها». */
 function SettingsButton() {
   return (
-    <Pressable
+    <PressableScale
       onPress={() => router.push('/settings' as Href)}
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel="تنظیمات"
-      style={({ pressed }) => [styles.headBtn, pressed && styles.headBtnPressed]}
+      scaleTo={0.88}
+      feedback="select"
+      bg={HEAD_IDLE}
+      bgPressed={colors.surface}
+      style={styles.headBtn}
     >
       <Icon name="menu" size={22} tint="gold" />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -138,9 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backPressed: { backgroundColor: colors.surface, opacity: 0.9 },
   headBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  headBtnPressed: { backgroundColor: colors.surface },
   headTrailing: { alignItems: 'flex-start' },
   headText: { flex: 1, alignItems: 'flex-end' },
   title: {

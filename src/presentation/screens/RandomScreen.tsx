@@ -147,6 +147,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { colors, gradients, shadow } from '@/core/theme';
 
 type Variant = 'surface' | 'gold' | 'ghost';
@@ -15,6 +16,8 @@ interface Props {
   variant?: Variant;
   disabled?: boolean;
   accessibilityLabel: string;
+  /** شدتِ لرزش. برای کنش‌های برگشت‌ناپذیر (پسند/رد) `commit` بده. */
+  feedback?: 'select' | 'tap' | 'commit' | 'none';
   style?: ViewStyle;
 }
 
@@ -27,24 +30,27 @@ export function IconButton({
   variant = 'surface',
   disabled,
   accessibilityLabel,
+  feedback = 'tap',
   style,
 }: Props) {
   const gold = variant === 'gold';
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
       hitSlop={4}
-      style={({ pressed }) => [
+      // دایره‌های بزرگ باید کمتر کوچک شوند تا حرکت اغراق‌آمیز نشود.
+      scaleTo={0.9}
+      feedback={feedback}
+      style={[
         styles.base,
         { width: size, height: size, borderRadius: size / 2 },
         styles[variant],
         gold && shadow.gold,
         disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
         style,
       ]}
     >
@@ -61,15 +67,19 @@ export function IconButton({
         size={iconSize ?? Math.round(size * 0.44)}
         tint={gold ? 'ink' : variant === 'ghost' ? 'gold' : 'white'}
       />
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   base: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  surface: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  surface: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderTopColor: colors.rim,
+  },
   gold: {},
   ghost: { backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldSoft },
   disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.94 }] },
 });

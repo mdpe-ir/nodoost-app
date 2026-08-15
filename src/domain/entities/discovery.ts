@@ -9,6 +9,8 @@ export interface Candidate {
   distanceM?: number;
   tier?: number;
   photoUrl?: string;
+  /** همه‌ی عکس‌های تأییدشده، اصلی اول — نوارِ عکسِ کارتِ سواایپ. */
+  photoUrls?: string[];
   interests?: string[];
   /** وضعیتِ فعالیت — سرور فقط برای بیننده‌ی نقره‌ای+ می‌فرستد. */
   isOnline?: boolean;

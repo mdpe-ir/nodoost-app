@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   actions: { marginTop: spacing.xl, gap: spacing.sm },
   btn: { paddingVertical: spacing.md, borderRadius: radius.pill, alignItems: 'center' },
-  btnGhost: { borderWidth: 1, borderColor: colors.line },
+  btnGhost: { borderWidth: 1, borderColor: colors.line, borderTopColor: colors.rim },
   btnText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, writingDirection: 'rtl' },
   btnGhostText: { color: colors.ink2 },
 });

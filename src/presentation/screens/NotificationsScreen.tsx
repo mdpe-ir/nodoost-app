@@ -2,12 +2,13 @@ import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  Pressable,
   SectionList,
   RefreshControl,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { Stagger } from '@/presentation/components/Stagger';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { router, type Href } from 'expo-router';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { StackHeader } from '@/presentation/components/StackHeader';
@@ -101,11 +102,13 @@ function NotificationCard({
   onPress: (n: AppNotification) => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
       onPress={() => onPress(n)}
       accessibilityRole="button"
       accessibilityLabel={n.title || n.body}
-      style={({ pressed }) => [styles.card, !n.read && styles.cardUnread, pressed && styles.pressed]}
+      style={[styles.card, !n.read && styles.cardUnread]}
     >
       <View style={styles.avatarWrap}>
         <ActorStack n={n} />
@@ -137,7 +140,7 @@ function NotificationCard({
       </View>
 
       {!n.read ? <View style={styles.unreadDot} /> : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -195,21 +198,27 @@ export function NotificationsScreen() {
         title="اعلان‌ها"
         trailing={
           vm.hasUnread ? (
-            <Pressable
+            <PressableScale
+              scaleTo={0.9}
+              feedback="select"
               onPress={vm.markAllRead}
               hitSlop={8}
               accessibilityRole="button"
-              style={({ pressed }) => [styles.readAll, pressed && styles.pressed]}
+              style={styles.readAll}
             >
               <Text style={styles.readAllText}>خواندنِ همه</Text>
-            </Pressable>
+            </PressableScale>
           ) : undefined
         }
       />
       <SectionList
         sections={sections}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <NotificationCard n={item} onPress={openNotification} />}
+        renderItem={({ item, index }) => (
+          <Stagger index={index}>
+            <NotificationCard n={item} onPress={openNotification} />
+          </Stagger>
+        )}
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionTitle}>{section.title}</Text>
         )}
@@ -269,10 +278,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     marginBottom: spacing.sm,
   },
   cardUnread: { backgroundColor: colors.surface2, borderColor: colors.goldSoft },
-  pressed: { opacity: 0.8 },
   avatarWrap: { width: AVATAR, height: AVATAR },
   stack: { flexDirection: 'row-reverse', alignItems: 'center' },
   stackItem: { alignItems: 'center', justifyContent: 'center' },
@@ -292,6 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     alignItems: 'center',
     justifyContent: 'center',
     // شبیه‌سازیِ «مات»: هویت پیدا نیست، فقط قابِ خاکستری با نشانِ قفل.

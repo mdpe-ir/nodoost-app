@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from '../PressableScale';
 import { router, type Href } from 'expo-router';
 import { Icon } from '@/presentation/components/Icon';
 import { useInAppMessages } from '@/presentation/providers/InAppMessagesProvider';
@@ -43,15 +44,13 @@ function AlarmCard({ m }: { m: InAppMessage }) {
   };
 
   return (
-    <Pressable
+    <PressableScale
       onPress={open}
       accessibilityRole="button"
       accessibilityLabel={m.title}
-      style={({ pressed }) => [
-        styles.card,
-        { borderColor: accent },
-        pressed && styles.pressed,
-      ]}
+      scaleTo={0.98}
+      feedback="select"
+      style={[styles.card, { borderColor: accent }]}
     >
       <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
         <Icon name={messageIcon(m)} size={18} tint="gold" />
@@ -72,16 +71,18 @@ function AlarmCard({ m }: { m: InAppMessage }) {
       </View>
 
       {m.dismissible ? (
-        <Pressable
+        <PressableScale
           onPress={() => dismiss(m)}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="بستنِ اعلان"
+          scaleTo={0.85}
+          feedback="select"
         >
           <Icon name="close" size={14} tint="ink" />
-        </Pressable>
+        </PressableScale>
       ) : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -96,7 +97,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: colors.surface2,
   },
-  pressed: { opacity: 0.85 },
   badge: {
     width: 38,
     height: 38,

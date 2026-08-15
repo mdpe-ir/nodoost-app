@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { Icon } from '@/presentation/components/Icon';
 import { usePwaInstall } from '@/presentation/providers/PwaInstallProvider';
 import { colors, fonts, fontSizes, radius, spacing } from '@/core/theme';
@@ -13,15 +14,17 @@ export function InstallButton() {
   if (!canInstall) return null;
 
   return (
-    <Pressable
+    <PressableScale
       onPress={requestInstall}
       accessibilityRole="button"
       accessibilityLabel="نصبِ اپلیکیشن"
-      style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+      style={styles.pill}
+      scaleTo={0.92}
+      feedback="select"
     >
       <Icon name="plus" size={14} tint="gold" />
       <Text style={styles.label}>نصبِ اپ</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -37,6 +40,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldSoft,
   },
-  pressed: { opacity: 0.7 },
   label: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
 });

@@ -1,5 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { AnimatedNumber } from '@/presentation/components/AnimatedNumber';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
@@ -284,24 +286,21 @@ function PlanPill({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.9}
+      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={`پلنِ ${tier.name}`}
-      style={({ pressed }) => [
-        styles.pill,
-        { borderColor: active ? tierColor(tier.level) : colors.line },
-        active && styles.pillActive,
-        pressed && styles.pillPressed,
-      ]}
+      style={[styles.pill, { borderColor: active ? tierColor(tier.level) : colors.line }, active && styles.pillActive]}
     >
       <View style={[styles.pillDot, { backgroundColor: tierColor(tier.level) }]} />
       <Text style={[styles.pillName, active && styles.pillNameActive]}>{tier.name}</Text>
       <Text style={styles.pillPrice}>
         {current ? 'فعلی' : tier.priceToman != null ? `${faPrice(tier.priceToman)} ت` : '—'}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -338,7 +337,9 @@ function PlanDetail({
         </View>
         {tier.priceToman != null ? (
           <View style={styles.priceWrap}>
-            <Text style={styles.price}>{faPrice(tier.priceToman)}</Text>
+            {/* با عوض‌کردنِ سطح، قیمت تا مقدارِ تازه بالا می‌رود. خودِ همین
+                تغییر خبرِ صفحه است — پریدنِ عدد آن را بی‌صدا می‌کرد. */}
+            <AnimatedNumber value={tier.priceToman} format="price" style={styles.price} />
             <Text style={styles.priceUnit}>تومان</Text>
           </View>
         ) : null}
@@ -479,11 +480,13 @@ function Disclosure({
   onToggle: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
       onPress={onToggle}
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}
-      style={({ pressed }) => [styles.disc, open && styles.discOpen, pressed && styles.discPressed]}
+      style={[styles.disc, open && styles.discOpen]}
     >
       <View style={styles.discTexts}>
         <Text style={styles.discLabel}>{label}</Text>
@@ -491,7 +494,7 @@ function Disclosure({
       </View>
       {/* ستِ آیکنِ برند فلشِ رو‌به‌پایین ندارد؛ مثلثِ ترسیمی همان کار را می‌کند. */}
       <View style={[styles.caret, open && styles.caretOpen]} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -666,6 +669,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     gap: spacing.sm,
   },
@@ -689,6 +693,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
   },
   freePillText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.ink2 },
@@ -743,7 +748,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   pillActive: { backgroundColor: colors.surface2 },
-  pillPressed: { opacity: 0.8 },
   pillDot: { width: 8, height: 8, borderRadius: 4 },
   pillName: {
     fontFamily: fonts.medium,
@@ -761,6 +765,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     gap: spacing.md,
   },
@@ -791,7 +796,10 @@ const styles = StyleSheet.create({
   priceWrap: { flexDirection: 'row-reverse', alignItems: 'baseline', gap: 4 },
   price: {
     fontFamily: fonts.bold,
-    fontSize: fontSizes.xl,
+    // پله‌ی نمایشی: قیمت مهم‌ترین عددِ این صفحه است و باید مثلِ عنوان دیده شود،
+    // نه هم‌وزنِ برچسبِ کنارش.
+    fontSize: fontSizes.display,
+    lineHeight: lineHeights.display,
     color: colors.gold2,
     writingDirection: 'rtl',
   },
@@ -850,6 +858,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
   },
   currentNoteText: {
@@ -877,6 +886,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -993,11 +1003,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     marginTop: spacing.md,
   },
   discOpen: { borderColor: colors.goldSoft },
-  discPressed: { opacity: 0.8 },
   discTexts: { flex: 1, gap: 2 },
   discLabel: {
     fontFamily: fonts.medium,

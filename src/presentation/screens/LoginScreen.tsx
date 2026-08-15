@@ -196,6 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     padding: spacing.xl,
   },
   cardTitle: {
@@ -232,6 +233,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     paddingHorizontal: spacing.lg,
   },
   input: { flex: 1, color: colors.ink, fontFamily: fonts.medium, fontSize: 17, letterSpacing: 1 },
@@ -262,6 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     alignItems: 'center',
     justifyContent: 'center',
   },

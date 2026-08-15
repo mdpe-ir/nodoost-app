@@ -27,6 +27,16 @@ export function useDiscoverViewModel() {
   const [locating, setLocating] = useState(false);
   /** سقفِ پسندِ روزانه همین حالا خورد — صفحه با آن برگه‌ی ارتقا را باز می‌کند. */
   const [limitHit, setLimitHit] = useState(false);
+  /**
+   * آخرین کارتی که رفت — برای برگرداندن.
+   *
+   * فقط یک قدم نگه داشته می‌شود، نه پشته‌ی کامل: «برگرداندنِ آخرین اشتباه»
+   * کاری است که آدم می‌خواهد؛ عقب‌گردِ بی‌انتها یعنی کاوش دیگر جلو نمی‌رود.
+   */
+  const [lastSwipe, setLastSwipe] = useState<{ candidate: Candidate; action: 'like' | 'pass' } | null>(
+    null
+  );
+  const [undoing, setUndoing] = useState(false);
   const { consume: consumeQuota, refresh: refreshQuota } = useQuota();
 
   const load = useCallback(
@@ -93,6 +103,7 @@ export function useDiscoverViewModel() {
       const target = cards[index];
       if (!target) return;
       setIndex((i) => i + 1);
+      setLastSwipe({ candidate: target, action });
       try {
         const result = await uc.discovery.swipe(target.id, action);
         if (action === 'like') {
@@ -117,6 +128,27 @@ export function useDiscoverViewModel() {
     [cards, index, uc, consumeQuota, refreshQuota]
   );
 
+  /**
+   * برگرداندنِ آخرین کارت. سرور همان `DELETE /api/swipes/{id}` را دارد و اگر
+   * در این فاصله مچ شده باشد ۴۰۹ می‌دهد — که درست است: مچ را نباید با یک
+   * دکمه‌ی «اشتباه شد» پس گرفت. در آن حالت فقط امکانِ برگرداندن را برمی‌داریم
+   * و کارت را جابه‌جا نمی‌کنیم.
+   */
+  const undoLast = useCallback(async () => {
+    if (!lastSwipe || undoing) return;
+    setUndoing(true);
+    try {
+      await uc.discovery.unswipe(lastSwipe.candidate.id);
+      setIndex((i) => Math.max(0, i - 1));
+      if (lastSwipe.action === 'like') refreshQuota();
+    } catch {
+      // مچ‌شده یا شبکه قطع است — در هر دو حالت وضعیتِ فعلی درست‌تر از حدسِ ماست.
+    } finally {
+      setLastSwipe(null);
+      setUndoing(false);
+    }
+  }, [lastSwipe, undoing, uc, refreshQuota]);
+
   const enableLocation = useCallback(async () => {
     if (locating) return;
     setLocating(true);
@@ -127,6 +159,12 @@ export function useDiscoverViewModel() {
 
   return {
     current,
+    /**
+     * دو کارتِ بعدی. دسته‌ی پشتِ سر تا امروز دو مستطیلِ خالی بود؛ با اینها
+     * عکسِ واقعیِ نفرِ بعد پیداست، پس دسته «ادامه دارد» به نظر می‌رسد نه
+     * «تزیینِ زیرِ کارت».
+     */
+    upcoming: cards.slice(index + 1, index + 3),
     loading,
     error,
     match,
@@ -135,6 +173,9 @@ export function useDiscoverViewModel() {
     swipe,
     enableLocation,
     limitHit,
+    canUndo: lastSwipe != null,
+    undoing,
+    undoLast,
     dismissLimit: () => setLimitHit(false),
     reload: () => load(),
     // بستنِ پنجره‌ی مَچ، نه ساختنش: پنجره‌ی درخواستِ نظر نباید روی خودِ

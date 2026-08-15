@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, Modal, Image, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Modal, Image, ScrollView, StyleSheet } from 'react-native';
+import { PressableScale } from '../PressableScale';
 import { Icon } from '@/presentation/components/Icon';
 import { useInAppMessages } from '@/presentation/providers/InAppMessagesProvider';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
@@ -57,36 +58,36 @@ export function InAppPopup() {
 
           <View style={styles.actions}>
             {popup.ctaLabel ? (
-              <Pressable
+              <PressableScale
                 style={[styles.btn, { backgroundColor: accent }]}
                 onPress={() => go(popup.ctaUrl)}
                 accessibilityRole="button"
                 accessibilityLabel={popup.ctaLabel}
               >
                 <Text style={[styles.btnText, { color: onAccent }]}>{popup.ctaLabel}</Text>
-              </Pressable>
+              </PressableScale>
             ) : null}
 
             {popup.secondaryLabel ? (
-              <Pressable
+              <PressableScale
                 style={[styles.btn, styles.btnGhost]}
                 onPress={() => go(popup.secondaryUrl)}
                 accessibilityRole="button"
                 accessibilityLabel={popup.secondaryLabel}
               >
                 <Text style={[styles.btnText, styles.btnGhostText]}>{popup.secondaryLabel}</Text>
-              </Pressable>
+              </PressableScale>
             ) : null}
 
             {popup.dismissible ? (
-              <Pressable
+              <PressableScale
                 style={[styles.btn, styles.btnGhost]}
                 onPress={close}
                 accessibilityRole="button"
                 accessibilityLabel="بستن"
               >
                 <Text style={[styles.btnText, styles.btnGhostText]}>بستن</Text>
-              </Pressable>
+              </PressableScale>
             ) : null}
           </View>
         </View>
@@ -106,6 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     padding: spacing.lg,
     maxHeight: '80%',
@@ -149,7 +151,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
   },
-  btnGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line },
+  btnGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line, borderTopColor: colors.rim },
   btnText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, writingDirection: 'rtl' },
   btnGhostText: { color: colors.ink2 },
 });

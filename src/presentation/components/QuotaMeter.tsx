@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import {
   QUOTA_META,
@@ -136,15 +137,17 @@ export function QuotaChip({ item, onPress }: { item: QuotaItem; onPress?: () => 
     );
   }
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [chip.wrap, out && chip.wrapOut, pressed && chip.pressed]}
+      scaleTo={0.92}
+      feedback="select"
+      style={[chip.wrap, out && chip.wrapOut]}
     >
       {body}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -161,7 +164,6 @@ const chip = StyleSheet.create({
     backgroundColor: colors.goldFaint,
   },
   wrapOut: { borderColor: colors.roseSoft, backgroundColor: colors.roseFaint },
-  pressed: { opacity: 0.7 },
   text: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2 },
   textOut: { color: colors.rose },
 });

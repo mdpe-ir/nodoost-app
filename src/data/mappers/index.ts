@@ -134,6 +134,9 @@ export const toCandidate = (d: CandidateDTO): Candidate => ({
   distanceM: d.distance_m,
   tier: d.tier,
   photoUrl: undefIfNull(d.photo_url),
+  // اگر سرور آرایه نفرستد (نسخه‌ی قدیمی‌تر)، همان عکسِ تکی یک نوارِ یک‌تایی
+  // می‌سازد؛ کارت لازم نیست دو حالت را بشناسد.
+  photoUrls: d.photo_urls?.length ? d.photo_urls : d.photo_url ? [d.photo_url] : [],
   interests: d.interests,
   isOnline: d.is_online,
   lastActiveMin: d.last_active_min ?? undefined,

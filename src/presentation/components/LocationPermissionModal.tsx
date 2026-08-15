@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Modal, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -160,9 +161,9 @@ export function LocationPermissionModal({
                 onPress={isBlocked ? onOpenSettings : onAllow}
                 style={styles.btnFull}
               />
-              <Pressable onPress={onLater} disabled={stage === 'requesting'} hitSlop={8}>
+              <PressableScale onPress={onLater} disabled={stage === 'requesting'} hitSlop={8} scaleTo={0.94} feedback="select">
                 <Text style={styles.later}>الان نه</Text>
-              </Pressable>
+              </PressableScale>
             </View>
           ) : null}
 
@@ -190,6 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     padding: spacing.xl,
     overflow: 'hidden',
@@ -241,6 +243,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
   },
   benefitRow: { flexDirection: 'row-reverse', gap: spacing.md },

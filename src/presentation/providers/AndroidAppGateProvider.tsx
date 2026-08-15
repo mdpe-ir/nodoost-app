@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/presentation/components/AppText';
@@ -178,11 +179,11 @@ export function AndroidAppGateProvider({ children }: { children: React.ReactNode
               <View style={styles.methods}>
                 <InstallMethods methods={methods} />
               </View>
-              <Pressable onPress={dismissNag} accessibilityRole="button" style={styles.nagLater}>
+              <PressableScale onPress={dismissNag} accessibilityRole="button" style={styles.nagLater} scaleTo={0.94} feedback="select">
                 <AppText variant="body" align="center" style={styles.nagLaterText}>
                   بعداً نصب می‌کنم
                 </AppText>
-              </Pressable>
+              </PressableScale>
               <AppText variant="caption" align="center" style={styles.nagNote}>
                 این یادآور تا نصبِ اپ باز هم نشان داده می‌شود
               </AppText>
@@ -220,6 +221,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderBottomWidth: 0,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     padding: spacing.xl,
     paddingBottom: spacing.xl + spacing.md,
     alignItems: 'center',

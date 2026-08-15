@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { BottomSheet } from './BottomSheet';
 import { router, type Href } from 'expo-router';
 
 import { Button } from './Button';
@@ -10,8 +9,6 @@ import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/t
 import { faNum } from '@/core/utils/faNum';
 import type { Rank } from '@/domain/entities';
 
-const TRAVEL = 460;
-const ENTER_SPRING = { damping: 20, stiffness: 190, mass: 0.9 } as const;
 
 /**
  * توضیحِ نشانِ رتبه — همان چیزی که با زدن روی نشان باز می‌شود.
@@ -38,38 +35,11 @@ export function RankSheet({
   toNext?: number;
   onDismiss: () => void;
 }) {
-  const insets = useSafeAreaInsets();
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) progress.value = withSpring(1, ENTER_SPRING);
-    else progress.value = 0;
-  }, [visible, progress]);
-
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (1 - progress.value) * TRAVEL }],
-  }));
 
   const mine = !peerName;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onDismiss}
-    >
-      <View style={styles.root}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} accessibilityLabel="بستن" />
-        </Animated.View>
-
-        <Animated.View
-          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }, sheetStyle]}
-        >
-          <View style={styles.grabber} />
+    <BottomSheet visible={visible} onDismiss={onDismiss}>
 
           <View style={styles.badgeRow}>
             <RankBadge rank={rank} height={30} />
@@ -109,32 +79,11 @@ export function RankSheet({
             }}
             style={{ marginTop: spacing.lg }}
           />
-        </Animated.View>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { backgroundColor: colors.backdrop },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    borderTopWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.line,
-    marginBottom: spacing.lg,
-  },
   badgeRow: { flexDirection: 'row-reverse', marginBottom: spacing.md },
   title: {
     fontFamily: fonts.bold,

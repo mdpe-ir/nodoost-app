@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { Text, StyleSheet, type ViewStyle } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { colors, fonts, fontSizes, radius } from '@/core/theme';
 
 interface Props {
@@ -12,19 +13,16 @@ interface Props {
 /** چیپِ انتخابی — برای فیلترها و گزینه‌های تک‌انتخابی (جنسیت و…). */
 export function Chip({ label, active, onPress, style }: Props) {
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: !!active }}
-      style={({ pressed }) => [
-        styles.base,
-        active && styles.active,
-        pressed && styles.pressed,
-        style,
-      ]}
+      scaleTo={0.94}
+      feedback="select"
+      style={[styles.base, active && styles.active, style]}
     >
       <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -36,11 +34,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     alignItems: 'center',
     justifyContent: 'center',
   },
   active: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   label: { fontFamily: fonts.medium, fontSize: fontSizes.md, color: colors.ink2 },
   labelActive: { color: colors.gold2 },
 });

@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     borderCurve: 'continuous',

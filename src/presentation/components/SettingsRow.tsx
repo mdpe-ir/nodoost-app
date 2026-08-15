@@ -1,7 +1,15 @@
 import React from 'react';
-import { View, Text, Pressable, Switch, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, Switch, ActivityIndicator, StyleSheet } from 'react-native';
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
+
+/**
+ * حالتِ رهای پس‌زمینه‌ی ردیف — همان `surface2` با آلفای صفر.
+ * از `transparent` استفاده نمی‌کنیم چون میان‌یابیِ رنگ از آن‌جا از سیاه رد
+ * می‌شود و ردیف موقعِ رهاشدن یک لحظه تیره می‌زند.
+ */
+const ROW_BG = 'rgba(30,24,38,0)';
 
 /**
  * ردیف‌های فهرستِ تنظیمات — یک شکلِ واحد برای هر سه رفتاری که در اپ داریم:
@@ -85,14 +93,20 @@ export function SettingsLink({
   );
   if (!onPress) return <View style={styles.row}>{body}</View>;
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      // ردیفِ تمام‌عرض نباید محسوس کوچک شود؛ بازخوردِ اصلی روشن‌شدنِ پس‌زمینه
+      // است — قراردادِ فهرست‌ها روی هر دو سکو.
+      scaleTo={0.985}
+      feedback="select"
+      bg={ROW_BG}
+      bgPressed={colors.surface2}
+      style={styles.row}
     >
       {body}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -180,6 +194,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
@@ -194,7 +209,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 64,
   },
-  pressed: { backgroundColor: colors.surface2 },
   chip: {
     width: 38,
     height: 38,

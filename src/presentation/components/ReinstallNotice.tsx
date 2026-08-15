@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { colors, spacing, radius, fonts, fontSizes } from '@/core/theme';
 import { AppText } from '@/presentation/components/AppText';
 import { Icon } from '@/presentation/components/Icon';
@@ -106,15 +107,17 @@ export function ReinstallNotice({ variant = 'alert', showAccountNote = true }: P
 
   return (
     <View style={styles.cardSubtle}>
-      <Pressable
+      <PressableScale
         onPress={() => setOpen((v) => !v)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel="راهنمای رفعِ مشکلِ نصب"
         hitSlop={8}
+        scaleTo={0.985}
+        feedback="select"
       >
         {header}
-      </Pressable>
+      </PressableScale>
       {open && <View style={styles.subtleBody}>{details}</View>}
     </View>
   );
@@ -137,6 +140,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   subtleBody: { gap: spacing.md, marginTop: spacing.md },

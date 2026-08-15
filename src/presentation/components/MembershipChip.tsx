@@ -1,7 +1,8 @@
 import React from 'react';
-import { Text, Pressable, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 import { tierColor, tierName } from './TierBadge';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
@@ -33,35 +34,34 @@ export function MembershipChip() {
 
   if (!isPlus) {
     return (
-      <Pressable
+      <PressableScale
         onPress={go}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel="ارتقای اشتراک"
-        style={({ pressed }) => [styles.chip, styles.chipFree, pressed && styles.pressed]}
+        scaleTo={0.92}
+        feedback="select"
+        style={[styles.chip, styles.chipFree]}
       >
         <Icon name="diamond-fill" size={13} tint="gold" />
         <Text style={styles.freeText}>ارتقا</Text>
-      </Pressable>
+      </PressableScale>
     );
   }
 
   return (
-    <Pressable
+    <PressableScale
       onPress={go}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={`اشتراکِ ${tierName(level)}${expiring ? ` — ${daysLeft} روز مانده` : ''}`}
-      style={({ pressed }) => [
-        styles.chip,
-        { borderColor: tierColor(level) },
-        expiring && styles.chipExpiring,
-        pressed && styles.pressed,
-      ]}
+      scaleTo={0.92}
+      feedback="select"
+      style={[styles.chip, { borderColor: tierColor(level) }, expiring && styles.chipExpiring]}
     >
       <Text style={[styles.tierText, { color: tierColor(level) }]}>{tierName(level)}</Text>
       {expiring ? <Text style={styles.daysText}>{`${faNum(daysLeft)} روز`}</Text> : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -75,11 +75,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   chipFree: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
   chipExpiring: { backgroundColor: colors.roseFaint, borderColor: colors.roseSoft },
-  pressed: { opacity: 0.75 },
   freeText: { fontFamily: fonts.bold, fontSize: fontSizes.xs, color: colors.gold2 },
   tierText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, writingDirection: 'rtl' },
   daysText: { fontFamily: fonts.medium, fontSize: 10, color: colors.rose, writingDirection: 'rtl' },

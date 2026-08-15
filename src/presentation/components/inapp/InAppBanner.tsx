@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from '../PressableScale';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { Icon } from '@/presentation/components/Icon';
 import { useInAppMessages } from '@/presentation/providers/InAppMessagesProvider';
@@ -39,8 +40,9 @@ export function InAppBanner() {
         <Icon name={messageIcon(banner)} size={18} tint="gold" />
       </View>
 
-      <Pressable
+      <PressableScale
         style={styles.body}
+        scaleTo={0.985}
         onPress={onPress}
         disabled={!banner.ctaUrl}
         accessibilityRole={banner.ctaUrl ? 'button' : undefined}
@@ -57,17 +59,19 @@ export function InAppBanner() {
         {banner.ctaLabel ? (
           <Text style={[styles.cta, { color: accent }]}>{banner.ctaLabel} ›</Text>
         ) : null}
-      </Pressable>
+      </PressableScale>
 
       {banner.dismissible ? (
-        <Pressable
+        <PressableScale
           onPress={() => dismiss(banner)}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="بستنِ پیام"
+          scaleTo={0.85}
+          feedback="select"
         >
           <Icon name="close" size={14} tint="ink" />
-        </Pressable>
+        </PressableScale>
       ) : null}
     </Animated.View>
   );

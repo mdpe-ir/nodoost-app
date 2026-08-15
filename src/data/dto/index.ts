@@ -68,6 +68,8 @@ export interface CandidateDTO {
   distance_m?: number;
   tier?: number;
   photo_url?: string | null;
+  /** همه‌ی عکس‌های تأییدشده، اصلی اول. سرورهای قدیمی‌تر نمی‌فرستندش. */
+  photo_urls?: string[] | null;
   interests?: string[];
   /** فقط برای بیننده‌ی نقره‌ای+ و اگر طرف پنهانش نکرده باشد. */
   is_online?: boolean;

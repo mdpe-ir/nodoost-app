@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { Image } from 'expo-image';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
@@ -41,9 +42,9 @@ export function InstallModal({
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="بستن" />
         <View style={[styles.card, shadow.card]}>
-          <Pressable onPress={onClose} style={styles.close} accessibilityLabel="بستن" accessibilityRole="button">
+          <PressableScale onPress={onClose} style={styles.close} accessibilityLabel="بستن" accessibilityRole="button" scaleTo={0.85} feedback="select">
             <Icon name="close" size={18} tint="gold" />
-          </Pressable>
+          </PressableScale>
 
           <Image source={APP_ICON} style={styles.icon} contentFit="cover" />
           <Text style={styles.title}>نودوست را نصب کن</Text>
@@ -76,13 +77,13 @@ export function InstallModal({
             )}
             <View style={styles.secondaryRow}>
               {showNativeButton ? (
-                <Pressable onPress={onSnooze} accessibilityRole="button">
+                <PressableScale onPress={onSnooze} accessibilityRole="button" scaleTo={0.94} feedback="select">
                   <Text style={styles.linkText}>بعداً</Text>
-                </Pressable>
+                </PressableScale>
               ) : null}
-              <Pressable onPress={onNever} accessibilityRole="button">
+              <PressableScale onPress={onNever} accessibilityRole="button" scaleTo={0.94} feedback="select">
                 <Text style={styles.linkMuted}>دیگر نشان نده</Text>
-              </Pressable>
+              </PressableScale>
             </View>
           </View>
         </View>
@@ -117,6 +118,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     padding: spacing.xl,
     alignItems: 'center',
   },
@@ -143,6 +145,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   stepRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
   stepBadge: {

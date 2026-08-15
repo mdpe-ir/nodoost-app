@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     marginBottom: spacing.sm,
   },
   rowBody: { flex: 1 },

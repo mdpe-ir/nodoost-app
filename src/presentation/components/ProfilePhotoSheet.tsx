@@ -1,24 +1,20 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheet } from './BottomSheet';
 import { Image } from 'expo-image';
 import { Icon } from './Icon';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import type { Photo } from '@/domain/entities';
-import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
 /** فاصله‌ی سُرخوردنِ برگه از پایینِ صفحه؛ از بلندترین حالتِ برگه بیشتر است. */
-const TRAVEL = 420;
-const ENTER_SPRING = { damping: 20, stiffness: 190, mass: 0.9 } as const;
 const THUMB = 84;
 
 interface Props {
@@ -55,19 +51,6 @@ export function ProfilePhotoSheet({
   onAddNew,
   onDismiss,
 }: Props) {
-  const insets = useSafeAreaInsets();
-  // ورود با فنر از پایین؛ خروج را خودِ Modal با محوشدن انجام می‌دهد.
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) progress.value = withSpring(1, ENTER_SPRING);
-    else progress.value = 0;
-  }, [visible, progress]);
-
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (1 - progress.value) * TRAVEL }],
-  }));
 
   // عکسِ ردشده نمی‌تواند چهره‌ی پروفایل شود؛ اصلاً نشانش نمی‌دهیم.
   const usable = photos.filter((p) => p.status !== 'rejected');
@@ -78,28 +61,7 @@ export function ProfilePhotoSheet({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onDismiss}
-    >
-      <View style={styles.root}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel="بستنِ انتخابِ عکسِ پروفایل"
-          />
-        </Animated.View>
-
-        <Animated.View
-          style={[styles.sheet, shadow.card, { paddingBottom: insets.bottom + spacing.lg }, sheetStyle]}
-          accessibilityViewIsModal
-        >
-          <View style={styles.grabber} />
+    <BottomSheet visible={visible} onDismiss={onDismiss}>
           <Text style={styles.title}>عکسِ پروفایل</Text>
           <Text style={styles.sub}>
             {usable.length > 0
@@ -181,34 +143,13 @@ export function ProfilePhotoSheet({
           >
             <Text style={styles.cancelText}>بستن</Text>
           </Pressable>
-        </Animated.View>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { backgroundColor: 'rgba(7,5,11,0.72)' },
   pressed: { opacity: 0.8 },
 
-  sheet: {
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.line,
-    marginBottom: spacing.lg,
-  },
 
   title: {
     fontFamily: fonts.bold,
@@ -309,6 +250,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   cancelText: {
     fontFamily: fonts.medium,

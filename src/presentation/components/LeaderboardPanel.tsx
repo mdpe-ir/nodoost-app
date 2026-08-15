@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
@@ -92,18 +93,16 @@ function Row({ entry, index }: { entry: LeaderEntry; index: number }) {
 
   return (
     <Animated.View entering={FadeInDown.duration(200).delay(Math.min(index, 8) * 20)}>
-      <Pressable
+      <PressableScale
         // ردیفِ خودم به پروفایلِ خودم نمی‌رود؛ /user/{me} صفحه‌ی غریبه است.
         onPress={
           entry.isMe ? undefined : () => router.push(`/user/${entry.userId}` as Href)
         }
         disabled={entry.isMe}
         accessibilityRole={entry.isMe ? undefined : 'button'}
-        style={({ pressed }) => [
-          styles.row,
-          entry.isMe && styles.rowMe,
-          pressed && styles.rowPressed,
-        ]}
+        scaleTo={0.985}
+        feedback="select"
+        style={[styles.row, entry.isMe && styles.rowMe]}
       >
         <View style={styles.rankSlot}>
           {medal ? (
@@ -127,7 +126,7 @@ function Row({ entry, index }: { entry: LeaderEntry; index: number }) {
         </Text>
 
         <Text style={styles.points}>{faNum(entry.points)}</Text>
-      </Pressable>
+      </PressableScale>
     </Animated.View>
   );
 }
@@ -153,10 +152,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   rowMe: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
-  rowPressed: { opacity: 0.7 },
 
   rankSlot: { width: 28, alignItems: 'center' },
   medal: { fontSize: 18 },

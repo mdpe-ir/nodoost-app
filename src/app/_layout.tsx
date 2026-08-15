@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { StyleSheet } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import {
   useFonts,
@@ -125,6 +127,9 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    // ژست‌های مبتنی بر gesture-handler (کارتِ سواایپ، برش عکس) بدونِ این ریشه
+    // روی اندروید بی‌صدا کار نمی‌کنند — هیچ خطایی نمی‌دهد، فقط لمس نمی‌گیرد.
+    <GestureHandlerRootView style={styles.root}>
     <SafeAreaProvider>
       {/*
        * اپ edge-to-edge است (gradle.properties → edgeToEdgeEnabled=true)؛ در این حالت
@@ -178,5 +183,10 @@ export default function RootLayout() {
         </DIProvider>
       </KeyboardProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
+});

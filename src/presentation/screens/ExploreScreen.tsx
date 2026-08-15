@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
@@ -70,12 +71,10 @@ export function ExploreView() {
 
   const renderItem = ({ item }: { item: Candidate }) => (
     <Animated.View entering={FadeIn.duration(220)}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.cell,
-          { width: cellW, height: cellW * 1.32 },
-          pressed && styles.cellPressed,
-        ]}
+      <PressableScale
+        scaleTo={0.98}
+        feedback="select"
+        style={[styles.cell, { width: cellW, height: cellW * 1.32 }]}
         onPress={() => vm.select(item)}
         accessibilityRole="button"
         accessibilityLabel={item.name}
@@ -105,7 +104,7 @@ export function ExploreView() {
             </Text>
           ) : null}
         </View>
-      </Pressable>
+      </PressableScale>
     </Animated.View>
   );
 
@@ -372,8 +371,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
-  cellPressed: { opacity: 0.88 },
   cellImg: { width: '100%', height: '100%' },
   cellFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
   cellBadge: { position: 'absolute', top: 8, right: 8 },
@@ -414,6 +413,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     overflow: 'hidden',
     ...shadow.card,
   },

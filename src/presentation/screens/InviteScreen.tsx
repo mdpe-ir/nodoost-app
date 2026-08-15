@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Pressable,
   RefreshControl,
   ScrollView,
   Share,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 
@@ -112,11 +112,13 @@ export function InviteScreen() {
             {/* ضربه روی کد = رونوشت (کارِ رایج‌تر)؛ فرستادن دکمه‌ی جداگانه دارد.
                 روی نسخه‌ای که رونوشت ندارد، همین ضربه برگه‌ی اشتراک‌گذاری را
                 باز می‌کند و متنِ راهنما هم همان را می‌گوید. */}
-            <Pressable
+            <PressableScale
+              scaleTo={0.98}
+              feedback="select"
               onPress={() => void onCodePress(s.code)}
               accessibilityRole="button"
               accessibilityLabel={clipboardAvailable ? 'رونوشتِ کدِ دعوت' : 'فرستادنِ کدِ دعوت'}
-              style={({ pressed }) => [styles.codeBox, pressed && styles.pressed]}
+              style={styles.codeBox}
             >
               <Text style={styles.code}>{s.code}</Text>
               <View style={styles.copyTag}>
@@ -129,7 +131,7 @@ export function InviteScreen() {
                   {copied ? 'کپی شد' : clipboardAvailable ? 'رونوشت' : 'فرستادن'}
                 </Text>
               </View>
-            </Pressable>
+            </PressableScale>
             <Text style={styles.codeHint}>
               {clipboardAvailable ? 'برای رونوشت روی کد بزن.' : 'برای فرستادن روی کد بزن.'}
             </Text>
@@ -264,7 +266,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     alignItems: 'center',
   },
-  pressed: { opacity: 0.8 },
   code: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.xxl,
@@ -298,6 +299,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
     alignItems: 'center',
@@ -326,6 +328,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
@@ -349,6 +352,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -385,12 +389,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface2 },
-  avatarEmpty: { borderWidth: 1, borderColor: colors.line },
+  avatarEmpty: { borderWidth: 1, borderColor: colors.line, borderTopColor: colors.rim },
   rowTitle: {
     fontFamily: fonts.medium,
     fontSize: fontSizes.sm,

@@ -1,8 +1,12 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
+
+/** حالتِ رهای پس‌زمینه‌ی دکمه‌ی بازگشت — `surface` با آلفای صفر. */
+const BACK_IDLE = 'rgba(22,18,28,0)';
 
 /**
  * هدرِ صفحاتِ پوش‌شده (استک) — دکمه‌ی بازگشت سمتِ راست (قراردادِ RTL) + عنوان.
@@ -10,16 +14,20 @@ import { colors, fonts, fontSizes, lineHeights, spacing } from '@/core/theme';
 export function StackHeader({ title, trailing }: { title: string; trailing?: React.ReactNode }) {
   return (
     <View style={styles.head}>
-      <Pressable
+      <PressableScale
         hitSlop={10}
         onPress={() => router.back()}
         accessibilityRole="button"
         accessibilityLabel="بازگشت"
-        style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+        scaleTo={0.88}
+        feedback="select"
+        bg={BACK_IDLE}
+        bgPressed={colors.surface}
+        style={styles.back}
       >
         {/* در RTL بازگشت به سمتِ راست است — شورونِ رو به راست */}
         <Icon name="chevron-next" size={22} tint="white" />
-      </Pressable>
+      </PressableScale>
       <Text style={styles.title} numberOfLines={1}>
         {title}
       </Text>
@@ -42,7 +50,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backPressed: { backgroundColor: colors.surface },
   title: {
     flex: 1,
     fontFamily: fonts.bold,

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { router, type Href } from 'expo-router';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { StackHeader } from '@/presentation/components/StackHeader';
@@ -173,16 +174,18 @@ export function SettingsScreen() {
               <Text style={styles.travelHint}>یک شهر انتخاب کن تا موقعیتت موقتاً آن‌جا باشد:</Text>
               <View style={styles.travelCities}>
                 {TRAVEL_CITIES.map((c) => (
-                  <Pressable
+                  <PressableScale
+                    scaleTo={0.94}
+                    feedback="tap"
                     key={c.name}
-                    style={({ pressed }) => [styles.cityChip, pressed && styles.pressed]}
+                    style={styles.cityChip}
                     onPress={() => vm.startTravel(c.lat, c.lng)}
                     disabled={vm.travelBusy}
                     accessibilityRole="button"
                     accessibilityLabel={`سفر به ${c.name}`}
                   >
                     <Text style={styles.cityChipText}>{c.name}</Text>
-                  </Pressable>
+                  </PressableScale>
                 ))}
               </View>
             </View>
@@ -217,7 +220,6 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.xxl * 2 },
-  pressed: { opacity: 0.6 },
 
   travelBox: { padding: spacing.lg, gap: spacing.md, alignItems: 'stretch' },
   travelTitle: {

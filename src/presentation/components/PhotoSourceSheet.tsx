@@ -1,16 +1,13 @@
-import React, { useEffect } from 'react';
-import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
-import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
 /** سرچشمه‌ی عکس — دوربین یا گالری. */
 export type PhotoSource = 'camera' | 'library';
 
 /** فاصله‌ی سُرخوردنِ برگه از پایینِ صفحه؛ از بلندترین حالتِ برگه بیشتر است. */
-const TRAVEL = 420;
-const ENTER_SPRING = { damping: 20, stiffness: 190, mass: 0.9 } as const;
 
 interface Props {
   visible: boolean;
@@ -26,50 +23,10 @@ interface Props {
  * کافه‌بازار درست ایراد گرفت: مجوزی که اعلام می‌شود باید واقعاً به کار برود.
  */
 export function PhotoSourceSheet({ visible, onSelect, onDismiss }: Props) {
-  const insets = useSafeAreaInsets();
-  // ورود با فنر از پایین؛ خروج را خودِ Modal با محوشدن انجام می‌دهد
   // (محتوا با بسته‌شدن از درخت می‌رود و انیمیشنِ برگشتِ ریانیمیتد فرصت اجرا ندارد).
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) progress.value = withSpring(1, ENTER_SPRING);
-    else progress.value = 0;
-  }, [visible, progress]);
-
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (1 - progress.value) * TRAVEL }],
-  }));
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      // روی اندروید همین کال‌بک، دکمه‌ی سخت‌افزاریِ بازگشت را می‌گیرد.
-      onRequestClose={onDismiss}
-    >
-      <View style={styles.root}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onDismiss}
-            accessibilityRole="button"
-            accessibilityLabel="بستنِ انتخابِ عکس"
-          />
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.sheet,
-            shadow.card,
-            { paddingBottom: insets.bottom + spacing.lg },
-            sheetStyle,
-          ]}
-          accessibilityViewIsModal
-        >
-          <View style={styles.grabber} />
+    <BottomSheet visible={visible} onDismiss={onDismiss}>
           <Text style={styles.title}>عکست را از کجا برداریم؟</Text>
           <Text style={styles.sub}>یک عکسِ واضح از چهره‌ات بهترین نتیجه را می‌دهد.</Text>
 
@@ -96,9 +53,7 @@ export function PhotoSourceSheet({ visible, onSelect, onDismiss }: Props) {
           >
             <Text style={styles.cancelText}>انصراف</Text>
           </Pressable>
-        </Animated.View>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -161,26 +116,7 @@ function LibraryGlyph() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { backgroundColor: 'rgba(7,5,11,0.72)' },
 
-  sheet: {
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.line,
-    marginBottom: spacing.lg,
-  },
 
   title: {
     fontFamily: fonts.bold,
@@ -210,6 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
   },
   rowPressed: { opacity: 0.85, borderColor: colors.goldSoft },
@@ -248,6 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   cancelPressed: { opacity: 0.7 },
   cancelText: {

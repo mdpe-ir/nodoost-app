@@ -1,11 +1,22 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, StyleSheet, Platform } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
+import { haptics, hapticThreshold } from '@/core/haptics';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
+import { ChatBackground } from '@/presentation/components/ChatBackground';
 import { BubblesSkeleton, Skeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
@@ -19,7 +30,16 @@ import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { lowWarning, isLow, isExhausted } from '@/presentation/tiers/quotaCopy';
 import { faClock, faDayLabel, dayKey } from '@/core/utils/time';
-import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients } from '@/core/theme';
+import {
+  colors,
+  fonts,
+  fontSizes,
+  gradients,
+  lineHeights,
+  radius,
+  spacing,
+  springs,
+} from '@/core/theme';
 import { quotaOf, type Message } from '@/domain/entities';
 
 type Row =
@@ -64,6 +84,153 @@ function buildRows(messages: Message[], myId?: number): Row[] {
   return rows.reverse();
 }
 
+/** چقدر می‌شود حباب را کشید، و از کجا رهاکردن یعنی «پاسخ بده». */
+const REPLY_MAX = 76;
+const REPLY_TRIGGER = 54;
+
+/**
+ * حبابِ پیام — با کشیدن تبدیل به پاسخ می‌شود.
+ *
+ * جهتِ کشیدن به سمتِ حباب بستگی دارد و همیشه **به سمتِ فضای خالیِ کنارش** است:
+ * پیامِ من چپ می‌رود، پیامِ او راست. دو دلیل دارد و هر دو عملی‌اند:
+ *   ۱) حباب هیچ‌وقت از لبه‌ی صفحه بیرون نمی‌زند. جهتِ ثابت برای هر دو، یکی از
+ *      دو طرف را حتماً می‌بُرد.
+ *   ۲) پیکانِ پاسخ در همان جایی ظاهر می‌شود که حباب خالی کرده — مثلِ کشیدنِ
+ *      کشو و دیدنِ چیزی که پشتش بود.
+ *
+ * `failOffsetY` مهم است: بدونِ آن، ژستِ افقی اسکرولِ عمودیِ گفتگو را می‌دزدد و
+ * بالا رفتن در تاریخچه لغزنده می‌شود. با آن، هر حرکتی که بیشتر عمودی است
+ * دستِ فهرست می‌ماند.
+ */
+function MessageBubble({
+  msg,
+  mine,
+  firstOfGroup,
+  lastOfGroup,
+  time,
+  highlighted,
+  onReply,
+  onLongPress,
+  onJumpToQuote,
+}: {
+  msg: Message;
+  mine: boolean;
+  firstOfGroup: boolean;
+  lastOfGroup: boolean;
+  time: string;
+  highlighted: boolean;
+  onReply: () => void;
+  onLongPress: () => void;
+  onJumpToQuote: (id: number) => void;
+}) {
+  /** ‎−۱ = حباب به چپ می‌رود (پیامِ من)، ‎+۱ = به راست (پیامِ او). */
+  const dir = mine ? -1 : 1;
+  const tx = useSharedValue(0);
+  /** یک‌بار در هر کشیدن لرزش بزند، نه در هر فریمِ بالای آستانه. */
+  const armed = useSharedValue(0);
+
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-14, 14])
+        .failOffsetY([-12, 12])
+        .onUpdate((e) => {
+          // در جهتِ درست آزاد است تا سقف؛ در جهتِ مخالف کِش می‌آید تا حرکت
+          // بی‌جواب نماند ولی معنایی هم پیدا نکند.
+          const along = e.translationX * dir;
+          tx.value = along > 0 ? Math.min(along, REPLY_MAX) * dir : (e.translationX / 4);
+          const past = along >= REPLY_TRIGGER ? 1 : 0;
+          if (past !== armed.value) {
+            armed.value = past;
+            if (past) runOnJS(hapticThreshold)();
+          }
+        })
+        .onEnd(() => {
+          if (armed.value) runOnJS(onReply)();
+          armed.value = 0;
+          tx.value = withSpring(0, springs.gentle);
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onReply, dir]
+  );
+
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
+  const glyph = useAnimatedStyle(() => {
+    const t = interpolate(tx.value * dir, [0, REPLY_TRIGGER], [0, 1], Extrapolation.CLAMP);
+    return { opacity: t, transform: [{ scale: 0.6 + t * 0.4 }] };
+  });
+
+  return (
+    <View style={styles.bubbleRow}>
+      {/* پیکانِ پاسخ در فضایی که حباب خالی می‌کند آشکار می‌شود. */}
+      <Animated.View
+        style={[styles.replyGlyph, mine ? styles.replyGlyphMine : styles.replyGlyphTheirs, glyph]}
+        pointerEvents="none"
+      >
+        <Icon name="reply" size={18} tint="gold" />
+      </Animated.View>
+
+      <GestureDetector gesture={pan}>
+        <Animated.View
+          style={[
+            styles.bubble,
+            mine ? styles.mine : styles.theirs,
+            firstOfGroup && styles.firstOfGroup,
+            mine && lastOfGroup && styles.mineTail,
+            !mine && lastOfGroup && styles.theirsTail,
+            highlighted && (mine ? styles.flashMine : styles.flashTheirs),
+            slide,
+          ]}
+        >
+          <Pressable
+            onLongPress={onLongPress}
+            delayLongPress={280}
+            accessibilityRole="button"
+            accessibilityLabel={msg.body}
+            accessibilityHint="نگه‌داشتن برای پاسخ، ویرایش یا حذف · کشیدن به چپ برای پاسخ"
+          >
+            {/* نقلِ پیامی که این پیام پاسخِ آن است — زدنش به همان پیام می‌برد. */}
+            {msg.replyTo ? (
+              <PressableScale
+                onPress={() => msg.replyTo && onJumpToQuote(msg.replyTo.id)}
+                disabled={msg.replyTo.deleted}
+                accessibilityRole="button"
+                accessibilityLabel="رفتن به پیامِ اصلی"
+                scaleTo={0.97}
+                feedback="select"
+                style={[styles.quote, mine ? styles.quoteMine : styles.quoteTheirs]}
+              >
+                <Text
+                  style={[
+                    styles.quoteText,
+                    mine ? styles.quoteTextMine : styles.quoteTextTheirs,
+                    msg.replyTo.deleted && styles.quoteDeleted,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {msg.replyTo.deleted ? 'پیامِ حذف‌شده' : msg.replyTo.body}
+                </Text>
+              </PressableScale>
+            ) : null}
+
+            <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
+              {msg.body}
+            </Text>
+            {lastOfGroup && time ? (
+              <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
+                {time}
+                {msg.editedAt ? '  · ویرایش‌شده' : ''}
+                {/* رسیدِ خواندن — سرور فقط برای طلایی+ می‌فرستد. */}
+                {mine && msg.readAt ? '  · خوانده شد' : ''}
+              </Text>
+            ) : null}
+          </Pressable>
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  );
+}
+
 export function ThreadScreen({
   matchId,
   name,
@@ -92,6 +259,35 @@ export function ThreadScreen({
     vm.loadOlder();
   };
   const canSend = !!vm.draft.trim() && !vm.sending;
+
+  /**
+   * پرش به پیامی که این پیام پاسخِ آن است.
+   *
+   * بعد از پرش، پیامِ مقصد برای یک لحظه روشن می‌شود. بدونِ آن، پرش در گفتگوی
+   * شلوغ بی‌فایده است: صفحه جابه‌جا می‌شود ولی معلوم نیست روی کدام حباب
+   * نشسته‌ای.
+   */
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  const jumpToMessage = useCallback(
+    (id: number) => {
+      const idx = rows.findIndex((r) => r.type === 'msg' && r.msg.id === id);
+      // پیامِ اصلی هنوز در صفحه‌های بارگذاری‌شده نیست — سکوت بهتر از پرشِ
+      // اشتباه است، ولی لرزش می‌گوید «شنیدم، ولی نشد».
+      if (idx < 0) {
+        haptics.warn();
+        return;
+      }
+      listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+      setHighlightId(id);
+    },
+    [rows],
+  );
+
+  useEffect(() => {
+    if (highlightId == null) return;
+    const t = setTimeout(() => setHighlightId(null), 1400);
+    return () => clearTimeout(t);
+  }, [highlightId]);
 
   /*
    * ردیابیِ کیبورد روی رشته‌ی UI (بدونِ رفت‌وبرگشتِ جاوااسکریپت):
@@ -268,17 +464,21 @@ export function ThreadScreen({
 
   return (
     <ScreenContainer flush>
+      {/* طرحِ پس‌زمینه زیرِ همه‌چیز و بیرونِ فهرست است تا با اسکرول حرکت نکند. */}
+      <ChatBackground />
       <View style={styles.header}>
-        <Pressable
+        <PressableScale
+          scaleTo={0.9}
+          feedback="select"
           hitSlop={10}
           onPress={() => router.back()}
           accessibilityRole="button"
           accessibilityLabel="بازگشت"
-          style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+          style={styles.back}
         >
           {/* در RTL بازگشت به سمتِ راست است — شورونِ رو به راست */}
           <Icon name="chevron-next" size={22} tint="white" />
-        </Pressable>
+        </PressableScale>
         {/* تپِ آواتار/نام → پروفایلِ طرفِ مقابل */}
         <Pressable
           onPress={openPeerProfile}
@@ -298,15 +498,17 @@ export function ThreadScreen({
             {peerId ? <Text style={styles.headerHint}>دیدنِ پروفایل</Text> : null}
           </View>
         </Pressable>
-        <Pressable
+        <PressableScale
+          scaleTo={0.9}
+          feedback="select"
           hitSlop={10}
           onPress={() => setThreadMenu(true)}
           accessibilityRole="button"
           accessibilityLabel="گزینه‌های گفتگو"
-          style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+          style={styles.back}
         >
           <Icon name="more" size={20} tint="gold" />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {/*
@@ -341,6 +543,21 @@ export function ThreadScreen({
             maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 10 }}
             onEndReached={onEndReached}
             onEndReachedThreshold={0.2}
+            // ارتفاعِ حباب‌ها متغیر است و getItemLayout نداریم؛ اگر مقصد هنوز
+            // رندر نشده باشد، اول تقریبی نزدیکش می‌رویم و بعد دقیق.
+            onScrollToIndexFailed={(info) => {
+              listRef.current?.scrollToOffset({
+                offset: info.averageItemLength * info.index,
+                animated: true,
+              });
+              setTimeout(() => {
+                listRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: true,
+                  viewPosition: 0.5,
+                });
+              }, 240);
+            }}
             // کشیدنِ فهرست کیبورد را می‌بندد. مقدارِ interactive فقط روی iOS معنا دارد
             // و روی اندروید بی‌صدا نادیده گرفته می‌شود؛ آنجا on-drag لازم است.
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -378,44 +595,17 @@ export function ThreadScreen({
               }
 
               return (
-                <Pressable
+                <MessageBubble
+                  msg={msg}
+                  mine={mine}
+                  firstOfGroup={firstOfGroup}
+                  lastOfGroup={lastOfGroup}
+                  time={time}
+                  highlighted={highlightId === msg.id}
+                  onReply={() => vm.startReply(msg)}
                   onLongPress={() => setActionTarget(msg)}
-                  delayLongPress={280}
-                  accessibilityRole="button"
-                  accessibilityLabel={msg.body}
-                  accessibilityHint="نگه‌داشتن برای پاسخ، ویرایش یا حذف"
-                  style={[
-                    styles.bubble,
-                    mine ? styles.mine : styles.theirs,
-                    firstOfGroup && styles.firstOfGroup,
-                    mine && lastOfGroup && styles.mineTail,
-                    !mine && lastOfGroup && styles.theirsTail,
-                  ]}
-                >
-                  {/* نقلِ پیامی که این پیام پاسخِ آن است. */}
-                  {msg.replyTo ? (
-                    <View style={[styles.quote, mine ? styles.quoteMine : styles.quoteTheirs]}>
-                      <Text
-                        style={[styles.quoteText, msg.replyTo.deleted && styles.quoteDeleted]}
-                        numberOfLines={2}
-                      >
-                        {msg.replyTo.deleted ? 'پیامِ حذف‌شده' : msg.replyTo.body}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
-                    {msg.body}
-                  </Text>
-                  {lastOfGroup && time ? (
-                    <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
-                      {time}
-                      {msg.editedAt ? '  · ویرایش‌شده' : ''}
-                      {/* رسیدِ خواندن — سرور فقط برای طلایی+ می‌فرستد. */}
-                      {mine && msg.readAt ? '  · خوانده شد' : ''}
-                    </Text>
-                  ) : null}
-                </Pressable>
+                  onJumpToQuote={jumpToMessage}
+                />
               );
             }}
           />
@@ -472,14 +662,12 @@ export function ThreadScreen({
 
         <View style={styles.composer}>
           {showStartWarning && convQuota ? (
-            <Pressable
+            <PressableScale
+              scaleTo={0.9}
+              feedback="select"
               onPress={() => setSheet({ kind: 'quota' })}
               accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.quotaHint,
-                isExhausted(convQuota) && styles.quotaHintOut,
-                pressed && styles.quotaHintPressed,
-              ]}
+              style={[styles.quotaHint, isExhausted(convQuota) && styles.quotaHintOut]}
             >
               <Icon name={isExhausted(convQuota) ? 'lock' : 'send-fill'} size={14} tint="gold" />
               <Text style={styles.quotaHintText}>
@@ -488,7 +676,7 @@ export function ThreadScreen({
                   : lowWarning(convQuota)}
               </Text>
               <Text style={styles.quotaHintCta}>جزئیات</Text>
-            </Pressable>
+            </PressableScale>
           ) : null}
           <TextInput
             style={styles.input}
@@ -499,8 +687,10 @@ export function ThreadScreen({
             textAlign="right"
             multiline
           />
-          <Pressable
-            style={({ pressed }) => [styles.send, pressed && canSend && styles.sendPressed]}
+          <PressableScale
+            scaleTo={0.9}
+            feedback="select"
+            style={styles.send}
             onPress={onSend}
             disabled={!canSend}
             accessibilityRole="button"
@@ -513,7 +703,7 @@ export function ThreadScreen({
               style={[StyleSheet.absoluteFill, !canSend && styles.sendOff]}
             />
             <Icon name={vm.editing ? 'check' : 'send-fill'} size={20} tint="ink" />
-          </Pressable>
+          </PressableScale>
         </View>
         </>
         )}
@@ -613,7 +803,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backPressed: { backgroundColor: colors.surface },
   headerPeer: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
   headerText: { flex: 1 },
   headerNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
@@ -640,6 +829,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   sepText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.ink3 },
   bubble: {
@@ -657,6 +847,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   theirsTail: { borderBottomLeftRadius: 4 },
   bubbleText: {
@@ -680,17 +871,30 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     borderRightWidth: 2,
   },
-  quoteMine: { backgroundColor: 'rgba(42,29,18,0.10)', borderRightColor: colors.onGold },
+  // داخلِ حبابِ طلایی، پس‌زمینه‌ی روشن است؛ متنِ نقل هم باید تیره باشد.
+  // قبلاً هر دو حالت `ink2` (خاکستریِ روشن) بودند و نقل روی طلا خوانده نمی‌شد.
+  quoteMine: { backgroundColor: 'rgba(42,29,18,0.14)', borderRightColor: 'rgba(42,29,18,0.55)' },
   quoteTheirs: { backgroundColor: colors.surface2, borderRightColor: colors.gold },
   quoteText: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.xs,
     lineHeight: lineHeights.xs,
-    color: colors.ink2,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
-  quoteDeleted: { fontStyle: 'italic', color: colors.ink3 },
+  quoteTextMine: { color: 'rgba(42,29,18,0.8)' },
+  quoteTextTheirs: { color: colors.ink2 },
+  quoteDeleted: { fontStyle: 'italic', opacity: 0.7 },
+
+  // ردیفی که حباب و پیکانِ پاسخ را کنارِ هم نگه می‌دارد.
+  bubbleRow: { justifyContent: 'center' },
+  replyGlyph: { position: 'absolute', alignSelf: 'center' },
+  // پیامِ من به چپ می‌رود، پس پیکان سمتِ راست جا باز می‌کند — و برعکس.
+  replyGlyphMine: { right: spacing.md },
+  replyGlyphTheirs: { left: spacing.md },
+  // برقِ کوتاهِ پیامِ مقصدِ پرش.
+  flashMine: { backgroundColor: colors.gold2 },
+  flashTheirs: { backgroundColor: colors.surface2, borderColor: colors.goldSoft },
 
   // سنگِ قبر — نه حباب است نه پس‌زمینه دارد؛ فقط جای خالی را نگه می‌دارد.
   tombstone: {
@@ -704,6 +908,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderStyle: 'dashed',
   },
   tombstoneIcon: { opacity: 0.6 },
@@ -730,6 +935,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   contextText: { flex: 1 },
@@ -776,6 +982,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     paddingHorizontal: spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 12 : 8,
     paddingBottom: Platform.OS === 'ios' ? 12 : 8,
@@ -833,7 +1040,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   quotaHintOut: { borderColor: colors.roseSoft },
-  quotaHintPressed: { opacity: 0.8 },
   quotaHintText: {
     flex: 1,
     fontFamily: fonts.medium,

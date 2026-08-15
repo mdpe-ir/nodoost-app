@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
+import { StepDots } from '@/presentation/components/StepDots';
+import { haptics } from '@/core/haptics';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -49,10 +52,12 @@ export function OnboardingScreen() {
   function next() {
     setLocal('');
     if (step === 0 && vm.name.trim().length < 2) {
+      haptics.warn();
       setLocal('اسمت را وارد کن');
       return;
     }
     if (step === 1 && !vm.gender) {
+      haptics.warn();
       setLocal('جنسیت را انتخاب کن');
       return;
     }
@@ -64,10 +69,12 @@ export function OnboardingScreen() {
       }
     }
     if (step === 5 && !vm.hasPhoto) {
+      haptics.warn();
       setLocal('یک عکس اضافه کن');
       return;
     }
     if (step < STEPS - 1) {
+      haptics.select();
       setStep((s) => s + 1);
       return;
     }
@@ -118,11 +125,7 @@ export function OnboardingScreen() {
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
         <View>
           {/* نوارِ پیشرفت راست‌به‌چپ پر می‌شود — هم‌جهت با خواندنِ فارسی */}
-          <View style={styles.progress}>
-            {Array.from({ length: STEPS }).map((_, i) => (
-              <View key={i} style={[styles.seg, i <= step && styles.segOn]} />
-            ))}
-          </View>
+          <StepDots count={STEPS} index={step} variant="bars" style={styles.progress} />
           <Text style={styles.stepLabel}>گامِ {faNum(step + 1)} از {faNum(STEPS)}</Text>
         </View>
 
@@ -198,8 +201,10 @@ export function OnboardingScreen() {
 
           {step === 5 ? (
             <View style={styles.photoStep}>
-              <Pressable
-                style={({ pressed }) => [styles.photoTile, pressed && styles.photoTilePressed]}
+              <PressableScale
+                scaleTo={0.98}
+                feedback="select"
+                style={styles.photoTile}
                 onPress={vm.pickPhoto}
                 accessibilityRole="button"
                 accessibilityLabel="افزودنِ عکس"
@@ -218,7 +223,7 @@ export function OnboardingScreen() {
                     <Text style={styles.photoHint}>انتخابِ عکس</Text>
                   </View>
                 )}
-              </Pressable>
+              </PressableScale>
               <View style={styles.reviewNote}>
                 <Icon name="shield" size={14} tint="gold" />
                 <Text style={styles.reviewText}>اگر عکس خلاف قوانین باشد، مدیر آن را همراه با دلیل رد می‌کند.</Text>
@@ -248,14 +253,16 @@ export function OnboardingScreen() {
         <View style={styles.footer}>
           <Button label={step < STEPS - 1 ? 'ادامه' : 'پایان'} onPress={next} loading={vm.loading} />
           {step > 0 ? (
-            <Pressable
+            <PressableScale
+              scaleTo={0.9}
+              feedback="select"
               onPress={() => setStep((s) => s - 1)}
-              style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+              style={styles.backBtn}
               accessibilityRole="button"
             >
               <Icon name="chevron-next" size={16} tint="gold" />
               <Text style={styles.backText}>گامِ قبلی</Text>
-            </Pressable>
+            </PressableScale>
           ) : null}
         </View>
       </KeyboardAvoidingView>
@@ -274,8 +281,6 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, paddingVertical: spacing.lg },
   progress: { flexDirection: 'row-reverse', gap: spacing.sm },
-  seg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.surface2 },
-  segOn: { backgroundColor: colors.gold },
   stepLabel: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.xs,
@@ -308,6 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     paddingHorizontal: spacing.lg,
     paddingVertical: 14,
     color: colors.ink,
@@ -332,6 +338,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -351,7 +358,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldSoft,
   },
-  photoTilePressed: { opacity: 0.85 },
   photoImg: { width: '100%', height: '100%' },
   photoEditTag: {
     position: 'absolute',
@@ -408,6 +414,5 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: spacing.sm,
   },
-  backBtnPressed: { opacity: 0.7 },
   backText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { colors, fonts, fontSizes, radius } from '@/core/theme';
 
 interface Option<T extends string> {
@@ -20,15 +21,17 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
       {options.map((o) => {
         const active = o.key === value;
         return (
-          <Pressable
+          <PressableScale
             key={o.key}
             onPress={() => onChange(o.key)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            style={({ pressed }) => [styles.seg, active && styles.segActive, pressed && !active && styles.segPressed]}
+            scaleTo={0.94}
+            feedback="select"
+            style={[styles.seg, active && styles.segActive]}
           >
             <Text style={[styles.label, active && styles.labelActive]}>{o.label}</Text>
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>
@@ -41,6 +44,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.pill,
     padding: 3,
   },
@@ -52,7 +56,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segActive: { backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldSoft },
-  segPressed: { opacity: 0.7 },
   label: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink3 },
   labelActive: { color: colors.gold2 },
 });

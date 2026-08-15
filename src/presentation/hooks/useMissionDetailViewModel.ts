@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { haptics } from '@/core/haptics';
 import { useCases } from '@/core/di/DIProvider';
 import type { Mission, MissionProof } from '@/domain/entities';
 import { missionErrorText } from './useMissionsViewModel';
@@ -61,12 +62,16 @@ export function useMissionDetailViewModel(missionId: number) {
     try {
       const res = await uc.missions.claimMission(missionId, proofText.trim() || undefined);
       setMission(res.mission);
+      const done = res.mission.state !== 'pending_review';
+      // «فرستاده شد» هنوز موفقیت نیست — منتظرِ بررسی است. لرزشِ جشن را برای
+      // لحظه‌ای نگه می‌داریم که امتیاز واقعاً نشسته باشد.
+      if (done) haptics.success();
+      else haptics.tap();
       setToast(
-        res.mission.state === 'pending_review'
-          ? 'فرستاده شد؛ پس از بررسی امتیازت اضافه می‌شود.'
-          : `${res.mission.points} امتیاز گرفتی 🎉`
+        done ? `${res.mission.points} امتیاز گرفتی 🎉` : 'فرستاده شد؛ پس از بررسی امتیازت اضافه می‌شود.'
       );
     } catch (e) {
+      haptics.warn();
       setToast(missionErrorText(e));
     } finally {
       setBusy(false);

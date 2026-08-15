@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, Text, ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Text, ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 import { colors, fonts, fontSizes, radius, spacing, gradients, shadow } from '@/core/theme';
 
 type Variant = 'gold' | 'outline' | 'ghost' | 'danger';
@@ -18,6 +19,8 @@ interface Props {
   icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
+  /** شدتِ لرزش. برای تأییدهای سنگین (خرید، حذف) `commit` بده. */
+  feedback?: 'select' | 'tap' | 'commit' | 'none';
   style?: ViewStyle;
 }
 
@@ -29,22 +32,26 @@ export function Button({
   icon,
   loading,
   disabled,
+  feedback = 'tap',
   style,
 }: Props) {
   const isDisabled = disabled || loading;
   const gold = variant === 'gold';
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
-      style={({ pressed }) => [
+      // دکمه‌ی پهن اگر به همان نسبتِ دکمه‌ی دایره‌ای کوچک شود، جابه‌جاییِ لبه‌اش
+      // زیاد و ناخوشایند می‌شود.
+      scaleTo={0.97}
+      feedback={feedback}
+      style={[
         styles.base,
         { height: HEIGHTS[size] },
         gold ? shadow.gold : styles[variant],
         isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
         style,
       ]}
     >
@@ -72,7 +79,7 @@ export function Button({
           </Text>
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -85,11 +92,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   center: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderTopColor: colors.rim,
+  },
   ghost: { backgroundColor: colors.goldFaint, borderWidth: 1, borderColor: colors.goldSoft },
   danger: { backgroundColor: colors.roseFaint, borderWidth: 1, borderColor: colors.rose },
   disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   label: { fontFamily: fonts.medium, fontSize: fontSizes.md },
   labelSm: { fontSize: fontSizes.sm },
   labelOnGold: { color: colors.onGold },

@@ -34,6 +34,7 @@ export type IconName =
   | 'chevron-down'
   | 'next-arrows'
   | 'phone'
+  | 'reply'
   | 'plus'
   | 'rewind'
   | 'send-fill'
@@ -53,6 +54,8 @@ const VECTOR = {
   headset: 'headset-outline',
   menu: 'menu-outline',
   'chevron-down': 'chevron-down',
+  // پیکانِ پاسخ هم در پکِ برند نیست؛ مثلِ بقیه‌ی این فهرست از Ionicons می‌آید.
+  reply: 'arrow-undo-outline',
 } as const satisfies Partial<Record<IconName, React.ComponentProps<typeof Ionicons>['name']>>;
 
 type PngName = Exclude<IconName, keyof typeof VECTOR>;

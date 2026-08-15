@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { haptics } from '@/core/haptics';
 import { useCases } from '@/core/di/DIProvider';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
@@ -140,6 +141,9 @@ export function useThreadViewModel(matchId: number) {
     try {
       const msg = await uc.chat.sendMessage(matchId, body, replyId);
       setMessages((prev) => [...prev, msg]);
+      // بازخوردِ لمسی وقتی می‌زند که پیام واقعاً روی سرور نشسته، نه وقتی دکمه
+      // فشرده شد. تفاوتش را کاربر روی اینترنتِ ضعیف حس می‌کند: لرزش یعنی «رفت».
+      haptics.success();
       recordInstallNagAction();
       recordReviewMoment('action');
       if (isStarting) consumeQuota('conversation');
@@ -148,6 +152,7 @@ export function useThreadViewModel(matchId: number) {
       if (replyTo) setReplyTo(replyTo);
       const b = sendBlockOf(e);
       setBlock(b);
+      haptics.warn();
       // سرور می‌گوید سهمیه تمام شده ولی شمارنده‌ی اپ هنوز عدد داشت — یعنی
       // عددِ ما کهنه است. تازه‌اش کن تا برگه‌ی ارتقا حقیقت را نشان دهد.
       if (b?.kind === 'quota') refreshQuota();

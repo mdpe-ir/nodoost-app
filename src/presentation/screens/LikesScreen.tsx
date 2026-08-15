@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Pressable,
   ScrollView,
   RefreshControl,
   StyleSheet,
@@ -10,6 +9,8 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import { Stagger } from '@/presentation/components/Stagger';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScreenContainer, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
@@ -41,8 +42,10 @@ const TABS: { key: Tab; label: string }[] = [
 /** کاشیِ یک نفر — با عکس، نام و سن؛ اگر id معتبر باشد به پروفایلش می‌رود. */
 function LikerTile({ liker, w, h }: { liker: Liker; w: number; h: number }) {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.tile, { width: w, height: h }, pressed && styles.tilePressed]}
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
+      style={[styles.tile, { width: w, height: h }]}
       onPress={() => router.push({ pathname: '/user/[id]', params: { id: String(liker.id) } })}
       accessibilityRole="button"
       accessibilityLabel={liker.name ?? 'پروفایل'}
@@ -72,7 +75,7 @@ function LikerTile({ liker, w, h }: { liker: Liker; w: number; h: number }) {
           </View>
         ) : null}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -162,8 +165,10 @@ export function LikesScreen() {
               ) : null}
               <View style={styles.grid}>
                 {revealed
-                  ? vm.data!.likers.map((liker) => (
-                      <LikerTile key={liker.id} liker={liker} w={tileW} h={tileH} />
+                  ? vm.data!.likers.map((liker, i) => (
+                      <Stagger key={liker.id} index={i}>
+                        <LikerTile liker={liker} w={tileW} h={tileH} />
+                      </Stagger>
                     ))
                   : Array.from({ length: Math.min(count, 12) }, (_, i) => (
                       <View key={`locked-${i}`} style={[styles.tile, { width: tileW, height: tileH }]}>
@@ -190,8 +195,10 @@ export function LikesScreen() {
           <>
             <Text style={styles.countLine}>{faNum(vm.sentTotal || vm.sent.length)} نفر را پسندیده‌ای</Text>
             <View style={styles.grid}>
-              {vm.sent.map((liker) => (
-                <LikerTile key={liker.id} liker={liker} w={tileW} h={tileH} />
+              {vm.sent.map((liker, i) => (
+                <Stagger key={liker.id} index={i}>
+                  <LikerTile liker={liker} w={tileW} h={tileH} />
+                </Stagger>
               ))}
             </View>
           </>
@@ -258,8 +265,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
-  tilePressed: { opacity: 0.85 },
   tileFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
   tileInitial: { fontFamily: fonts.bold, fontSize: 40, color: colors.goldSoft },
   tileMeta: { position: 'absolute', right: 8, left: 8, bottom: 8 },

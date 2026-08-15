@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import { Icon, type IconName } from './Icon';
+import { PressableScale } from './PressableScale';
 
 interface Props {
   icon?: IconName;
@@ -25,14 +26,10 @@ export function EmptyState({ icon, title, hint, actionLabel, onAction, actionIco
       <Text style={styles.title}>{title}</Text>
       {hint ? <Text style={styles.hint}>{hint}</Text> : null}
       {actionLabel && onAction ? (
-        <Pressable
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-          onPress={onAction}
-          accessibilityRole="button"
-        >
+        <PressableScale style={styles.action} onPress={onAction} accessibilityRole="button" scaleTo={0.94}>
           <Icon name={actionIcon} size={16} tint="gold" />
           <Text style={styles.actionText}>{actionLabel}</Text>
-        </Pressable>
+        </PressableScale>
       ) : null}
     </Animated.View>
   );
@@ -73,6 +70,5 @@ const styles = StyleSheet.create({
     borderColor: colors.goldSoft,
     backgroundColor: colors.goldFaint,
   },
-  actionPressed: { opacity: 0.8 },
   actionText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2 },
 });

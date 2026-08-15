@@ -2,18 +2,25 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  Pressable,
-  ScrollView,
   StyleSheet,
   type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { PressableScale } from '@/presentation/components/PressableScale';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
+import {
+  CollapsingHeaderTitle,
+  ScreenContainer,
+  ScreenHeader,
+} from '@/presentation/components/ScreenContainer';
 import { ProfileSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon, type IconName } from '@/presentation/components/Icon';
@@ -68,15 +75,17 @@ const LEGACY_TAB: Record<string, Href> = {
 /** یک ستونِ آماری — عدد و برچسبِ کوتاه، با مقصدِ خودش. */
 function Stat({ value, label, onPress }: { value: string; label: string; onPress: () => void }) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.9}
+      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
-      style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
+      style={styles.stat}
     >
       <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -93,18 +102,20 @@ function QuickTile({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
-      style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
+      style={styles.tile}
     >
       <View style={styles.tileIcon}>
         <Icon name={icon} size={18} tint="gold" />
       </View>
       <Text style={styles.tileTitle} numberOfLines={1}>{title}</Text>
       <Text style={styles.tileHint} numberOfLines={2}>{hint}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -136,15 +147,27 @@ export function ProfileScreen() {
     const atEnd = g.offset + g.viewport >= g.content - 32;
     setHasMore(scrollable && !atEnd);
   }, []);
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      geom.current.offset = e.nativeEvent.contentOffset.y;
-      geom.current.viewport = e.nativeEvent.layoutMeasurement.height;
-      geom.current.content = e.nativeEvent.contentSize.height;
+  /**
+   * موقعیتِ اسکرول برای کوچک‌شدنِ عنوان — روی تردِ UI می‌ماند تا هدر با
+   * اسکرولِ تند هم نلرزد.
+   */
+  const scrollY = useSharedValue(0);
+
+  // هندسه‌ی اسکرول (برای نشانه‌ی «ادامه دارد») هنوز سمتِ JS لازم است.
+  const reportGeom = useCallback(
+    (offset: number, viewport: number, content: number) => {
+      geom.current.offset = offset;
+      geom.current.viewport = viewport;
+      geom.current.content = content;
       syncHasMore();
     },
     [syncHasMore],
   );
+
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+    runOnJS(reportGeom)(e.contentOffset.y, e.layoutMeasurement.height, e.contentSize.height);
+  });
   const onScrollLayout = useCallback(
     (e: LayoutChangeEvent) => {
       geom.current.viewport = e.nativeEvent.layout.height;
@@ -199,8 +222,13 @@ export function ProfileScreen() {
 
   return (
     <ScreenContainer>
-      <ScreenHeader title="من" support settings />
-      <ScrollView
+      <ScreenHeader
+        title="من"
+        support
+        settings
+        titleSlot={<CollapsingHeaderTitle title="من" scrollY={scrollY} />}
+      />
+      <Animated.ScrollView
         contentContainerStyle={styles.scroll}
         // نوارِ اسکرولِ وب روی عنوانِ بخش‌ها می‌افتد؛ نشانه‌ی «بکش پایین» کارِ
         // اعلامِ ادامه‌ی صفحه را بهتر و بدونِ این عارضه انجام می‌دهد.
@@ -212,9 +240,11 @@ export function ProfileScreen() {
       >
         {/* ۱ — هویت: چهره، نام، رتبه، معرفیِ کوتاه — */}
         <View style={styles.idRow}>
-          <Pressable
+          <PressableScale
+            scaleTo={0.94}
+            feedback="tap"
             onPress={openPhotoSheet}
-            style={({ pressed }) => [styles.avatarRing, shadow.gold, pressed && styles.pressed]}
+            style={[styles.avatarRing, shadow.gold]}
             accessibilityRole="button"
             accessibilityLabel="تغییرِ عکسِ پروفایل"
           >
@@ -228,7 +258,7 @@ export function ProfileScreen() {
             <View style={styles.avatarBadge}>
               <Icon name="edit" size={13} tint="ink" />
             </View>
-          </Pressable>
+          </PressableScale>
 
           <View style={styles.idBody}>
             <View style={styles.nameRow}>
@@ -312,11 +342,13 @@ export function ProfileScreen() {
           <Text style={styles.sectionTitle}>اشتراکِ من</Text>
         </View>
         <View style={[styles.statusCard, user?.isPlus && styles.statusCardPlus]}>
-          <Pressable
+          <PressableScale
+            scaleTo={0.98}
+            feedback="select"
             onPress={() => goToPlans()}
             accessibilityRole="button"
             accessibilityLabel={user?.isPlus ? 'تمدید یا ارتقای اشتراک' : 'خریدِ اشتراک'}
-            style={({ pressed }) => [styles.statusHead, pressed && styles.ctaPressed]}
+            style={styles.statusHead}
           >
             {!user?.isPlus ? (
               <LinearGradient colors={gradients.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -341,7 +373,7 @@ export function ProfileScreen() {
                 {user?.isPlus ? 'تمدید' : 'ارتقا'}
               </Text>
             </View>
-          </Pressable>
+          </PressableScale>
 
           {/* «چه داری» بالا، «چقدر مانده» پایین — همان‌جایی که کاربر می‌فهمد
               سهمیه‌ای در کار است، راهِ بازکردنش هم یک لمس فاصله دارد. */}
@@ -392,7 +424,7 @@ export function ProfileScreen() {
             onPress={() => router.push('/settings' as Href)}
           />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {hasMore ? (
         <Animated.View
@@ -447,7 +479,6 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   scroll: { paddingBottom: spacing.xxl },
-  pressed: { opacity: 0.6 },
 
   // — هویت —
   idRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.lg },
@@ -503,6 +534,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     borderRadius: radius.lg,
     paddingVertical: spacing.md,
     marginTop: spacing.md,
@@ -548,14 +580,13 @@ const styles = StyleSheet.create({
     borderColor: colors.goldSoft,
     backgroundColor: colors.surface,
   },
-  statusCardPlus: { borderColor: colors.line },
+  statusCardPlus: { borderColor: colors.line, borderTopColor: colors.rim },
   statusHead: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.md,
   },
-  ctaPressed: { opacity: 0.92 },
   statusIcon: {
     width: 42,
     height: 42,
@@ -687,10 +718,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
     alignItems: 'flex-end',
   },
-  tilePressed: { backgroundColor: colors.surface2, borderColor: colors.goldSoft },
   tileIcon: {
     width: 36,
     height: 36,

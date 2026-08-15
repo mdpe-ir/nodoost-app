@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, Linking, Platform, StyleSheet } from 'react-native';
+import { View, Text, Linking, Platform, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { Image } from 'expo-image';
 import { Icon } from '@/presentation/components/Icon';
 import type { InstallMethod, InstallMethodKey } from '@/core/config/installConfig';
@@ -68,12 +69,13 @@ export function InstallMethods({ methods }: { methods: InstallMethod[] }) {
   return (
     <View style={styles.list}>
       {methods.map((m) => (
-        <Pressable
+        <PressableScale
           key={m.key}
           onPress={() => openMethod(m)}
           accessibilityRole="button"
           accessibilityLabel={`${m.label} — ${METHOD_HINT[m.key] ?? ''}`}
-          style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+          style={styles.card}
+          scaleTo={0.97}
         >
           <View style={styles.leadIcon}>
             <Image source={METHOD_LOGO[m.key]} style={styles.logo} contentFit="contain" />
@@ -83,7 +85,7 @@ export function InstallMethods({ methods }: { methods: InstallMethod[] }) {
             <Text style={styles.hint}>{METHOD_HINT[m.key] ?? m.url}</Text>
           </View>
           <Icon name="chevron-prev" size={20} tint="gold" />
-        </Pressable>
+        </PressableScale>
       ))}
     </View>
   );
@@ -101,7 +103,6 @@ const styles = StyleSheet.create({
     borderColor: colors.goldSoft,
     backgroundColor: colors.surface,
   },
-  pressed: { opacity: 0.7 },
   leadIcon: {
     width: 44,
     height: 44,
@@ -109,6 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -136,6 +138,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   emptyText: {

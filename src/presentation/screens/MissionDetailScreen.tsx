@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { ZoomIn, FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 
@@ -206,10 +206,11 @@ function Hero({ mission }: { mission: Mission }) {
 function StatusRibbon({ mission }: { mission: Mission }) {
   if (mission.state === 'completed') {
     return (
-      <View style={[styles.ribbon, styles.ribbonOk]}>
+      // فنر، نه محوشدن: تکمیلِ ماموریت دستاورد است و باید مثلِ دستاورد بنشیند.
+      <Animated.View entering={ZoomIn.springify().damping(13).stiffness(200)} style={[styles.ribbon, styles.ribbonOk]}>
         <Icon name="check" size={16} tint="gold" />
         <Text style={styles.ribbonOkText}>انجام شد — {faNum(mission.points)} امتیاز گرفتی.</Text>
-      </View>
+      </Animated.View>
     );
   }
   if (mission.state === 'pending_review') {
@@ -502,6 +503,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   chipGold: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
@@ -516,10 +518,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   ribbonOk: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
-  ribbonBad: { borderColor: colors.line, backgroundColor: colors.surface2 },
+  ribbonBad: { borderColor: colors.line, borderTopColor: colors.rim, backgroundColor: colors.surface2 },
   ribbonText: {
     flex: 1,
     fontFamily: fonts.regular,
@@ -560,6 +563,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   sectionTitle: {
@@ -654,6 +658,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   thumb: { width: '100%', height: '100%' },
   thumbAdd: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed' },
@@ -674,6 +679,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.bg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -694,6 +700,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface,
   },
   lockText: {

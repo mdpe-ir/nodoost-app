@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, FlatList, RefreshControl, ActivityIndicator, StyleSheet } from 'react-native';
+import { Stagger } from '@/presentation/components/Stagger';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { StackHeader } from '@/presentation/components/StackHeader';
@@ -39,8 +41,10 @@ function FollowRow({
   onRemove: () => void;
 }) {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
+      style={styles.row}
       onPress={() => router.push({ pathname: '/user/[id]', params: { id: String(item.id) } })}
       accessibilityRole="button"
       accessibilityLabel={item.name ?? 'پروفایل'}
@@ -72,7 +76,7 @@ function FollowRow({
       {isMe ? null : (
         <FollowButton isFollowing={item.isFollowing} busy={busy} onPress={onToggle} size="sm" />
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -117,16 +121,18 @@ export function FollowersScreen({
         <FlatList
           data={vm.items}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <FollowRow
-              item={item}
-              isMe={item.id === myId}
-              busy={vm.isBusy(item.id)}
-              // فقط فهرستِ دنبال‌کننده‌های خودم؛ روی پروفایلِ دیگران معنا ندارد.
-              canRemove={!userId && vm.tab === 'followers' && item.id !== myId}
-              onToggle={() => vm.toggleFollow(item)}
-              onRemove={() => setConfirmRemove(item)}
-            />
+          renderItem={({ item, index }) => (
+            <Stagger index={index}>
+              <FollowRow
+                item={item}
+                isMe={item.id === myId}
+                busy={vm.isBusy(item.id)}
+                // فقط فهرستِ دنبال‌کننده‌های خودم؛ روی پروفایلِ دیگران معنا ندارد.
+                canRemove={!userId && vm.tab === 'followers' && item.id !== myId}
+                onToggle={() => vm.toggleFollow(item)}
+                onRemove={() => setConfirmRemove(item)}
+              />
+            </Stagger>
           )}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
@@ -188,9 +194,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     marginBottom: spacing.sm,
   },
-  pressed: { opacity: 0.8 },
   rowBody: { flex: 1 },
   nameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.xs },
   name: {
@@ -208,6 +214,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   removePressed: { opacity: 0.6 },
   removeText: {

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScreenContainer, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
@@ -70,9 +71,11 @@ export function PhotosScreen() {
             const pending = p.status === 'pending' || p.status == null;
             const isRejected = p.status === 'rejected';
             return (
-              <Pressable
+              <PressableScale
+                scaleTo={0.98}
+                feedback="select"
                 key={p.id}
-                style={({ pressed }) => [styles.tile, { width: tile, height: tile }, pressed && styles.tilePressed]}
+                style={[styles.tile, { width: tile, height: tile }]}
                 onPress={() => uri && setViewer(p)}
                 disabled={!uri}
                 accessibilityRole="imagebutton"
@@ -108,13 +111,15 @@ export function PhotosScreen() {
                 >
                   <Icon name="close" size={14} tint="white" />
                 </Pressable>
-              </Pressable>
+              </PressableScale>
             );
           })}
 
           {countedPhotos < maxPhotos ? (
-            <Pressable
-              style={({ pressed }) => [styles.tile, styles.addTile, { width: tile, height: tile }, pressed && styles.addTilePressed]}
+            <PressableScale
+              scaleTo={0.98}
+              feedback="select"
+              style={[styles.tile, styles.addTile, { width: tile, height: tile }]}
               onPress={() => vm.addPhoto()}
               disabled={vm.busy}
               accessibilityRole="button"
@@ -122,17 +127,13 @@ export function PhotosScreen() {
             >
               <Icon name="plus" size={24} tint="gold" />
               <Text style={styles.addTileText}>افزودن</Text>
-            </Pressable>
+            </PressableScale>
           ) : userTier < 5 ? (
             // سقفِ سطحِ فعلی پر شده — کاشیِ قفل، دعوت به ارتقا.
-            <Pressable
-              style={({ pressed }) => [
-                styles.tile,
-                styles.addTile,
-                styles.lockTile,
-                { width: tile, height: tile },
-                pressed && styles.addTilePressed,
-              ]}
+            <PressableScale
+              scaleTo={0.98}
+              feedback="select"
+              style={[styles.tile, styles.addTile, styles.lockTile, { width: tile, height: tile }]}
               onPress={() =>
                 router.push({
                   pathname: '/plans',
@@ -144,7 +145,7 @@ export function PhotosScreen() {
             >
               <Icon name="lock" size={22} tint="gold" />
               <Text style={styles.addTileText}>عکسِ بیشتر با ارتقا</Text>
-            </Pressable>
+            </PressableScale>
           ) : null}
         </View>
 
@@ -213,7 +214,6 @@ const styles = StyleSheet.create({
   // — شبکه‌ی تمام‌عرض (لبه‌تا‌لبه) — سلول‌های مربعیِ نزدیک‌به‌هم.
   grid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: GAP, marginTop: spacing.sm },
   tile: { backgroundColor: colors.surface2, overflow: 'hidden' },
-  tilePressed: { opacity: 0.8 },
   photo: { width: '100%', height: '100%' },
   photoDim: { opacity: 0.45 },
   primaryTag: {
@@ -261,7 +261,6 @@ const styles = StyleSheet.create({
     borderColor: colors.goldSoft,
     backgroundColor: colors.surface,
   },
-  addTilePressed: { backgroundColor: colors.goldFaint },
   addTileText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.gold2, textAlign: 'center', writingDirection: 'rtl' },
   lockTile: { borderStyle: 'solid', opacity: 0.85, paddingHorizontal: spacing.xs },
 

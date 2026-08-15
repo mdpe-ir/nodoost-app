@@ -2,12 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  Pressable,
   ScrollView,
   RefreshControl,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { Stagger } from '@/presentation/components/Stagger';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { ScreenContainer, PAGE_PADDING } from '@/presentation/components/ScreenContainer';
@@ -137,8 +138,10 @@ export function ViewersScreen() {
             ) : null}
             <View style={styles.grid}>
               {revealed
-                ? (data?.viewers ?? []).map((v) => (
-                    <ViewerTile key={v.id} viewer={v} w={tileW} h={tileH} />
+                ? (data?.viewers ?? []).map((v, i) => (
+                    <Stagger key={v.id} index={i}>
+                      <ViewerTile viewer={v} w={tileW} h={tileH} />
+                    </Stagger>
                   ))
                 : Array.from({ length: Math.min(count, 12) }, (_, i) => (
                     <View key={`locked-${i}`} style={[styles.tile, { width: tileW, height: tileH }]}>
@@ -170,8 +173,10 @@ export function ViewersScreen() {
 /** کاشیِ یک بازدیدکننده — با عکس، نام و سطح؛ تپ → پروفایل. */
 function ViewerTile({ viewer, w, h }: { viewer: Viewer; w: number; h: number }) {
   return (
-    <Pressable
-      style={({ pressed }) => [styles.tile, { width: w, height: h }, pressed && styles.tilePressed]}
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
+      style={[styles.tile, { width: w, height: h }]}
       onPress={() => router.push({ pathname: '/user/[id]', params: { id: String(viewer.id) } })}
       accessibilityRole="button"
       accessibilityLabel={viewer.name ?? 'پروفایل'}
@@ -201,7 +206,7 @@ function ViewerTile({ viewer, w, h }: { viewer: Viewer; w: number; h: number }) 
           </View>
         ) : null}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -250,8 +255,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
-  tilePressed: { opacity: 0.85 },
   tileFallback: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface2 },
   tileInitial: { fontFamily: fonts.bold, fontSize: 40, color: colors.goldSoft },
   tileMeta: { position: 'absolute', right: 8, left: 8, bottom: 8 },

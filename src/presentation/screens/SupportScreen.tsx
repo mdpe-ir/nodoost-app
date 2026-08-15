@@ -10,12 +10,14 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
+import { ChatBackground } from '@/presentation/components/ChatBackground';
 import { StackHeader } from '@/presentation/components/StackHeader';
 import { RowsSkeleton, Skeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
@@ -229,21 +231,19 @@ export function SupportScreen() {
           </Text>
           <View style={styles.topics}>
             {vm.topics.map((t) => (
-              <Pressable
+              <PressableScale
+                scaleTo={0.98}
+                feedback="select"
                 key={t.slug}
                 onPress={() => void vm.startThread(t.slug)}
                 disabled={vm.starting}
                 accessibilityRole="button"
                 accessibilityLabel={t.label}
-                style={({ pressed }) => [
-                  styles.topic,
-                  pressed && !vm.starting && styles.topicPressed,
-                  vm.starting && styles.topicDisabled,
-                ]}
+                style={[styles.topic, vm.starting && styles.topicDisabled]}
               >
                 <Text style={styles.topicText}>{t.label}</Text>
                 <Icon name="chevron-prev" size={14} tint="gold" />
-              </Pressable>
+              </PressableScale>
             ))}
           </View>
 
@@ -262,16 +262,20 @@ export function SupportScreen() {
   // ───────── حالتِ ۲: گفتگو باز است — همان تجربه‌ی چت ─────────
   return (
     <ScreenContainer flush>
+      {/* همان پس‌زمینه‌ی گفتگو — پشتیبانی هم یک پیام‌رسان است. */}
+      <ChatBackground />
       <View style={styles.header}>
-        <Pressable
+        <PressableScale
+          scaleTo={0.9}
+          feedback="select"
           hitSlop={10}
           onPress={() => router.back()}
           accessibilityRole="button"
           accessibilityLabel="بازگشت"
-          style={({ pressed }) => [styles.back, pressed && styles.backPressed]}
+          style={styles.back}
         >
           <Icon name="chevron-next" size={22} tint="white" />
-        </Pressable>
+        </PressableScale>
         {/* بی‌کنش: حسابِ رسمی پروفایلِ عمومی ندارد و لمسش نباید به ۴۰۴ برسد. */}
         <OfficialHeader
           name={vm.account?.name}
@@ -362,8 +366,10 @@ export function SupportScreen() {
             textAlign="right"
             multiline
           />
-          <Pressable
-            style={({ pressed }) => [styles.send, pressed && canSend && styles.sendPressed]}
+          <PressableScale
+            scaleTo={0.9}
+            feedback="select"
+            style={styles.send}
             onPress={onSend}
             disabled={!canSend}
             accessibilityRole="button"
@@ -376,7 +382,7 @@ export function SupportScreen() {
               style={[StyleSheet.absoluteFill, !canSend && styles.sendOff]}
             />
             <Icon name="send-fill" size={20} tint="ink" />
-          </Pressable>
+          </PressableScale>
         </View>
 
         <Animated.View style={bottomSpacer} />
@@ -440,6 +446,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     overflow: 'hidden',
   },
   divider: { height: 1, backgroundColor: colors.line, marginHorizontal: spacing.md },
@@ -473,8 +480,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
-  topicPressed: { backgroundColor: colors.surface2 },
   topicDisabled: { opacity: 0.5 },
   topicText: {
     flex: 1,
@@ -518,7 +525,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   back: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  backPressed: { backgroundColor: colors.surface },
   emptyWrap: { flex: 1, justifyContent: 'center' },
   list: { padding: spacing.lg, paddingTop: spacing.sm },
   olderLoading: { paddingBottom: spacing.md },
@@ -531,6 +537,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   sepText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.ink3 },
   bubble: {
@@ -548,6 +555,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
   },
   theirsTail: { borderBottomLeftRadius: 4 },
   bubbleText: {
@@ -580,6 +588,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     paddingHorizontal: spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 12 : 8,
     paddingBottom: Platform.OS === 'ios' ? 12 : 8,

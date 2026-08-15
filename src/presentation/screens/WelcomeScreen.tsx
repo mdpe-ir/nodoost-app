@@ -2,13 +2,14 @@ import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  Pressable,
   StyleSheet,
   ScrollView,
   useWindowDimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
+import { StepDot } from '@/presentation/components/StepDots';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -117,15 +118,16 @@ export function WelcomeScreen() {
       {/* سطرِ بالا: نامِ برند + رد کردن */}
       <View style={styles.topBar}>
         {!isLast ? (
-          <Pressable
+          <PressableScale
+            scaleTo={0.9}
+            feedback="select"
             onPress={markSeen}
             hitSlop={10}
-            style={({ pressed }) => pressed && styles.pressedDim}
             accessibilityRole="button"
             accessibilityLabel="رد کردنِ معرفی"
           >
             <Text style={styles.skip}>رد کردن</Text>
-          </Pressable>
+          </PressableScale>
         ) : (
           <View />
         )}
@@ -175,9 +177,17 @@ export function WelcomeScreen() {
       {/* نقطه‌های پیشرفت — راست‌به‌چپ، هم‌جهت با خواندنِ فارسی */}
       <View style={styles.dots}>
         {SLIDES.map((_, i) => (
-          <Pressable key={i} onPress={() => goTo(i)} hitSlop={8} accessibilityRole="button">
-            <View style={[styles.dot, i === index && styles.dotOn]} />
-          </Pressable>
+          <PressableScale
+            key={i}
+            onPress={() => goTo(i)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`اسلایدِ ${i + 1}`}
+            scaleTo={0.8}
+            feedback="select"
+          >
+            <StepDot active={i === index} />
+          </PressableScale>
         ))}
       </View>
 
@@ -190,15 +200,17 @@ export function WelcomeScreen() {
           style={styles.nextBtn}
         />
         {index > 0 ? (
-          <Pressable
+          <PressableScale
+            scaleTo={0.9}
+            feedback="select"
             onPress={prev}
             hitSlop={8}
-            style={({ pressed }) => [styles.prevBtn, pressed && styles.pressedDim]}
+            style={styles.prevBtn}
             accessibilityRole="button"
             accessibilityLabel="اسلایدِ قبلی"
           >
             <Text style={styles.prevText}>قبلی</Text>
-          </Pressable>
+          </PressableScale>
         ) : null}
       </View>
     </View>
@@ -222,7 +234,6 @@ const styles = StyleSheet.create({
   },
   brand: { fontFamily: fonts.bold, fontSize: fontSizes.lg, color: colors.gold2 },
   skip: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink3 },
-  pressedDim: { opacity: 0.6 },
   // pager کلِ فضای میانی را می‌گیرد تا کلِ این ناحیه هدفِ سوایپ باشد، نه فقط نوارِ محتوا
   pager: { flex: 1 },
   // alignItems:center محتوای هر اسلاید را به‌صورتِ عمودی وسطِ قابِ بلندِ pager می‌چیند
@@ -281,8 +292,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.xl,
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.surface2 },
-  dotOn: { width: 22, backgroundColor: colors.gold },
   footer: { paddingHorizontal: 22, paddingBottom: spacing.lg },
   nextBtn: { width: '100%' },
   prevBtn: { alignSelf: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },

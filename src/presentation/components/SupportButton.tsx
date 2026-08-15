@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { Icon } from './Icon';
+import { PressableScale } from './PressableScale';
 import { colors, radius } from '@/core/theme';
 
 /**
@@ -11,20 +12,22 @@ import { colors, radius } from '@/core/theme';
  */
 export function SupportButton() {
   return (
-    <Pressable
+    <PressableScale
       // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ تازه تا اجرای بعدیِ expo start شناخته نمی‌شود.
       onPress={() => router.push('/support' as Href)}
       hitSlop={10}
       accessibilityRole="button"
       accessibilityLabel="پشتیبانی"
-      style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+      scaleTo={0.88}
+      feedback="select"
+      style={styles.btn}
     >
       <View style={styles.chip}>
         {/* هدست، نه سپر: سپر «تأییدشده» معنی می‌دهد و همان‌جا کنارِ نامِ حسابِ
             پشتیبانی هم به همان معنا به کار می‌رود. */}
         <Icon name="headset" size={20} tint="gold" />
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -46,5 +49,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: { opacity: 0.7 },
 });

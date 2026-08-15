@@ -1,6 +1,7 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { PressableScale } from './PressableScale';
 import { colors, fonts, radius } from '@/core/theme';
 import type { Rank } from '@/domain/entities';
 
@@ -65,14 +66,15 @@ export function RankBadge({
 
   if (!onPress) return body;
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={`رتبه: ${rank.name}`}
-      style={({ pressed }) => (pressed ? { opacity: 0.75 } : null)}
+      scaleTo={0.92}
+      feedback="select"
     >
       {body}
-    </Pressable>
+    </PressableScale>
   );
 }

@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     overflow: 'hidden',
   },
   divider: { height: 1, backgroundColor: colors.line, marginHorizontal: spacing.md },

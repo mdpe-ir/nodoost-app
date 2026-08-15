@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
-import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { BottomSheet } from './BottomSheet';
 import { router } from 'expo-router';
 import { Button } from './Button';
 import { Icon } from './Icon';
@@ -13,7 +12,7 @@ import { tierPerks } from '@/presentation/tiers/tierFeatures';
 import { QUOTA_META, resetText, unlockText } from '@/presentation/tiers/quotaCopy';
 import { faPrice } from '@/core/utils/faNum';
 import { quotaOf, type QuotaKey } from '@/domain/entities';
-import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
 /**
  * برگه‌ی ارتقا — تنها دروازه‌ی «چرا نمی‌توانم و چطور بازش کنم» در کلِ اپ.
@@ -31,8 +30,6 @@ import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '
  *     اصلاً ارتقا پیشنهاد نمی‌شود — فقط زمانِ تازه‌شدن گفته می‌شود.
  */
 
-const TRAVEL = 560;
-const ENTER_SPRING = { damping: 22, stiffness: 200, mass: 0.9 } as const;
 
 export interface UpgradeSheetProps {
   visible: boolean;
@@ -58,20 +55,8 @@ export function UpgradeSheet({
   message,
   feature,
 }: UpgradeSheetProps) {
-  const insets = useSafeAreaInsets();
   const { quota } = useQuota();
   const { tiers } = useTierCatalog();
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (visible) progress.value = withSpring(1, ENTER_SPRING);
-    else progress.value = 0;
-  }, [visible, progress]);
-
-  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (1 - progress.value) * TRAVEL }],
-  }));
 
   const item = quotaKey ? quotaOf(quota, quotaKey) : undefined;
 
@@ -115,22 +100,7 @@ export function UpgradeSheet({
   const gain = item && target ? unlockText(item, target.name) : null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <View style={styles.root}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="بستن"
-          />
-        </Animated.View>
-
-        <Animated.View
-          style={[styles.sheet, shadow.card, { paddingBottom: insets.bottom + spacing.lg }, sheetStyle]}
-          accessibilityViewIsModal
-        >
-          <View style={styles.grabber} />
+    <BottomSheet visible={visible} onDismiss={onClose}>
 
           <View style={styles.headRow}>
             <View style={styles.headIcon}>
@@ -194,33 +164,12 @@ export function UpgradeSheet({
           {quotaKey === 'conversation' ? (
             <Text style={styles.note}>پاسخ‌دادن به کسی که به تو پیام داده همیشه رایگان است.</Text>
           ) : null}
-        </Animated.View>
-      </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { backgroundColor: colors.backdrop },
 
-  sheet: {
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  grabber: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.line,
-    marginBottom: spacing.lg,
-  },
 
   headRow: { flexDirection: 'row-reverse', gap: spacing.md, alignItems: 'flex-start' },
   headIcon: {
@@ -257,6 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
   },
 

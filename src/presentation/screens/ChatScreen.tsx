@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { Stagger } from '@/presentation/components/Stagger';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { router, type Href } from 'expo-router';
 import { ScreenContainer, ScreenHeader } from '@/presentation/components/ScreenContainer';
 import { RowsSkeleton } from '@/presentation/components/Skeleton';
@@ -51,8 +53,10 @@ export function ChatScreen() {
    * راه می‌دهد و منوی مسدودکردن/گزارش را روی حسابِ رسمی نشان نمی‌دهد.
    */
   const supportRow = support.enabled ? (
-    <Pressable
-      style={({ pressed }) => [styles.row, styles.supportRow, pressed && styles.rowPressed]}
+    <PressableScale
+      scaleTo={0.98}
+      feedback="select"
+      style={[styles.row, styles.supportRow]}
       accessibilityRole="button"
       accessibilityLabel="گفتگو با پشتیبانی"
       onPress={() => router.push('/support' as Href)}
@@ -93,7 +97,7 @@ export function ChatScreen() {
           ) : null}
         </View>
       </View>
-    </Pressable>
+    </PressableScale>
   ) : null;
 
   return (
@@ -131,11 +135,14 @@ export function ChatScreen() {
         refreshControl={
           <RefreshControl refreshing={vm.refreshing} onRefresh={vm.refresh} tintColor={colors.gold} />
         }
-        renderItem={({ item }) => {
+        renderItem={({ item, index }) => {
             const unread = !!item.unread;
             return (
-              <Pressable
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              <Stagger index={index}>
+              <PressableScale
+                scaleTo={0.98}
+                feedback="select"
+                style={styles.row}
                 accessibilityRole="button"
                 accessibilityHint={item.isSupport ? undefined : 'نگه‌داشتن برای پاک‌کردن یا مسدود کردن'}
                 // پشتیبانی مستثناست: نه پاک می‌شود نه بلاک — تنها راهِ کمک‌گرفتن است.
@@ -192,7 +199,8 @@ export function ChatScreen() {
                     ) : null}
                   </View>
                 </View>
-              </Pressable>
+              </PressableScale>
+              </Stagger>
             );
           }}
       />
@@ -302,7 +310,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
-  rowPressed: { opacity: 0.7 },
   meta: { flex: 1, gap: 2 },
   rowTop: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   nameWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },

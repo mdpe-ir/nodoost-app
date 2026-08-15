@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, Pressable, TextInput, StyleSheet } from 'react-native';
+import { View, Text, Modal, TextInput, StyleSheet } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { Button } from './Button';
 import { Icon } from './Icon';
 import { copyOf, reviewCopy, type ReviewConfig } from '@/core/config/reviewConfig';
@@ -81,11 +82,11 @@ export function ReviewPromptModal({ visible, cfg, onChoose }: Props) {
                 />
               </View>
               <View style={styles.footRow}>
-                <Pressable onPress={close} hitSlop={8}>
+                <PressableScale onPress={close} hitSlop={8} scaleTo={0.85} feedback="select">
                   <Text style={styles.footLink}>{copyOf(cfg.laterLabel, reviewCopy.laterLabel)}</Text>
-                </Pressable>
+                </PressableScale>
                 <Text style={styles.footSep}>·</Text>
-                <Pressable
+                <PressableScale
                   onPress={() => {
                     onChoose({ kind: 'never' });
                     reset();
@@ -93,7 +94,7 @@ export function ReviewPromptModal({ visible, cfg, onChoose }: Props) {
                   hitSlop={8}
                 >
                   <Text style={styles.footLink}>دیگر نپرس</Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </>
           ) : null}
@@ -213,6 +214,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.line,
+    borderTopColor: colors.rim,
     backgroundColor: colors.surface2,
     color: colors.ink,
     fontFamily: fonts.regular,
