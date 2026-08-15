@@ -24,7 +24,18 @@ export function faClock(iso?: string): string {
   return faNum(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
 }
 
-/** برچسبِ روزِ پیام‌ها: «امروز»، «دیروز» یا تاریخِ شمسی. */
+/**
+ * برچسبِ روزِ پیام‌ها: «امروز»، «دیروز» یا تاریخِ شمسی.
+ *
+ * از `faJalali` استفاده می‌کند نه `toLocaleDateString('fa-IR')`. همان دلیلی که
+ * پایین‌ترِ همین فایل برای نوشتنِ مبدلِ دستی آمده اینجا هم صدق می‌کند: Hermes
+ * بدونِ ICUِ کامل ساخته می‌شود و `fa-IR` روی دستگاه‌ها یک‌دست نیست — جایی
+ * تاریخِ میلادی با رقمِ لاتین می‌دهد و جایی اصلاً تقویمِ جلالی نمی‌شناسد. پیش
+ * از این، جداکننده‌ی روزِ گفتگو دقیقاً همان مسیرِ ناامن را می‌رفت.
+ *
+ * سال فقط وقتی می‌آید که با سالِ جاری فرق کند؛ روی گفتگوی همین هفته، «۲۳ تیر
+ * ۱۴۰۵» بیش از آن چیزی است که یک جداکننده‌ی روز لازم دارد.
+ */
 export function faDayLabel(iso?: string): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -34,7 +45,9 @@ export function faDayLabel(iso?: string): string {
   const diffDays = Math.round((startOf(now) - startOf(d)) / 86_400_000);
   if (diffDays === 0) return 'امروز';
   if (diffDays === 1) return 'دیروز';
-  return d.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
+  const then = toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+  const today = toJalaali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  return faJalali(iso, then.jy !== today.jy);
 }
 
 /** کلیدِ روز برای گروه‌بندیِ پیام‌ها. */

@@ -106,12 +106,19 @@ function readReceiptText(m: Message | null): string | undefined {
 function Ticks({ read }: { read: boolean }) {
   return (
     <View
-      style={styles.ticks}
+      style={[styles.ticks, read && styles.ticksRead]}
       accessibilityLabel={read ? 'خوانده شد' : 'ارسال شد'}
       accessibilityRole="image"
     >
-      <Icon name="check" size={12} tint={read ? 'gold' : 'ink'} style={styles.tick} />
-      {read ? <Icon name="check" size={12} tint="gold" style={styles.tickSecond} /> : null}
+      {/*
+       * هر دو تیک همیشه ته‌رنگِ `ink` دارند و رنگشان با خوانده‌شدن عوض
+       * نمی‌شود. تیک فقط روی حبابِ خودم رندر می‌شود و آن حباب پس‌زمینه‌ی
+       * طلایی دارد — پس ته‌رنگِ `gold` یعنی طلایی روی طلایی، یعنی نامرئی.
+       * تفاوتِ «رفت» و «خوانده شد» را تعدادِ تیک می‌گوید، نه رنگ؛ همان
+       * قراردادی که کاربر از پیام‌رسان‌های دیگر می‌شناسد.
+       */}
+      <Icon name="check" size={12} tint="ink" style={styles.tick} />
+      {read ? <Icon name="check" size={12} tint="ink" style={styles.tickSecond} /> : null}
     </View>
   );
 }
@@ -938,7 +945,10 @@ const styles = StyleSheet.create({
   time: { fontFamily: fonts.regular, fontSize: 10, textAlign: 'left' },
   // ساعت و تیک در یک ردیف؛ در RTL تیک سمتِ چپِ ساعت می‌نشیند.
   metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 3, alignSelf: 'flex-start' },
-  ticks: { flexDirection: 'row', alignItems: 'center', width: 17, height: 12 },
+  // عرضِ یک تیک؛ با خوانده‌شدن جا برای تیکِ دوم باز می‌شود. اگر عرض ثابت
+  // می‌ماند، پیامِ خوانده‌نشده یک فاصله‌ی خالیِ بی‌دلیل کنارِ ساعت داشت.
+  ticks: { alignItems: 'center', width: 12, height: 12 },
+  ticksRead: { width: 17 },
   tick: { position: 'absolute', left: 0 },
   // تیکِ دوم کمی جلوتر تا هم‌پوشانیِ آشنای «دو تیک» ساخته شود.
   tickSecond: { position: 'absolute', left: 5 },
