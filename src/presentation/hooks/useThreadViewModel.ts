@@ -7,8 +7,11 @@ import { ApiError } from '@/core/http/ApiError';
 import { recordInstallNagAction } from '@/core/installNag';
 import { recordReviewMoment } from '@/core/reviewMoments';
 import { quotaKeyForError } from '@/presentation/tiers/quotaCopy';
-import type { Message } from '@/domain/entities';
+import type { Presence, Message } from '@/domain/entities';
 import type { DeleteScope } from '@/domain/repositories/ChatRepository';
+
+/** حداقل فاصله‌ی دو اعلامِ تایپ. کلیدِ سرور ۶ ثانیه عمر دارد. */
+const TYPING_THROTTLE_MS = 4000;
 
 /** اندازه‌ی صفحه‌ی تاریخچه‌ی پیام. */
 const PAGE = 30;
@@ -108,6 +111,55 @@ export function useThreadViewModel(matchId: number) {
     const timer = setInterval(() => load(true), 4000);
     return () => clearInterval(timer);
   }, [load, matchId]);
+
+  /*
+   * وضعیتِ طرفِ مقابل (آنلاین / آخرین فعالیت / در حالِ تایپ).
+   *
+   * جدا از نظرسنجیِ پیام‌ها و تندتر از آن است: «در حالِ تایپ» اگر با تأخیرِ ۴
+   * ثانیه بیاید دیگر تایپ نیست، خبرِ گذشته است. در عوض پاسخش ناچیز است.
+   * خودِ همین درخواست، حضورِ *ما* را هم نزدِ طرفِ مقابل تازه نگه می‌دارد.
+   */
+  const [presence, setPresence] = useState<Presence | null>(null);
+  useEffect(() => {
+    if (!matchId) return;
+    let alive = true;
+    const tick = async () => {
+      try {
+        const p = await uc.chat.getPresence(matchId);
+        if (alive) setPresence(p);
+      } catch {
+        // وضعیتِ حضور هیچ‌وقت آن‌قدر مهم نیست که خطایش را به کاربر نشان دهیم.
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 5000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, [uc, matchId]);
+
+  /*
+   * اعلامِ تایپ. با هر کلید فرستاده نمی‌شود — کلیدِ سمتِ سرور ۶ ثانیه عمر
+   * دارد، پس یک اعلام در هر ۴ ثانیه کافی است و بارِ شبکه را از «هر حرف» به
+   * «هر چند ثانیه» می‌آورد.
+   */
+  const lastTypingAt = useRef(0);
+  const notifyTyping = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTypingAt.current < TYPING_THROTTLE_MS) return;
+    lastTypingAt.current = now;
+    uc.chat.sendTyping(matchId).catch(() => {});
+  }, [uc, matchId]);
+
+  /** جای `setDraft` در صفحه — نوشتن را هم به سرور خبر می‌دهد. */
+  const changeDraft = useCallback(
+    (v: string) => {
+      setDraft(v);
+      if (v.trim()) notifyTyping();
+    },
+    [notifyTyping]
+  );
 
   /** صفحه‌ی قدیمی‌ترِ بعدی را می‌گیرد و بالای فهرست می‌افزاید. */
   const loadOlder = useCallback(async () => {
@@ -237,6 +289,8 @@ export function useThreadViewModel(matchId: number) {
     loadOlder,
     draft,
     setDraft,
+    changeDraft,
+    presence,
     send,
     sending,
     /** علتِ ردشدنِ ارسال — صفحه با آن برگه‌ی ارتقا را باز می‌کند. */

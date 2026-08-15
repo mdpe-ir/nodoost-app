@@ -33,7 +33,7 @@ export interface Message {
   senderId: number;
   body: string;
   createdAt?: string;
-  /** زمانِ خوانده‌شدن — سرور فقط روی پیام‌های خودم و برای سطحِ طلایی+ می‌فرستد. */
+  /** زمانِ خوانده‌شدن — سرور فقط روی پیام‌های خودم می‌فرستد (هر سطحی). */
   readAt?: string;
   /** زمانِ آخرین ویرایش؛ تهی یعنی ویرایش نشده. */
   editedAt?: string;
@@ -45,4 +45,17 @@ export interface Message {
    */
   deleted?: boolean;
   deletedByAdmin?: boolean;
+}
+
+/** وضعیتِ لحظه‌ایِ طرفِ مقابل در یک گفتگو. */
+export interface Presence {
+  online: boolean;
+  /** دقیقه‌های گذشته از آخرین فعالیت؛ اگر پنهان شده باشد تعریف‌نشده است. */
+  lastActiveMin?: number;
+  typing: boolean;
+  /**
+   * طرفِ مقابل (طلایی+) حضورش را خاموش کرده. با «آفلاین» یکی نیست و اپ باید
+   * چیزی نشان ندهد، نه اینکه بگوید آفلاین است.
+   */
+  hidden: boolean;
 }

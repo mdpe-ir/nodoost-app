@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { Stagger } from '@/presentation/components/Stagger';
 import { PressableScale } from '@/presentation/components/PressableScale';
 import { router, type Href } from 'expo-router';
@@ -162,17 +162,14 @@ export function ChatScreen() {
                   })
                 }
               >
-                {/* تپِ آواتار → پروفایلِ طرفِ مقابل.
-                    بدونِ accessibilityRole تا روی وب <button> تودرتو نسازد. */}
-                <Pressable
-                  onPress={() =>
-                    router.push({ pathname: '/user/[id]', params: { id: String(item.otherId) } })
-                  }
-                  hitSlop={4}
-                  accessibilityLabel={`پروفایلِ ${item.otherName ?? 'کاربر'}`}
-                >
-                  <Avatar uri={item.otherPhotoUrl} name={item.otherName} size={54} ring={unread} />
-                </Pressable>
+                {/*
+                  * آواتار عمداً قابلِ فشارِ جداگانه **نیست**: در فهرستِ گفتگو
+                  * هر جای ردیف که بزنی باید گفتگو باز شود. پیش‌تر زدنِ آواتار
+                  * به پروفایل می‌رفت و همین باعث می‌شد کاربری که فقط می‌خواست
+                  * چت را باز کند، سر از صفحه‌ی دیگری دربیاورد. پروفایل از
+                  * هدرِ خودِ گفتگو در دسترس است.
+                  */}
+                <Avatar uri={item.otherPhotoUrl} name={item.otherName} size={54} ring={unread} />
                 <View style={styles.meta}>
                   <View style={styles.rowTop}>
                     <View style={styles.nameWrap}>

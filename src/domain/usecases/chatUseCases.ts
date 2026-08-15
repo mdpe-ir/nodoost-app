@@ -20,6 +20,8 @@ export const makeDeleteMessage =
   (r: ChatRepository) => (messageId: number, scope: DeleteScope) =>
     r.deleteMessage(messageId, scope);
 export const makeClearChat = (r: ChatRepository) => (matchId: number) => r.clearChat(matchId);
+export const makeGetPresence = (r: ChatRepository) => (matchId: number) => r.getPresence(matchId);
+export const makeSendTyping = (r: ChatRepository) => (matchId: number) => r.sendTyping(matchId);
 
 export type ChatUseCases = {
   getConversations: ReturnType<typeof makeGetConversations>;
@@ -29,4 +31,6 @@ export type ChatUseCases = {
   editMessage: ReturnType<typeof makeEditMessage>;
   deleteMessage: ReturnType<typeof makeDeleteMessage>;
   clearChat: ReturnType<typeof makeClearChat>;
+  getPresence: ReturnType<typeof makeGetPresence>;
+  sendTyping: ReturnType<typeof makeSendTyping>;
 };

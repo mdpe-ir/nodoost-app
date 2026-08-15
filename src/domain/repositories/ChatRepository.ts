@@ -1,4 +1,6 @@
-import type { Conversation, Message, Page } from '@/domain/entities';
+import type { Conversation, Message, Page,
+  Presence,
+} from '@/domain/entities';
 
 /** گزینه‌های صفحه‌بندیِ تاریخچه‌ی پیام: پیش از این شناسه‌ی پیام. */
 export interface MessagePageOptions {
@@ -21,4 +23,7 @@ export interface ChatRepository {
   deleteMessage(messageId: number, scope: DeleteScope): Promise<void>;
   /** تاریخچه را فقط برای خودم پاک می‌کند؛ طرفِ مقابل چیزی نمی‌بیند. */
   clearChat(matchId: number): Promise<void>;
+  getPresence(matchId: number): Promise<Presence>;
+  /** اعلامِ «در حالِ تایپم». کم‌تواتر صدا زده می‌شود، نه با هر کلید. */
+  sendTyping(matchId: number): Promise<void>;
 }

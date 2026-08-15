@@ -29,7 +29,7 @@ import { useCases } from '@/core/di/DIProvider';
 import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { lowWarning, isLow, isExhausted } from '@/presentation/tiers/quotaCopy';
-import { faClock, faDayLabel, dayKey } from '@/core/utils/time';
+import { faClock, faDayLabel, dayKey, lastSeenText } from '@/core/utils/time';
 import {
   colors,
   fonts,
@@ -82,6 +82,38 @@ function buildRows(messages: Message[], myId?: number): Row[] {
   });
   // ترتیبِ صعودی ساخته شد؛ برای فهرستِ وارونه باید برعکس شود.
   return rows.reverse();
+}
+
+/**
+ * متنِ «کِی خوانده شد» برای برگه‌ی کنشِ پیام.
+ *
+ * فقط برای پیامِ خودم معنا دارد و فقط وقتی سرور `readAt` داده باشد. اگر
+ * نداده، چیزی برنمی‌گرداند تا صفحه به متنِ پیش‌فرض (متنِ پیام) برگردد —
+ * «خوانده نشده» گفتن غلط است، چون شاید فقط سطحِ حساب اجازه‌ی دیدنش را ندهد.
+ */
+function readReceiptText(m: Message | null): string | undefined {
+  if (!m?.readAt) return undefined;
+  return `خوانده شد · ${faDayLabel(m.readAt)} ساعتِ ${faClock(m.readAt)}`;
+}
+
+/**
+ * نشانه‌ی رسیدن و خواندن.
+ *
+ * دو تیکِ روی‌هم‌افتاده با یک شکلِ واحد ساخته می‌شود تا وقتی پیام خوانده شد،
+ * تیکِ دوم *کنارِ* اولی ظاهر شود و شکلِ آشنای «دو تیک» را بسازد — نه اینکه
+ * آیکنِ دیگری جایش بنشیند.
+ */
+function Ticks({ read }: { read: boolean }) {
+  return (
+    <View
+      style={styles.ticks}
+      accessibilityLabel={read ? 'خوانده شد' : 'ارسال شد'}
+      accessibilityRole="image"
+    >
+      <Icon name="check" size={12} tint={read ? 'gold' : 'ink'} style={styles.tick} />
+      {read ? <Icon name="check" size={12} tint="gold" style={styles.tickSecond} /> : null}
+    </View>
+  );
 }
 
 /** چقدر می‌شود حباب را کشید، و از کجا رهاکردن یعنی «پاسخ بده». */
@@ -217,12 +249,18 @@ function MessageBubble({
               {msg.body}
             </Text>
             {lastOfGroup && time ? (
-              <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
-                {time}
-                {msg.editedAt ? '  · ویرایش‌شده' : ''}
-                {/* رسیدِ خواندن — سرور فقط برای طلایی+ می‌فرستد. */}
-                {mine && msg.readAt ? '  · خوانده شد' : ''}
-              </Text>
+              <View style={styles.metaRow}>
+                <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
+                  {time}
+                  {msg.editedAt ? '  · ویرایش‌شده' : ''}
+                </Text>
+                {/*
+                  * تیک فقط روی پیامِ خودم معنا دارد: یک تیک «رفت»، دو تیک
+                  * «خوانده شد». برای همه‌ی سطح‌ها باز است؛ «پیامم را خواند؟»
+                  * اطمینان است نه قابلیتِ فروشی.
+                  */}
+                {mine ? <Ticks read={!!msg.readAt} /> : null}
+              </View>
             ) : null}
           </Pressable>
         </Animated.View>
@@ -421,6 +459,19 @@ export function ThreadScreen({
   const sheet = blockSheet ?? manualSheet;
   const setSheet = setManualSheet;
 
+  /**
+   * `hidden` یعنی طرفِ مقابل (طلایی+) حضورش را خاموش کرده — در آن حالت هیچ
+   * چیزی نمی‌گوییم. گفتنِ «آفلاین» همان اطلاعاتی را لو می‌دهد که او خاموش
+   * کرده است.
+   */
+  const presenceLine = (() => {
+    const p = vm.presence;
+    if (!p || p.hidden) return peerId ? 'دیدنِ پروفایل' : '';
+    if (p.typing) return 'در حالِ نوشتن…';
+    if (p.online) return 'آنلاین';
+    return lastSeenText(p.lastActiveMin) || (peerId ? 'دیدنِ پروفایل' : '');
+  })();
+
   const openPeerProfile = () => {
     if (peerId) router.push({ pathname: '/user/[id]', params: { id: String(peerId) } });
   };
@@ -495,7 +546,24 @@ export function ThreadScreen({
               </Text>
               {peerTier ? <TierBadge tier={peerTier} height={18} /> : null}
             </View>
-            {peerId ? <Text style={styles.headerHint}>دیدنِ پروفایل</Text> : null}
+            {/*
+              * یک خط، چهار حالت — به ترتیبِ فوریت. «در حالِ تایپ» از همه
+              * جلوتر است چون تنها حالتی است که همین ثانیه معنا دارد؛
+              * «دیدنِ پروفایل» ته‌ی صف است چون راهنماست نه خبر.
+              */}
+            {presenceLine ? (
+              <View style={styles.presenceRow}>
+                {vm.presence?.online && !vm.presence.typing ? (
+                  <View style={styles.onlineDot} />
+                ) : null}
+                <Text
+                  style={[styles.headerHint, vm.presence?.typing && styles.headerHintLive]}
+                  numberOfLines={1}
+                >
+                  {presenceLine}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </Pressable>
         <PressableScale
@@ -681,7 +749,7 @@ export function ThreadScreen({
           <TextInput
             style={styles.input}
             value={vm.draft}
-            onChangeText={vm.setDraft}
+            onChangeText={vm.changeDraft}
             placeholder={vm.editing ? 'متنِ تازه…' : 'پیامت را بنویس…'}
             placeholderTextColor={colors.ink3}
             textAlign="right"
@@ -758,7 +826,12 @@ export function ThreadScreen({
       <ActionSheet
         visible={actionTarget != null}
         title="این پیام"
-        subtitle={actionTarget?.body}
+        /*
+         * نگه‌داشتنِ پیام، زمانِ خوانده‌شدن را هم می‌گوید. جایش همین‌جاست نه
+         * روی خودِ حباب: تاریخِ کامل روی هر پیام، گفتگو را شلوغ می‌کند، ولی
+         * وقتی کسی عمداً پیام را نگه می‌دارد دقیقاً دنبالِ همین جزئیات است.
+         */
+        subtitle={readReceiptText(actionTarget) || actionTarget?.body}
         actions={messageActions}
         onDismiss={() => setActionTarget(null)}
       />
@@ -806,6 +879,9 @@ const styles = StyleSheet.create({
   headerPeer: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
   headerText: { flex: 1 },
   headerNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
+  presenceRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
+  onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.ok },
+  headerHintLive: { color: colors.gold2 },
   headerHint: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, textAlign: 'right' },
   headerName: {
     fontFamily: fonts.bold,
@@ -859,7 +935,13 @@ const styles = StyleSheet.create({
   },
   mineText: { color: colors.onGold },
   theirsText: { color: colors.ink },
-  time: { fontFamily: fonts.regular, fontSize: 10, marginTop: 3, textAlign: 'left' },
+  time: { fontFamily: fonts.regular, fontSize: 10, textAlign: 'left' },
+  // ساعت و تیک در یک ردیف؛ در RTL تیک سمتِ چپِ ساعت می‌نشیند.
+  metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 3, alignSelf: 'flex-start' },
+  ticks: { flexDirection: 'row', alignItems: 'center', width: 17, height: 12 },
+  tick: { position: 'absolute', left: 0 },
+  // تیکِ دوم کمی جلوتر تا هم‌پوشانیِ آشنای «دو تیک» ساخته شود.
+  tickSecond: { position: 'absolute', left: 5 },
   timeMine: { color: 'rgba(42,29,18,0.6)' },
   timeTheirs: { color: colors.ink3 },
 

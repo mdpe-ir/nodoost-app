@@ -3,10 +3,10 @@ import type {
   DeleteScope,
   MessagePageOptions,
 } from '@/domain/repositories/ChatRepository';
-import type { Conversation, Message, Page } from '@/domain/entities';
+import type { Conversation, Message, Page, Presence } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { ConversationDTO, MessageDTO } from '@/data/dto';
-import { toConversation, toMessage } from '@/data/mappers';
+import type { ConversationDTO, MessageDTO, PresenceDTO } from '@/data/dto';
+import { toConversation, toMessage, toPresence } from '@/data/mappers';
 
 export class ChatRepositoryImpl implements ChatRepository {
   constructor(private readonly http: HttpClient) {}
@@ -61,6 +61,14 @@ export class ChatRepositoryImpl implements ChatRepository {
 
   async deleteMessage(messageId: number, scope: DeleteScope): Promise<void> {
     await this.http.request(`/api/messages/${messageId}?scope=${scope}`, { method: 'DELETE' });
+  }
+
+  async getPresence(matchId: number): Promise<Presence> {
+    return toPresence(await this.http.request<PresenceDTO>(`/api/matches/${matchId}/presence`));
+  }
+
+  async sendTyping(matchId: number): Promise<void> {
+    await this.http.request(`/api/matches/${matchId}/typing`, { method: 'POST' });
   }
 
   async clearChat(matchId: number): Promise<void> {

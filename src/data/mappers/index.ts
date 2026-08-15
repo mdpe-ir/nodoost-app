@@ -26,6 +26,7 @@ import type {
   Tier,
   User,
   Viewer,
+  Presence,
 } from '@/domain/entities';
 import type {
   AuthDTO,
@@ -52,6 +53,7 @@ import type {
   TierDTO,
   UserDTO,
   ViewerDTO,
+  PresenceDTO,
 } from '@/data/dto';
 
 const undefIfNull = <T>(v: T | null | undefined): T | undefined =>
@@ -447,4 +449,11 @@ export const toInAppMessage = (d: InAppMessageDTO): InAppMessage => ({
   priority: d.priority ?? 0,
   impressions: d.impressions ?? 0,
   lastSeenAt: undefIfNull(d.last_seen_at),
+});
+
+export const toPresence = (d: PresenceDTO): Presence => ({
+  online: !!d.online,
+  lastActiveMin: d.last_active_min ?? undefined,
+  typing: !!d.typing,
+  hidden: !!d.hidden,
 });

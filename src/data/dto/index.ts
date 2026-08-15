@@ -266,7 +266,7 @@ export interface MessageDTO {
   sender_id: number;
   body: string;
   created_at?: string;
-  /** رسیدِ خواندن — فقط روی پیام‌های خودم و از سطحِ طلایی برمی‌گردد. */
+  /** رسیدِ خواندن — فقط روی پیام‌های خودم برمی‌گردد (هر سطحی). */
   read_at?: string | null;
   edited_at?: string | null;
   reply_to?: MessageReplyDTO | null;
@@ -367,4 +367,11 @@ export interface InAppMessageDTO {
 export interface InAppMessagesDTO {
   results?: InAppMessageDTO[] | null;
   server_time?: string;
+}
+
+export interface PresenceDTO {
+  online?: boolean;
+  last_active_min?: number | null;
+  typing?: boolean;
+  hidden?: boolean;
 }

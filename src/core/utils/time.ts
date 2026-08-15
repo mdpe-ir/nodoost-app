@@ -96,3 +96,20 @@ export function daysUntil(iso?: string): number {
   const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   return Math.max(0, Math.ceil((startOf(d) - startOf(now)) / 86_400_000));
 }
+
+/**
+ * «آخرین بازدید» از تعدادِ دقیقه — نه از تاریخ.
+ *
+ * سرور دقیقه می‌دهد نه زمانِ دقیق، و عمداً: زمانِ دقیقِ آخرین فعالیت بیش از
+ * چیزی است که یک هدرِ گفتگو لازم دارد، و افشایش هم بیشتر از فایده‌اش است.
+ */
+export function lastSeenText(minutes?: number): string {
+  if (minutes == null || minutes < 0) return '';
+  if (minutes < 1) return 'آخرین بازدید: همین حالا';
+  if (minutes < 60) return `آخرین بازدید: ${faNum(minutes)} دقیقه پیش`;
+  const h = Math.floor(minutes / 60);
+  if (h < 24) return `آخرین بازدید: ${faNum(h)} ساعت پیش`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `آخرین بازدید: ${faNum(d)} روز پیش`;
+  return 'مدتی است آنلاین نبوده';
+}

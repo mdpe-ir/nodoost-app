@@ -100,6 +100,8 @@ export function createContainer() {
       editMessage: chat.makeEditMessage(chatRepo),
       deleteMessage: chat.makeDeleteMessage(chatRepo),
       clearChat: chat.makeClearChat(chatRepo),
+      getPresence: chat.makeGetPresence(chatRepo),
+      sendTyping: chat.makeSendTyping(chatRepo),
     },
     random: {
       join: random.makeJoinRandom(randomRepo),
