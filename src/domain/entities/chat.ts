@@ -26,12 +26,30 @@ export interface MessageReply {
   deleted: boolean;
 }
 
+/** نوعِ پیام در گفتگو. */
+export type MessageKind = 'text' | 'photo' | 'voice';
+
+export interface MessageMediaMeta {
+  durationMs?: number;
+  peaks?: number[];
+  width?: number;
+  height?: number;
+  mime?: string;
+  bytes?: number;
+}
+
 /** یک پیام در گفتگو. */
 export interface Message {
   id?: number;
   matchId: number;
   senderId: number;
+  kind?: MessageKind;
   body: string;
+  mediaMeta?: MessageMediaMeta;
+  /** uriِ محلی برای حبابِ خوش‌بینانه قبل از آپلود. */
+  localUri?: string;
+  pending?: boolean;
+  failed?: boolean;
   createdAt?: string;
   /** زمانِ خوانده‌شدن — سرور فقط روی پیام‌های خودم می‌فرستد (هر سطحی). */
   readAt?: string;

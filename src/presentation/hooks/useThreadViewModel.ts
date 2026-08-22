@@ -183,7 +183,6 @@ export function useThreadViewModel(matchId: number) {
   const send = useCallback(async () => {
     const body = draft.trim();
     if (!body) return;
-    // «شروعِ گفتگو» فقط اولین پیامِ یک رشته است؛ پاسخ‌دادن سهمیه نمی‌سوزاند.
     const isStarting = messages.length === 0;
     const replyId = replyTo?.id;
     setDraft('');
@@ -193,8 +192,6 @@ export function useThreadViewModel(matchId: number) {
     try {
       const msg = await uc.chat.sendMessage(matchId, body, replyId);
       setMessages((prev) => [...prev, msg]);
-      // بازخوردِ لمسی وقتی می‌زند که پیام واقعاً روی سرور نشسته، نه وقتی دکمه
-      // فشرده شد. تفاوتش را کاربر روی اینترنتِ ضعیف حس می‌کند: لرزش یعنی «رفت».
       haptics.success();
       recordInstallNagAction();
       recordReviewMoment('action');
@@ -205,15 +202,49 @@ export function useThreadViewModel(matchId: number) {
       const b = sendBlockOf(e);
       setBlock(b);
       haptics.warn();
-      // سرور می‌گوید سهمیه تمام شده ولی شمارنده‌ی اپ هنوز عدد داشت — یعنی
-      // عددِ ما کهنه است. تازه‌اش کن تا برگه‌ی ارتقا حقیقت را نشان دهد.
       if (b?.kind === 'quota') refreshQuota();
     } finally {
       setSending(false);
     }
   }, [draft, matchId, uc, messages.length, consumeQuota, refreshQuota, replyTo]);
 
-  /** ویرایش را ذخیره می‌کند. متنِ قبلی سمتِ سرور در تاریخچه می‌ماند. */
+  const sendMedia = useCallback(
+    async (kind: 'photo' | 'voice', uri: string, opts?: { durationMs?: number; peaks?: number[] }) => {
+      const isStarting = messages.length === 0;
+      const replyId = replyTo?.id;
+      setReplyTo(undefined);
+      setSending(true);
+      setBlock(undefined);
+      try {
+        const msg = await uc.chat.sendMediaMessage(matchId, kind, uri, {
+          replyToId: replyId,
+          durationMs: opts?.durationMs,
+          peaks: opts?.peaks,
+          mime: kind === 'voice' ? 'audio/mp4' : 'image/jpeg',
+        });
+        setMessages((prev) => [...prev, msg]);
+        haptics.success();
+        recordInstallNagAction();
+        recordReviewMoment('action');
+        if (isStarting) consumeQuota('conversation');
+      } catch (e) {
+        const b = sendBlockOf(e);
+        setBlock(b);
+        haptics.warn();
+        if (b?.kind === 'quota') refreshQuota();
+      } finally {
+        setSending(false);
+      }
+    },
+    [matchId, uc, messages.length, consumeQuota, refreshQuota, replyTo]
+  );
+
+  const sendPhoto = useCallback((uri: string) => sendMedia('photo', uri), [sendMedia]);
+  const sendVoice = useCallback(
+    (uri: string, durationMs: number, peaks: number[]) => sendMedia('voice', uri, { durationMs, peaks }),
+    [sendMedia]
+  );
+
   const submitEdit = useCallback(async () => {
     const target = editing;
     const body = draft.trim();
@@ -292,6 +323,8 @@ export function useThreadViewModel(matchId: number) {
     changeDraft,
     presence,
     send,
+    sendPhoto,
+    sendVoice,
     sending,
     /** علتِ ردشدنِ ارسال — صفحه با آن برگه‌ی ارتقا را باز می‌کند. */
     block,
@@ -317,6 +350,7 @@ export function useThreadViewModel(matchId: number) {
      */
     canEdit: useCallback(
       (m: Message) =>
+        (m.kind == null || m.kind === 'text') &&
         m.senderId === user?.id &&
         !m.deleted &&
         !!m.createdAt &&

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   FlatList,
   ScrollView,
@@ -15,7 +14,6 @@ import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { ChatBackground } from '@/presentation/components/ChatBackground';
 import { StackHeader } from '@/presentation/components/StackHeader';
@@ -23,9 +21,14 @@ import { RowsSkeleton, Skeleton } from '@/presentation/components/Skeleton';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
+import { VoiceBubble } from '@/presentation/components/VoiceBubble';
+import { PhotoBubble } from '@/presentation/components/PhotoBubble';
+import { ChatComposer } from '@/presentation/components/ChatComposer';
 import { useSupportViewModel } from '@/presentation/hooks/useSupportViewModel';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import { messagePreviewText } from '@/core/media/messagePreview';
 import { faClock, faDayLabel, dayKey } from '@/core/utils/time';
-import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients } from '@/core/theme';
+import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import type { Message } from '@/domain/entities';
 
 /**
@@ -117,10 +120,12 @@ function OfficialHeader({
 
 export function SupportScreen() {
   const vm = useSupportViewModel();
+  const { chat } = useRemoteConfig();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<Row>>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
+  const matchId = vm.overview?.matchId;
 
   // متنِ آماده از صفحه‌ی ارجاع‌دهنده (مثلاً بن‌بستِ «این محصول از قبل خریداری شده»).
   // فقط یک‌بار و فقط وقتی کاربر خودش چیزی ننوشته — تایپِ کاربر مقدس است.
@@ -138,10 +143,12 @@ export function SupportScreen() {
     height: Math.max(-keyboardHeight.value, insets.bottom),
   }));
 
-  const canSend = !!vm.draft.trim() && !vm.sending;
   const onSend = () => {
     void vm.send();
     listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+  const onSendPhoto = (uri: string) => {
+    void vm.sendPhoto(uri).then(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   };
 
   if (vm.loading) {
@@ -338,14 +345,32 @@ export function SupportScreen() {
                     mine && lastOfGroup && styles.mineTail,
                     !mine && lastOfGroup && styles.theirsTail,
                   ]}
+                  accessibilityLabel={messagePreviewText(msg)}
                 >
-                  <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
-                    {msg.body}
-                  </Text>
+                  {msg.kind === 'voice' && msg.id && matchId ? (
+                    <VoiceBubble
+                      matchId={matchId}
+                      messageId={msg.id}
+                      durationMs={msg.mediaMeta?.durationMs}
+                      peaks={msg.mediaMeta?.peaks}
+                      mine={mine}
+                    />
+                  ) : msg.kind === 'photo' && msg.id && matchId ? (
+                    <PhotoBubble
+                      matchId={matchId}
+                      messageId={msg.id}
+                      width={msg.mediaMeta?.width}
+                      height={msg.mediaMeta?.height}
+                      mine={mine}
+                    />
+                  ) : (
+                    <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
+                      {msg.body}
+                    </Text>
+                  )}
                   {lastOfGroup && time ? (
                     <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
                       {time}
-                      {/* در گفتگوی پشتیبانی رسیدِ خواندن برای همه باز است. */}
                       {mine && msg.readAt ? '  · خوانده شد' : ''}
                     </Text>
                   ) : null}
@@ -355,35 +380,20 @@ export function SupportScreen() {
           />
         )}
 
-        <View style={styles.composer}>
-          {vm.sendError ? <Text style={styles.sendError}>{vm.sendError}</Text> : null}
-          <TextInput
-            style={styles.input}
-            value={vm.draft}
-            onChangeText={vm.setDraft}
-            placeholder="پیامت را بنویس…"
-            placeholderTextColor={colors.ink3}
-            textAlign="right"
-            multiline
-          />
-          <PressableScale
-            scaleTo={0.9}
-            feedback="select"
-            style={styles.send}
-            onPress={onSend}
-            disabled={!canSend}
-            accessibilityRole="button"
-            accessibilityLabel="ارسال"
-          >
-            <LinearGradient
-              colors={gradients.gold}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFill, !canSend && styles.sendOff]}
-            />
-            <Icon name="send-fill" size={20} tint="ink" />
-          </PressableScale>
-        </View>
+        {vm.sendError ? <Text style={styles.sendError}>{vm.sendError}</Text> : null}
+        <ChatComposer
+          draft={vm.draft}
+          onChangeDraft={vm.setDraft}
+          onSendText={onSend}
+          onSendPhoto={onSendPhoto}
+          onSendVoice={() => {}}
+          sending={vm.sending}
+          chat={chat}
+          myTier={vm.myTier}
+          voiceEnabled={false}
+          photoBypassTier
+          onPhotoLocked={() => {}}
+        />
 
         <Animated.View style={bottomSpacer} />
       </View>

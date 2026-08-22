@@ -119,6 +119,14 @@ export const TIER_FEATURE_ROWS: Row[] = [
     rank: (t) => t.boostPerMonth,
   },
   {
+    key: 'chat_photo',
+    icon: 'edit',
+    label: 'ارسال عکس در گفتگو',
+    value: (t) => (t.level >= 3 ? 'دارد' : 'ندارد'),
+    enabled: (t) => t.level >= 3,
+    rank: (t) => (t.level >= 3 ? 1 : 0),
+  },
+  {
     key: 'photos',
     icon: 'edit',
     label: 'تعدادِ عکس',

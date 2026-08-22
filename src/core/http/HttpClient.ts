@@ -130,6 +130,40 @@ export class HttpClient {
     return (await res.json().catch(() => null)) as T;
   }
 
+  /** multipart با فیلدهای دلخواه (پیامِ صوتی/عکس در گفتگو). */
+  async uploadForm<T>(path: string, form: FormData, retried = false): Promise<T> {
+    const token = await this.tokens.getAccess();
+    const res = await fetch(this.baseUrl + path, {
+      method: 'POST',
+      headers: {
+        ...clientMetadataHeaders(),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: form,
+    });
+    if (res.status === 401 && !retried) {
+      if (await this.tryRefresh()) return this.uploadForm<T>(path, form, true);
+      throw new ApiError(401);
+    }
+    if (!res.ok) {
+      let body: Record<string, unknown> | undefined;
+      try {
+        body = (await res.json()) as Record<string, unknown>;
+      } catch {}
+      const code = typeof body?.error === 'string' ? (body.error as string) : undefined;
+      throw new ApiError(res.status, code, body);
+    }
+    return (await res.json().catch(() => null)) as T;
+  }
+
+  async authHeaders(): Promise<Record<string, string>> {
+    const token = await this.tokens.getAccess();
+    return {
+      ...clientMetadataHeaders(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
   private async tryRefresh(): Promise<boolean> {
     const refreshToken = await this.tokens.getRefresh();
     if (!refreshToken) return false;

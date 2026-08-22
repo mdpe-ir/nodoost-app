@@ -4,8 +4,11 @@ import type {
   MessagePageOptions,
 } from '@/domain/repositories/ChatRepository';
 import type { Conversation, Message, Page, Presence } from '@/domain/entities';
+import { Platform } from 'react-native';
+import { File as ExpoFile } from 'expo-file-system';
 import type { HttpClient } from '@/core/http/HttpClient';
 import type { ConversationDTO, MessageDTO, PresenceDTO } from '@/data/dto';
+import { resolveChatMediaUri } from '@/core/media/fetchChatMedia';
 import { toConversation, toMessage, toPresence } from '@/data/mappers';
 
 export class ChatRepositoryImpl implements ChatRepository {
@@ -49,6 +52,37 @@ export class ChatRepositoryImpl implements ChatRepository {
       body: { body, reply_to_id: replyToId },
     });
     return toMessage(dto);
+  }
+
+  async sendMediaMessage(
+    matchId: number,
+    kind: 'photo' | 'voice',
+    uri: string,
+    opts?: { replyToId?: number; durationMs?: number; peaks?: number[]; mime?: string }
+  ): Promise<Message> {
+    const form = new FormData();
+    form.append('kind', kind);
+    const name = uri.split('/').pop() || (kind === 'voice' ? 'voice.m4a' : 'photo.jpg');
+    if (Platform.OS === 'web') {
+      const blob = await (await fetch(uri)).blob();
+      form.append('file', blob, name);
+    } else {
+      form.append('file', new ExpoFile(uri), name);
+    }
+    if (opts?.replyToId != null) form.append('reply_to_id', String(opts.replyToId));
+    if (opts?.durationMs != null) form.append('duration_ms', String(opts.durationMs));
+    if (opts?.peaks?.length) form.append('peaks', JSON.stringify(opts.peaks));
+    const dto = await this.http.uploadForm<MessageDTO>(`/api/matches/${matchId}/messages`, form);
+    return toMessage(dto);
+  }
+
+  async resolveMediaUri(
+    matchId: number,
+    messageId: number,
+    kind: 'photo' | 'voice',
+    mime?: string
+  ): Promise<string> {
+    return resolveChatMediaUri(this.http, matchId, messageId, kind, mime);
   }
 
   async editMessage(messageId: number, body: string): Promise<{ body: string; editedAt?: string }> {

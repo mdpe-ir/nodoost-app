@@ -16,6 +16,18 @@ export interface ChatRepository {
   getConversations(page?: number): Promise<Page<Conversation>>;
   getMessages(matchId: number, opts?: MessagePageOptions): Promise<Message[]>;
   sendMessage(matchId: number, body: string, replyToId?: number): Promise<Message>;
+  sendMediaMessage(
+    matchId: number,
+    kind: 'photo' | 'voice',
+    uri: string,
+    opts?: { replyToId?: number; durationMs?: number; peaks?: number[]; mime?: string }
+  ): Promise<Message>;
+  resolveMediaUri(
+    matchId: number,
+    messageId: number,
+    kind: 'photo' | 'voice',
+    mime?: string
+  ): Promise<string>;
   /** گفتگوی مستقیم با یک کاربر را باز می‌کند (اگر نبود، می‌سازد) و matchId می‌دهد. */
   startDirect(userId: number): Promise<number>;
   /** متنِ پیامِ خودم را عوض می‌کند (فقط داخلِ پنجره‌ی مجاز). */

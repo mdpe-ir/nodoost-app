@@ -26,6 +26,11 @@ import {
   parseMissionsConfig,
   type MissionsConfig,
 } from '@/core/config/missionsConfig';
+import {
+  emptyChatConfig,
+  parseChatConfig,
+  type ChatConfig,
+} from '@/core/config/chatConfig';
 
 /**
  * پیکربندیِ زمانِ اجرا که یک‌بار از `GET /api/config` خوانده و در کلِ اپ به اشتراک
@@ -43,6 +48,8 @@ interface RemoteConfigValue {
   review: ReviewConfig;
   /** پرچم‌های سیستمِ امتیاز و نردبانِ رتبه. */
   missions: MissionsConfig;
+  /** دروازه‌های پیامِ صوتی/عکس در گفتگو. */
+  chat: ChatConfig;
   loaded: boolean;
 }
 
@@ -53,6 +60,7 @@ const RemoteConfigContext = createContext<RemoteConfigValue>({
   rules: defaultTierRules,
   review: emptyReviewConfig,
   missions: emptyMissionsConfig,
+  chat: emptyChatConfig(),
   loaded: false,
 });
 
@@ -65,6 +73,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   const [rules, setRules] = useState<TierRules>(defaultTierRules);
   const [review, setReview] = useState<ReviewConfig>(emptyReviewConfig);
   const [missions, setMissions] = useState<MissionsConfig>(emptyMissionsConfig);
+  const [chat, setChat] = useState<ChatConfig>(emptyChatConfig());
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -79,6 +88,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
           rules?: unknown;
           review?: unknown;
           missions?: unknown;
+          chat?: unknown;
         };
         if (!alive) return;
         setInstall(parseInstallConfig(cfg.install));
@@ -86,6 +96,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
         setRules(parseTierRules(cfg.rules));
         setReview(parseReviewConfig(cfg.review));
         setMissions(parseMissionsConfig(cfg.missions));
+        setChat(parseChatConfig(cfg.chat));
         // فیلدهای نسخه در ریشه‌ی پاسخ‌اند (نه زیرِ install)، پس کلِ cfg را می‌دهیم.
         setVersion(parseVersionConfig(cfg));
       } catch {
@@ -100,7 +111,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <RemoteConfigContext.Provider value={{ install, interests, version, rules, review, missions, loaded }}>
+    <RemoteConfigContext.Provider value={{ install, interests, version, rules, review, missions, chat, loaded }}>
       {children}
     </RemoteConfigContext.Provider>
   );

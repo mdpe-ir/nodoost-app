@@ -233,6 +233,11 @@ export interface ReferralSummary {
   /** خودِ کاربر هنوز می‌تواند کدِ کسِ دیگری را وارد کند. */
   canEnterCode: boolean;
   enabled: boolean;
+  /**
+   * متنِ اشتراک‌گذاریِ آماده‌ی سرور (قالبِ ادمین، جای‌گذاری‌شده).
+   * رشته‌ی خالی یعنی سرورِ قدیمی — اپ همان خطِ قبلی را می‌سازد.
+   */
+  shareText: string;
 }
 
 export interface ReferralOverview {

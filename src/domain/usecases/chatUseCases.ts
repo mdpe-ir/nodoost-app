@@ -14,6 +14,18 @@ export const makeStartDirect =
 export const makeSendMessage =
   (r: ChatRepository) => (matchId: number, body: string, replyToId?: number) =>
     r.sendMessage(matchId, body, replyToId);
+export const makeSendMediaMessage =
+  (r: ChatRepository) =>
+  (
+    matchId: number,
+    kind: 'photo' | 'voice',
+    uri: string,
+    opts?: { replyToId?: number; durationMs?: number; peaks?: number[]; mime?: string }
+  ) =>
+    r.sendMediaMessage(matchId, kind, uri, opts);
+export const makeResolveMediaUri =
+  (r: ChatRepository) => (matchId: number, messageId: number, kind: 'photo' | 'voice', mime?: string) =>
+    r.resolveMediaUri(matchId, messageId, kind, mime);
 export const makeEditMessage =
   (r: ChatRepository) => (messageId: number, body: string) => r.editMessage(messageId, body);
 export const makeDeleteMessage =
@@ -27,6 +39,8 @@ export type ChatUseCases = {
   getConversations: ReturnType<typeof makeGetConversations>;
   getMessages: ReturnType<typeof makeGetMessages>;
   sendMessage: ReturnType<typeof makeSendMessage>;
+  sendMediaMessage: ReturnType<typeof makeSendMediaMessage>;
+  resolveMediaUri: ReturnType<typeof makeResolveMediaUri>;
   startDirect: ReturnType<typeof makeStartDirect>;
   editMessage: ReturnType<typeof makeEditMessage>;
   deleteMessage: ReturnType<typeof makeDeleteMessage>;

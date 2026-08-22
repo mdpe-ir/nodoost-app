@@ -242,7 +242,18 @@ export const toMessage = (d: MessageDTO): Message => ({
   id: d.id,
   matchId: d.match_id,
   senderId: d.sender_id,
+  kind: (d.kind as Message['kind']) ?? 'text',
   body: d.body,
+  mediaMeta: d.media_meta
+    ? {
+        durationMs: typeof d.media_meta.duration_ms === 'number' ? d.media_meta.duration_ms : undefined,
+        peaks: Array.isArray(d.media_meta.peaks) ? (d.media_meta.peaks as number[]) : undefined,
+        width: typeof d.media_meta.width === 'number' ? d.media_meta.width : undefined,
+        height: typeof d.media_meta.height === 'number' ? d.media_meta.height : undefined,
+        mime: typeof d.media_meta.mime === 'string' ? d.media_meta.mime : undefined,
+        bytes: typeof d.media_meta.bytes === 'number' ? d.media_meta.bytes : undefined,
+      }
+    : undefined,
   createdAt: d.created_at,
   readAt: undefIfNull(d.read_at),
   editedAt: undefIfNull(d.edited_at),

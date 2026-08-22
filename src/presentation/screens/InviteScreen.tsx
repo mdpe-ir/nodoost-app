@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Platform,
   RefreshControl,
   ScrollView,
   Share,
@@ -8,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 import { PressableScale } from '@/presentation/components/PressableScale';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -18,7 +20,7 @@ import { EmptyState } from '@/presentation/components/EmptyState';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { RowsSkeleton } from '@/presentation/components/Skeleton';
-import { useInviteViewModel } from '@/presentation/hooks/useInviteViewModel';
+import { inviteShareCaption, useInviteViewModel } from '@/presentation/hooks/useInviteViewModel';
 import { faNum } from '@/core/utils/faNum';
 import { clipboardAvailable, copyToClipboard } from '@/core/utils/clipboard';
 import { timeAgo } from '@/core/utils/time';
@@ -48,6 +50,7 @@ const STATUS_COLOR: Record<ReferralStatus, string> = {
  */
 export function InviteScreen() {
   const vm = useInviteViewModel();
+  const router = useRouter();
   const s = vm.data?.summary;
 
   // بازخوردِ «کپی شد» خودش بعد از دو ثانیه می‌رود. تایمر در ref نگه داشته
@@ -58,9 +61,7 @@ export function InviteScreen() {
     if (copyTimer.current) clearTimeout(copyTimer.current);
   }, []);
 
-  const shareText = s
-    ? `با کدِ دعوتِ من عضوِ نودوست شو و ${faNum(s.inviteePoints)} امتیازِ هدیه بگیر:\n${s.code}`
-    : '';
+  const shareText = s ? inviteShareCaption(s) : '';
 
   const share = () => void Share.share({ message: shareText }).catch(() => undefined);
 
@@ -142,6 +143,14 @@ export function InviteScreen() {
               onPress={share}
               style={{ marginTop: spacing.lg }}
             />
+            {Platform.OS !== 'web' ? (
+              <Button
+                label="ساخت پست"
+                variant="outline"
+                onPress={() => router.push('/invite/card' as Href)}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
           </Animated.View>
 
           <View style={styles.statsRow}>

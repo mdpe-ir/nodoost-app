@@ -437,6 +437,7 @@ export class MissionsRepositoryImpl implements MissionsRepository {
         grace_days: number;
         can_enter_code: boolean;
         enabled: boolean;
+        share_text?: string;
       };
       invitees?: RefRowDTO[] | null;
       total?: number;
@@ -464,6 +465,7 @@ export class MissionsRepositoryImpl implements MissionsRepository {
         graceDays: d?.summary?.grace_days ?? 0,
         canEnterCode: Boolean(d?.summary?.can_enter_code),
         enabled: Boolean(d?.summary?.enabled),
+        shareText: d?.summary?.share_text?.trim() ?? '',
       },
       invitees,
       total: d?.total ?? invitees.length,

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { ApiError } from '@/core/http/ApiError';
-import { enNum } from '@/core/utils/faNum';
-import type { ReferralOverview } from '@/domain/entities';
+import { enNum, faNum } from '@/core/utils/faNum';
+import type { ReferralOverview, ReferralSummary } from '@/domain/entities';
 
 const ERRORS: Record<string, string> = {
   referral_self: 'کدِ خودت را نمی‌توانی وارد کنی.',
@@ -17,6 +17,13 @@ const ERRORS: Record<string, string> = {
  *  حذفِ فاصله و خط‌تیره، حروفِ بزرگ. */
 export const normalizeInviteCode = (raw: string): string =>
   enNum(raw).replace(/[\s\-_]/g, '').toUpperCase();
+
+/** کپشنِ اشتراک‌گذاری: متنِ سرور اگر باشد، وگرنه همان خطِ قدیمیِ اپ. */
+export function inviteShareCaption(s: ReferralSummary): string {
+  const fromApi = s.shareText?.trim() ?? '';
+  if (fromApi) return fromApi;
+  return `با کدِ دعوتِ من عضوِ نودوست شو و ${faNum(s.inviteePoints)} امتیازِ هدیه بگیر:\n${s.code}`;
+}
 
 export function useInviteViewModel() {
   const uc = useCases();
@@ -46,9 +53,24 @@ export function useInviteViewModel() {
     }
   }, [fetchIt]);
 
+  // بارِ اول: loading از قبل true است؛ setState فقط بعد از await تا lintِ
+  // «setState هم‌زمان در effect» برنخورد.
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const next = await uc.missions.getReferral(1);
+        if (!cancelled) setData(next);
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uc]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);

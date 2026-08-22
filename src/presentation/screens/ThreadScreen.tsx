@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, FlatList, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, FlatList, StyleSheet, Platform } from 'react-native';
 import { PressableScale } from '@/presentation/components/PressableScale';
 import { haptics, hapticThreshold } from '@/core/haptics';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -14,7 +14,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { ChatBackground } from '@/presentation/components/ChatBackground';
 import { BubblesSkeleton, Skeleton } from '@/presentation/components/Skeleton';
@@ -23,7 +22,12 @@ import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
 import { Button } from '@/presentation/components/Button';
 import { TierBadge, tierName } from '@/presentation/components/TierBadge';
+import { VoiceBubble } from '@/presentation/components/VoiceBubble';
+import { PhotoBubble } from '@/presentation/components/PhotoBubble';
+import { ChatComposer } from '@/presentation/components/ChatComposer';
 import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import { messagePreviewText } from '@/core/media/messagePreview';
 import { ActionSheet, type SheetAction } from '@/presentation/components/ActionSheet';
 import { useCases } from '@/core/di/DIProvider';
 import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
@@ -34,7 +38,6 @@ import {
   colors,
   fonts,
   fontSizes,
-  gradients,
   lineHeights,
   radius,
   spacing,
@@ -142,6 +145,7 @@ const REPLY_TRIGGER = 54;
  * دستِ فهرست می‌ماند.
  */
 function MessageBubble({
+  matchId,
   msg,
   mine,
   firstOfGroup,
@@ -152,6 +156,7 @@ function MessageBubble({
   onLongPress,
   onJumpToQuote,
 }: {
+  matchId: number;
   msg: Message;
   mine: boolean;
   firstOfGroup: boolean;
@@ -225,7 +230,7 @@ function MessageBubble({
             onLongPress={onLongPress}
             delayLongPress={280}
             accessibilityRole="button"
-            accessibilityLabel={msg.body}
+            accessibilityLabel={messagePreviewText(msg)}
             accessibilityHint="نگه‌داشتن برای پاسخ، ویرایش یا حذف · کشیدن به چپ برای پاسخ"
           >
             {/* نقلِ پیامی که این پیام پاسخِ آن است — زدنش به همان پیام می‌برد. */}
@@ -247,14 +252,32 @@ function MessageBubble({
                   ]}
                   numberOfLines={2}
                 >
-                  {msg.replyTo.deleted ? 'پیامِ حذف‌شده' : msg.replyTo.body}
+                  {messagePreviewText(msg.replyTo)}
                 </Text>
               </PressableScale>
             ) : null}
 
-            <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
-              {msg.body}
-            </Text>
+            {msg.kind === 'voice' && msg.id ? (
+              <VoiceBubble
+                matchId={matchId}
+                messageId={msg.id}
+                durationMs={msg.mediaMeta?.durationMs}
+                peaks={msg.mediaMeta?.peaks}
+                mine={mine}
+              />
+            ) : msg.kind === 'photo' && msg.id ? (
+              <PhotoBubble
+                matchId={matchId}
+                messageId={msg.id}
+                width={msg.mediaMeta?.width}
+                height={msg.mediaMeta?.height}
+                mine={mine}
+              />
+            ) : (
+              <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
+                {msg.body}
+              </Text>
+            )}
             {lastOfGroup && time ? (
               <View style={styles.metaRow}>
                 <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
@@ -290,6 +313,7 @@ export function ThreadScreen({
   peerTier?: number;
 }) {
   const vm = useThreadViewModel(matchId);
+  const { chat } = useRemoteConfig();
   const uc = useCases();
   const { quota } = useQuota();
   const insets = useSafeAreaInsets();
@@ -303,8 +327,6 @@ export function ThreadScreen({
     if (!vm.hasMore || vm.loadingOlder) return;
     vm.loadOlder();
   };
-  const canSend = !!vm.draft.trim() && !vm.sending;
-
   /**
    * پرش به پیامی که این پیام پاسخِ آن است.
    *
@@ -457,12 +479,19 @@ export function ThreadScreen({
 
   // برگه‌ی ارتقا از دو مسیر باز می‌شود: کاربر روی هشدار زد، یا سرور ارسال را رد
   // کرد. حالتِ دوم *مشتق* می‌شود تا رفتنِ یکی از آن دو، دیگری را گیج نکند.
-  const [manualSheet, setManualSheet] = useState<{ kind: 'quota' } | null>(null);
-  const blockSheet: { kind: 'quota' } | { kind: 'tier'; level: number } | null = vm.block
-    ? vm.block.kind === 'quota'
-      ? { kind: 'quota' }
-      : { kind: 'tier', level: vm.block.requiredTier ?? peerTier ?? 2 }
-    : null;
+  const [manualSheet, setManualSheet] = useState<
+    { kind: 'quota' } | { kind: 'tier'; level: number; feature: string } | null
+  >(null);
+  const blockSheet: { kind: 'quota' } | { kind: 'tier'; level: number; feature: string } | null =
+    vm.block
+      ? vm.block.kind === 'quota'
+        ? { kind: 'quota' }
+        : {
+            kind: 'tier',
+            level: vm.block.requiredTier ?? peerTier ?? chat.photo.minTier ?? 3,
+            feature: 'ارسال عکس در گفتگو',
+          }
+      : null;
   const sheet = blockSheet ?? manualSheet;
   const setSheet = setManualSheet;
 
@@ -671,6 +700,7 @@ export function ThreadScreen({
 
               return (
                 <MessageBubble
+                  matchId={matchId}
                   msg={msg}
                   mine={mine}
                   firstOfGroup={firstOfGroup}
@@ -716,7 +746,7 @@ export function ThreadScreen({
                 {vm.editing ? 'ویرایشِ پیام' : 'پاسخ به پیام'}
               </Text>
               <Text style={styles.contextBody} numberOfLines={1}>
-                {(vm.editing ?? vm.replyTo)?.body}
+                {messagePreviewText((vm.editing ?? vm.replyTo)! as Message)}
               </Text>
             </View>
             <Pressable
@@ -735,51 +765,43 @@ export function ThreadScreen({
           </Pressable>
         ) : null}
 
-        <View style={styles.composer}>
-          {showStartWarning && convQuota ? (
-            <PressableScale
-              scaleTo={0.9}
-              feedback="select"
-              onPress={() => setSheet({ kind: 'quota' })}
-              accessibilityRole="button"
-              style={[styles.quotaHint, isExhausted(convQuota) && styles.quotaHintOut]}
-            >
-              <Icon name={isExhausted(convQuota) ? 'lock' : 'send-fill'} size={14} tint="gold" />
-              <Text style={styles.quotaHintText}>
-                {isExhausted(convQuota)
-                  ? 'سهمِ شروعِ گفتگویت تمام شده — برای ادامه بزن'
-                  : lowWarning(convQuota)}
-              </Text>
-              <Text style={styles.quotaHintCta}>جزئیات</Text>
-            </PressableScale>
-          ) : null}
-          <TextInput
-            style={styles.input}
-            value={vm.draft}
-            onChangeText={vm.changeDraft}
-            placeholder={vm.editing ? 'متنِ تازه…' : 'پیامت را بنویس…'}
-            placeholderTextColor={colors.ink3}
-            textAlign="right"
-            multiline
-          />
-          <PressableScale
-            scaleTo={0.9}
-            feedback="select"
-            style={styles.send}
-            onPress={onSend}
-            disabled={!canSend}
-            accessibilityRole="button"
-            accessibilityLabel={vm.editing ? 'ذخیره‌ی ویرایش' : 'ارسال'}
-          >
-            <LinearGradient
-              colors={gradients.gold}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFill, !canSend && styles.sendOff]}
-            />
-            <Icon name={vm.editing ? 'check' : 'send-fill'} size={20} tint="ink" />
-          </PressableScale>
-        </View>
+        <ChatComposer
+          draft={vm.draft}
+          onChangeDraft={vm.changeDraft}
+          onSendText={onSend}
+          onSendPhoto={vm.sendPhoto}
+          onSendVoice={vm.sendVoice}
+          sending={vm.sending}
+          editing={!!vm.editing}
+          chat={chat}
+          myTier={vm.myTier}
+          onPhotoLocked={() =>
+            setManualSheet({
+              kind: 'tier',
+              level: chat.photo.minTier ?? 3,
+              feature: 'ارسال عکس در گفتگو',
+            })
+          }
+          showQuotaHint={
+            showStartWarning && convQuota ? (
+              <PressableScale
+                scaleTo={0.9}
+                feedback="select"
+                onPress={() => setSheet({ kind: 'quota' })}
+                accessibilityRole="button"
+                style={[styles.quotaHint, isExhausted(convQuota) && styles.quotaHintOut]}
+              >
+                <Icon name={isExhausted(convQuota) ? 'lock' : 'send-fill'} size={14} tint="gold" />
+                <Text style={styles.quotaHintText}>
+                  {isExhausted(convQuota)
+                    ? 'سهمِ شروعِ گفتگویت تمام شده — برای ادامه بزن'
+                    : lowWarning(convQuota)}
+                </Text>
+                <Text style={styles.quotaHintCta}>جزئیات</Text>
+              </PressableScale>
+            ) : undefined
+          }
+        />
         </>
         )}
 
@@ -858,8 +880,20 @@ export function ThreadScreen({
         }}
         quotaKey={sheet?.kind === 'quota' ? 'conversation' : undefined}
         requiredTier={sheet?.kind === 'tier' ? sheet.level : undefined}
-        feature={sheet?.kind === 'tier' ? 'شروعِ گفتگو با این کاربر' : undefined}
-        title={sheet?.kind === 'tier' ? 'گفتگو با این کاربر قفل است' : undefined}
+        feature={
+          sheet?.kind === 'tier'
+            ? sheet.feature
+            : sheet?.kind === 'quota'
+              ? undefined
+              : undefined
+        }
+        title={
+          sheet?.kind === 'tier' && sheet.feature === 'ارسال عکس در گفتگو'
+            ? 'ارسال عکس در گفتگو قفل است'
+            : sheet?.kind === 'tier'
+              ? 'گفتگو با این کاربر قفل است'
+              : undefined
+        }
       />
     </ScreenContainer>
   );

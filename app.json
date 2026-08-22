@@ -2,7 +2,7 @@
   "expo": {
     "name": "نودوست",
     "slug": "nodoost",
-    "version": "2.5.0",
+    "version": "2.5.1",
     "orientation": "portrait",
     "icon": "./assets/logo/app-icon.png",
     "scheme": "nodoost",
@@ -23,14 +23,16 @@
     },
     "android": {
       "package": "com.nodoost.app",
-      "versionCode": 20,
+      "versionCode": 21,
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
         "backgroundImage": "./assets/logo/adaptive-icon-background.png",
         "foregroundImage": "./assets/logo/adaptive-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"]
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "output": "static",
@@ -61,13 +63,20 @@
         {
           "photosPermission": "برای انتخابِ عکسِ پروفایل، به گالریِ تصاویر دسترسی نیاز داریم.",
           "cameraPermission": "برای گرفتنِ عکسِ پروفایل با دوربین، به دوربینِ دستگاه دسترسی نیاز داریم.",
-          "microphonePermission": false
+          "microphonePermission": "برای ضبطِ پیامِ صوتی در گفتگو، به میکروفون دسترسی نیاز داریم."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "برای ضبطِ پیامِ صوتی در گفتگو، به میکروفون دسترسی نیاز داریم."
         }
       ],
       "expo-secure-store",
       "./plugins/withBazaarBilling",
       "./plugins/withReleaseSigning",
-      "./plugins/withFetchySdk"
+      "./plugins/withFetchySdk",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -134,7 +134,6 @@ export function useSupportViewModel() {
     try {
       const msg = await uc.support.sendMessage(body, overview?.topic);
       setMessages((prev) => mergeAsc(prev, [msg]));
-      // اولین پیام ممکن است گفتگو را همین‌جا ساخته باشد.
       if (!overview?.matchId) {
         setOverview((prev) => (prev ? { ...prev, matchId: msg.matchId, status: 'open' } : prev));
       }
@@ -145,6 +144,33 @@ export function useSupportViewModel() {
       setSending(false);
     }
   }, [draft, overview, uc]);
+
+  const sendPhoto = useCallback(
+    async (uri: string) => {
+      let mid = overview?.matchId;
+      if (!mid && overview?.topic) {
+        try {
+          mid = await uc.support.startThread(overview.topic);
+          setOverview((prev) => (prev ? { ...prev, matchId: mid, status: 'open' } : prev));
+        } catch {
+          setSendError('باز کردنِ گفتگو ناموفق بود.');
+          return;
+        }
+      }
+      if (!mid) return;
+      setSending(true);
+      setSendError(undefined);
+      try {
+        const msg = await uc.chat.sendMediaMessage(mid, 'photo', uri, { mime: 'image/jpeg' });
+        setMessages((prev) => mergeAsc(prev, [msg]));
+      } catch {
+        setSendError('ارسال ناموفق بود. اتصالت را بررسی کن.');
+      } finally {
+        setSending(false);
+      }
+    },
+    [overview, uc]
+  );
 
   return {
     overview,
@@ -164,8 +190,10 @@ export function useSupportViewModel() {
     draft,
     setDraft,
     send,
+    sendPhoto,
     sending,
     sendError,
     myId: user?.id,
+    myTier: user?.tier ?? 1,
   };
 }

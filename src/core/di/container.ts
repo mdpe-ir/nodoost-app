@@ -96,6 +96,8 @@ export function createContainer() {
       getConversations: chat.makeGetConversations(chatRepo),
       getMessages: chat.makeGetMessages(chatRepo),
       sendMessage: chat.makeSendMessage(chatRepo),
+      sendMediaMessage: chat.makeSendMediaMessage(chatRepo),
+      resolveMediaUri: chat.makeResolveMediaUri(chatRepo),
       startDirect: chat.makeStartDirect(chatRepo),
       editMessage: chat.makeEditMessage(chatRepo),
       deleteMessage: chat.makeDeleteMessage(chatRepo),

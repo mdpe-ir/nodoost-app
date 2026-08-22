@@ -264,7 +264,9 @@ export interface MessageDTO {
   id?: number;
   match_id: number;
   sender_id: number;
+  kind?: string;
   body: string;
+  media_meta?: Record<string, unknown> | null;
   created_at?: string;
   /** رسیدِ خواندن — فقط روی پیام‌های خودم برمی‌گردد (هر سطحی). */
   read_at?: string | null;
