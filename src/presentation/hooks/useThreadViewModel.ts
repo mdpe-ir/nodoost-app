@@ -52,12 +52,27 @@ function sendBlockOf(e: unknown): SendBlock | undefined {
     : undefined;
 }
 
-/** دو فهرستِ پیام را با کلیدِ id یکی می‌کند و صعودی مرتب می‌کند (تکراری‌ها حذف). */
+/** دو فهرستِ پیام را با کلیدِ id یکی می‌کند و صعودی مرتب می‌کند (تکراری‌ها حذف).
+ * پیام‌های خوش‌بینانه‌ی بدون id (clientId) حفظ می‌شوند تا نظرسنجیِ بی‌صدا آن‌ها را نبلعد.
+ * localUri سمتِ کلاینت روی پیامِ سرور حفظ می‌شود تا فرستنده دوباره دانلود نکند. */
 function mergeAsc(a: Message[], b: Message[]): Message[] {
+  const pending = a.filter((m) => m.id == null && m.clientId);
   const map = new Map<number, Message>();
   for (const m of a) if (m.id != null) map.set(m.id, m);
-  for (const m of b) if (m.id != null) map.set(m.id, m);
-  return Array.from(map.values()).sort((x, y) => (x.id ?? 0) - (y.id ?? 0));
+  for (const m of b) {
+    if (m.id == null) continue;
+    const prev = map.get(m.id);
+    map.set(
+      m.id,
+      prev?.localUri && !m.localUri ? { ...m, localUri: prev.localUri, clientId: prev.clientId } : m
+    );
+  }
+  const merged = Array.from(map.values()).sort((x, y) => (x.id ?? 0) - (y.id ?? 0));
+  return pending.length ? [...merged, ...pending] : merged;
+}
+
+function newClientId(): string {
+  return `c-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /**
@@ -180,69 +195,242 @@ export function useThreadViewModel(matchId: number) {
     }
   }, [uc, matchId, hasMore, messages]);
 
-  const send = useCallback(async () => {
-    const body = draft.trim();
-    if (!body) return;
-    const isStarting = messages.length === 0;
-    const replyId = replyTo?.id;
-    setDraft('');
-    setReplyTo(undefined);
-    setSending(true);
-    setBlock(undefined);
-    try {
-      const msg = await uc.chat.sendMessage(matchId, body, replyId);
-      setMessages((prev) => [...prev, msg]);
-      haptics.success();
-      recordInstallNagAction();
-      recordReviewMoment('action');
-      if (isStarting) consumeQuota('conversation');
-    } catch (e) {
-      setDraft(body);
-      if (replyTo) setReplyTo(replyTo);
-      const b = sendBlockOf(e);
-      setBlock(b);
-      haptics.warn();
-      if (b?.kind === 'quota') refreshQuota();
-    } finally {
-      setSending(false);
-    }
-  }, [draft, matchId, uc, messages.length, consumeQuota, refreshQuota, replyTo]);
+  const patchByClientId = useCallback((clientId: string, patch: Partial<Message>) => {
+    setMessages((prev) => prev.map((m) => (m.clientId === clientId ? { ...m, ...patch } : m)));
+  }, []);
 
-  const sendMedia = useCallback(
-    async (kind: 'photo' | 'voice', uri: string, opts?: { durationMs?: number; peaks?: number[] }) => {
-      const isStarting = messages.length === 0;
-      const replyId = replyTo?.id;
-      setReplyTo(undefined);
-      setSending(true);
+  const sendText = useCallback(
+    async (
+      body: string,
+      opts?: {
+        clientId?: string;
+        replyToId?: number;
+        replyTo?: Message['replyTo'];
+      }
+    ) => {
+      const isStarting = !messages.some((m) => m.id != null);
+      const clientId = opts?.clientId ?? newClientId();
       setBlock(undefined);
+
+      if (!opts?.clientId) {
+        const optimistic: Message = {
+          clientId,
+          matchId,
+          senderId: user?.id ?? 0,
+          kind: 'text',
+          body,
+          pending: true,
+          failed: false,
+          createdAt: new Date().toISOString(),
+          replyTo: opts?.replyTo,
+        };
+        setMessages((prev) => [...prev, optimistic]);
+      } else {
+        patchByClientId(clientId, { pending: true, failed: false });
+      }
+
       try {
-        const msg = await uc.chat.sendMediaMessage(matchId, kind, uri, {
-          replyToId: replyId,
-          durationMs: opts?.durationMs,
-          peaks: opts?.peaks,
-          mime: kind === 'voice' ? 'audio/mp4' : 'image/jpeg',
-        });
-        setMessages((prev) => [...prev, msg]);
-        haptics.success();
+        const msg = await uc.chat.sendMessage(matchId, body, opts?.replyToId);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientId === clientId
+              ? { ...msg, clientId, pending: false, failed: false }
+              : m
+          )
+        );
         recordInstallNagAction();
         recordReviewMoment('action');
         if (isStarting) consumeQuota('conversation');
       } catch (e) {
+        patchByClientId(clientId, { pending: false, failed: true });
         const b = sendBlockOf(e);
         setBlock(b);
         haptics.warn();
         if (b?.kind === 'quota') refreshQuota();
-      } finally {
-        setSending(false);
       }
     },
-    [matchId, uc, messages.length, consumeQuota, refreshQuota, replyTo]
+    [matchId, uc, messages, consumeQuota, refreshQuota, user?.id, patchByClientId]
   );
 
-  const sendPhoto = useCallback((uri: string) => sendMedia('photo', uri), [sendMedia]);
+  const send = useCallback(() => {
+    const body = draft.trim();
+    if (!body) return;
+    const replyId = replyTo?.id;
+    const quote = replyTo
+      ? {
+          id: replyTo.id!,
+          senderId: replyTo.senderId,
+          body: replyTo.body,
+          deleted: !!replyTo.deleted,
+        }
+      : undefined;
+    setDraft('');
+    setReplyTo(undefined);
+    void sendText(body, { replyToId: replyId, replyTo: quote });
+  }, [draft, replyTo, sendText]);
+
+  const sendMedia = useCallback(
+    async (
+      kind: 'photo' | 'voice',
+      uri: string,
+      opts?: { durationMs?: number; peaks?: number[]; clientId?: string; uploadUri?: string }
+    ) => {
+      const isStarting = !messages.some((m) => m.id != null);
+      const existing = opts?.clientId
+        ? messages.find((m) => m.clientId === opts.clientId)
+        : undefined;
+      const replyId = existing?.replyTo?.id ?? replyTo?.id;
+      const clientId = opts?.clientId ?? newClientId();
+      if (!opts?.clientId) setReplyTo(undefined);
+      setBlock(undefined);
+
+      // اگر retry نیست، حبابِ خوش‌بینانه بساز.
+      if (!opts?.clientId) {
+        const optimistic: Message = {
+          clientId,
+          matchId,
+          senderId: user?.id ?? 0,
+          kind,
+          body: '',
+          localUri: uri,
+          pending: true,
+          failed: false,
+          transferPhase: kind === 'photo' ? 'preparing' : 'uploading',
+          transferProgress: kind === 'photo' ? undefined : 0,
+          mediaMeta: {
+            durationMs: opts?.durationMs,
+            peaks: opts?.peaks,
+            mime: kind === 'voice' ? 'audio/mp4' : 'image/jpeg',
+          },
+          createdAt: new Date().toISOString(),
+          replyTo: replyTo
+            ? {
+                id: replyTo.id!,
+                senderId: replyTo.senderId,
+                body: replyTo.body,
+                deleted: !!replyTo.deleted,
+              }
+            : undefined,
+        };
+        setMessages((prev) => [...prev, optimistic]);
+      } else {
+        patchByClientId(clientId, {
+          pending: true,
+          failed: false,
+          transferPhase: kind === 'photo' && !opts.uploadUri ? 'preparing' : 'uploading',
+          transferProgress: 0,
+        });
+      }
+
+      try {
+        let uploadUri = opts?.uploadUri ?? uri;
+        let width: number | undefined;
+        let height: number | undefined;
+
+        if (kind === 'photo' && !opts?.uploadUri) {
+          const { toJpeg } = await import('@/core/media/normalizeImage');
+          const prepared = await toJpeg(uri, { maxSize: 1280, compress: 0.85 });
+          uploadUri = prepared.uri;
+          width = prepared.width;
+          height = prepared.height;
+          patchByClientId(clientId, {
+            localUri: uploadUri,
+            transferPhase: 'uploading',
+            transferProgress: 0,
+            mediaMeta: {
+              width,
+              height,
+              mime: 'image/jpeg',
+            },
+          });
+        }
+
+        const msg = await uc.chat.sendMediaMessage(matchId, kind, uploadUri, {
+          replyToId: replyId,
+          durationMs: opts?.durationMs,
+          peaks: opts?.peaks,
+          mime: kind === 'voice' ? 'audio/mp4' : 'image/jpeg',
+          onProgress: (ratio) => {
+            patchByClientId(clientId, {
+              transferPhase: 'uploading',
+              transferProgress: ratio,
+            });
+          },
+        });
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientId === clientId
+              ? {
+                  ...msg,
+                  clientId,
+                  localUri: uploadUri,
+                  pending: false,
+                  failed: false,
+                  transferPhase: undefined,
+                  transferProgress: undefined,
+                }
+              : m
+          )
+        );
+        recordInstallNagAction();
+        recordReviewMoment('action');
+        if (isStarting) consumeQuota('conversation');
+      } catch (e) {
+        patchByClientId(clientId, {
+          pending: false,
+          failed: true,
+          transferPhase: undefined,
+          transferProgress: undefined,
+        });
+        const b = sendBlockOf(e);
+        setBlock(b);
+        haptics.warn();
+        if (b?.kind === 'quota') refreshQuota();
+      }
+    },
+    [
+      matchId,
+      uc,
+      messages.length,
+      consumeQuota,
+      refreshQuota,
+      replyTo,
+      user?.id,
+      patchByClientId,
+    ]
+  );
+
+  const sendPhoto = useCallback((uri: string) => void sendMedia('photo', uri), [sendMedia]);
   const sendVoice = useCallback(
-    (uri: string, durationMs: number, peaks: number[]) => sendMedia('voice', uri, { durationMs, peaks }),
+    (uri: string, durationMs: number, peaks: number[]) =>
+      void sendMedia('voice', uri, { durationMs, peaks }),
     [sendMedia]
+  );
+
+  const retryMessage = useCallback(
+    (clientId: string) => {
+      const target = messages.find((m) => m.clientId === clientId && m.failed);
+      if (!target) return;
+      if (target.kind === 'photo' || target.kind === 'voice') {
+        if (!target.localUri) return;
+        void sendMedia(target.kind, target.localUri, {
+          clientId,
+          durationMs: target.mediaMeta?.durationMs,
+          peaks: target.mediaMeta?.peaks,
+          uploadUri:
+            target.kind === 'photo' && target.mediaMeta?.width ? target.localUri : undefined,
+        });
+        return;
+      }
+      if (!target.body) return;
+      void sendText(target.body, {
+        clientId,
+        replyToId: target.replyTo?.id,
+        replyTo: target.replyTo,
+      });
+    },
+    [messages, sendMedia, sendText]
   );
 
   const submitEdit = useCallback(async () => {
@@ -277,7 +465,12 @@ export function useThreadViewModel(matchId: number) {
    */
   const remove = useCallback(
     async (message: Message, scope: DeleteScope) => {
-      if (!message.id) return;
+      if (!message.id) {
+        if (message.clientId) {
+          setMessages((prev) => prev.filter((m) => m.clientId !== message.clientId));
+        }
+        return;
+      }
       const id = message.id;
       const before = messages;
       setMessages((prev) =>
@@ -325,6 +518,7 @@ export function useThreadViewModel(matchId: number) {
     send,
     sendPhoto,
     sendVoice,
+    retryMessage,
     sending,
     /** علتِ ردشدنِ ارسال — صفحه با آن برگه‌ی ارتقا را باز می‌کند. */
     block,
@@ -351,6 +545,9 @@ export function useThreadViewModel(matchId: number) {
     canEdit: useCallback(
       (m: Message) =>
         (m.kind == null || m.kind === 'text') &&
+        !!m.id &&
+        !m.pending &&
+        !m.failed &&
         m.senderId === user?.id &&
         !m.deleted &&
         !!m.createdAt &&

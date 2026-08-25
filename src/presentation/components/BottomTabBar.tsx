@@ -91,7 +91,6 @@ export function BottomTabBar({ state, descriptors, navigation }: TabBarProps) {
                   accessibilityLabel={label}
                   hitSlop={6}
                   scaleTo={0.9}
-                  feedback="commit"
                   style={[styles.centerBtn, shadow.gold, focused && styles.centerBtnFocused]}
                 >
                   <LinearGradient
@@ -165,7 +164,6 @@ function TabItem({
       accessibilityLabel={label}
       hitSlop={6}
       scaleTo={0.93}
-      feedback="select"
       style={styles.item}
     >
       <Animated.View style={[styles.pill, pill]} pointerEvents="none" />

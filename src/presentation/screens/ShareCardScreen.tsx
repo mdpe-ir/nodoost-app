@@ -27,6 +27,7 @@ import {
 import { useShareCard } from '@/presentation/hooks/useShareCard';
 import { inviteShareCaption, useInviteViewModel } from '@/presentation/hooks/useInviteViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
+import { mediaUrl } from '@/core/http/mediaUrl';
 import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
 
 const FORMATS: { key: ShareCardFormat; label: string }[] = [
@@ -60,7 +61,9 @@ export function ShareCardScreen() {
   const summary = vm.data?.summary;
   const code = summary?.code ?? '';
   const name = user?.name?.trim() ?? '';
-  const photoUrl = user?.photos?.find((p) => p.isPrimary)?.url ?? user?.photos?.[0]?.url;
+  const photoUrl = mediaUrl(
+    user?.photos?.find((p) => p.isPrimary)?.url ?? user?.photos?.[0]?.url
+  );
   const caption = captionEdit ?? (summary ? inviteShareCaption(summary) : '');
 
   const cardKey = `${format}-${look}-${photoUrl ?? ''}`;
@@ -82,7 +85,7 @@ export function ShareCardScreen() {
 
   const cardSize = CARD_SIZES[format];
   const maxPreviewW = screenW - PAGE_PADDING * 2;
-  const maxPreviewH = Math.min(screenH * 0.38, 440);
+  const maxPreviewH = Math.min(screenH * 0.34, 360);
   const previewScale = Math.min(maxPreviewW / cardSize.width, maxPreviewH / cardSize.height);
   const previewW = cardSize.width * previewScale;
   const previewH = cardSize.height * previewScale;
@@ -128,7 +131,7 @@ export function ShareCardScreen() {
 
   return (
     <ScreenContainer>
-      {/* کارتِ تمام‌رزولوشن پشتِ UI می‌نشیند تا view-shot از روی پیکسلِ واقعی ثبت کند. */}
+      {/* کارتِ تمام‌رزولوشن خارج از دید می‌نشیند تا view-shot از روی پیکسلِ واقعی ثبت کند. */}
       <View
         ref={viewRef}
         collapsable={false}
@@ -152,40 +155,66 @@ export function ShareCardScreen() {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.sectionLabel}>فرمت</Text>
-          <SegmentedControl options={FORMATS} value={format} onChange={setFormat} />
-
-          <Text style={styles.sectionLabel}>ظاهر</Text>
-          <View style={styles.looks}>
-            {LOOKS.map((l) => (
-              <Chip
-                key={l.key}
-                label={l.label}
-                active={look === l.key}
-                onPress={() => setLook(l.key)}
-                style={{ minHeight: 40, paddingHorizontal: 16 }}
-              />
-            ))}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>فرمت</Text>
+            <SegmentedControl options={FORMATS} value={format} onChange={setFormat} />
           </View>
 
-          <Text style={styles.sectionLabel}>پیش‌نمایش</Text>
-          <View style={[styles.previewWrap, { width: previewW, height: previewH }]}>
-            <ShareCardView {...cardProps} width={previewW} height={previewH} />
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>ظاهر</Text>
+            <View style={styles.looks}>
+              {LOOKS.map((l) => (
+                <Chip
+                  key={l.key}
+                  label={l.label}
+                  active={look === l.key}
+                  onPress={() => setLook(l.key)}
+                  style={{ minHeight: 40, paddingHorizontal: 16 }}
+                />
+              ))}
+            </View>
           </View>
 
-          <Text style={styles.sectionLabel}>کپشن</Text>
-          <TextInput
-            value={caption}
-            onChangeText={setCaptionEdit}
-            multiline
-            placeholder="متنِ همراهِ پست"
-            placeholderTextColor={colors.ink3}
-            style={styles.caption}
-            textAlign="right"
-          />
-          <Text style={styles.captionHint}>
-            کپشن هنگامِ اشتراک‌گذاری کپی می‌شود؛ در اینستاگرام پیست کن.
-          </Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>پیش‌نمایش</Text>
+            <View style={[styles.previewWrap, { width: previewW, height: previewH }]}>
+              {/*
+               * کارت را در ابعاد واقعی می‌کشیم و با scale جمع می‌کنیم تا حاشیه و
+               * تایپ در پیش‌نمایشِ کوچک محو/ناپدید نشوند.
+               */}
+              <View
+                pointerEvents="none"
+                style={{
+                  width: cardSize.width,
+                  height: cardSize.height,
+                  transform: [{ scale: previewScale }],
+                  transformOrigin: 'top left',
+                }}
+              >
+                <ShareCardView
+                  {...cardProps}
+                  width={cardSize.width}
+                  height={cardSize.height}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>کپشن</Text>
+            <TextInput
+              value={caption}
+              onChangeText={setCaptionEdit}
+              multiline
+              placeholder="متنِ همراهِ پست"
+              placeholderTextColor={colors.ink3}
+              style={styles.caption}
+              textAlign="right"
+            />
+            <Text style={styles.captionHint}>
+              کپشن هنگامِ اشتراک‌گذاری کپی می‌شود؛ در اینستاگرام پیست کن.
+            </Text>
+          </View>
         </KeyboardAwareScrollView>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
@@ -211,7 +240,8 @@ export function ShareCardScreen() {
 const styles = StyleSheet.create({
   captureHost: {
     position: 'absolute',
-    left: 0,
+    // خارج از دید — opacity صفر ثبتِ view-shot را خراب می‌کند.
+    left: -4096,
     top: 0,
     zIndex: 0,
   },
@@ -220,26 +250,29 @@ const styles = StyleSheet.create({
     zIndex: 1,
     backgroundColor: colors.bg,
   },
-  scroll: { paddingBottom: spacing.lg, gap: spacing.sm },
+  scroll: {
+    paddingBottom: spacing.xl,
+    gap: spacing.lg,
+  },
+  section: { gap: spacing.sm },
   sectionLabel: {
     fontFamily: fonts.bold,
     fontSize: fontSizes.xs,
     color: colors.ink3,
     textAlign: 'right',
     writingDirection: 'rtl',
-    marginTop: spacing.md,
   },
   looks: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.sm },
   previewWrap: {
     alignSelf: 'center',
-    marginTop: spacing.sm,
     borderRadius: radius.md,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.line,
+    backgroundColor: colors.surface,
   },
   caption: {
-    minHeight: 112,
+    minHeight: 96,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,

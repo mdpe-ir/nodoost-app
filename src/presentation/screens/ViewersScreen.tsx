@@ -175,7 +175,6 @@ function ViewerTile({ viewer, w, h }: { viewer: Viewer; w: number; h: number }) 
   return (
     <PressableScale
       scaleTo={0.98}
-      feedback="select"
       style={[styles.tile, { width: w, height: h }]}
       onPress={() => router.push({ pathname: '/user/[id]', params: { id: String(viewer.id) } })}
       accessibilityRole="button"

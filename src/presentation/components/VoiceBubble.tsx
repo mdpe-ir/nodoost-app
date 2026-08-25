@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useChatMediaUri } from '@/presentation/hooks/useChatMediaUri';
+import { MediaTransferOverlay } from './MediaTransferOverlay';
+import type { MediaTransferPhase } from '@/domain/entities';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, spacing } from '@/core/theme';
 
@@ -16,14 +18,42 @@ function formatMs(ms?: number): string {
 
 interface Props {
   matchId: number;
-  messageId: number;
+  messageId?: number;
+  localUri?: string;
+  pending?: boolean;
+  failed?: boolean;
+  transferPhase?: MediaTransferPhase;
+  transferProgress?: number;
   durationMs?: number;
   peaks?: number[];
   mine: boolean;
+  onRetry?: () => void;
 }
 
-export function VoiceBubble({ matchId, messageId, durationMs, peaks, mine }: Props) {
-  const { uri, loading } = useChatMediaUri(matchId, messageId, 'voice', 'audio/mp4');
+export function VoiceBubble({
+  matchId,
+  messageId,
+  localUri,
+  pending,
+  failed,
+  transferPhase,
+  transferProgress,
+  durationMs,
+  peaks,
+  mine,
+  onRetry,
+}: Props) {
+  const [dlProgress, setDlProgress] = useState<number | undefined>();
+  const needsRemote = !!messageId && !localUri;
+  const { uri: remoteUri, loading } = useChatMediaUri(
+    matchId,
+    needsRemote ? messageId : undefined,
+    'voice',
+    'audio/mp4',
+    needsRemote ? setDlProgress : undefined
+  );
+
+  const uri = localUri || remoteUri;
   const player = useAudioPlayer(uri ? { uri } : null);
   const status = useAudioPlayerStatus(player);
 
@@ -33,10 +63,10 @@ export function VoiceBubble({ matchId, messageId, durationMs, peaks, mine }: Pro
   }, [uri, player]);
 
   const toggle = useCallback(() => {
-    if (!uri) return;
+    if (!uri || failed || pending) return;
     if (status.playing) player.pause();
     else player.play();
-  }, [uri, status.playing, player]);
+  }, [uri, failed, pending, status.playing, player]);
 
   const bars = useMemo(() => {
     const src = peaks?.length ? peaks : Array.from({ length: 28 }, (_, i) => 0.25 + (i % 5) * 0.12);
@@ -47,20 +77,53 @@ export function VoiceBubble({ matchId, messageId, durationMs, peaks, mine }: Pro
   const total = durationMs ?? (status.duration ? status.duration * 1000 : 0);
   const label = status.playing ? formatMs(elapsed) : formatMs(total);
 
+  const uploading = !!pending && !failed;
+  const downloading = needsRemote && loading && !uri;
+  const showOverlay = failed || uploading || downloading;
+
+  const overlayPhase: MediaTransferPhase | undefined = failed
+    ? undefined
+    : uploading
+      ? transferPhase ?? 'uploading'
+      : downloading
+        ? 'downloading'
+        : undefined;
+
+  const overlayProgress = uploading
+    ? transferProgress
+    : downloading
+      ? dlProgress
+      : undefined;
+
   return (
     <Pressable
-      onPress={toggle}
-      disabled={!uri || loading}
+      onPress={failed && onRetry ? onRetry : toggle}
+      disabled={(!uri && !failed) || loading}
       style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}
       accessibilityRole="button"
-      accessibilityLabel={status.playing ? 'توقفِ پیام صوتی' : 'پخشِ پیام صوتی'}
+      accessibilityLabel={
+        failed
+          ? 'تلاش دوباره‌ی ارسالِ ویس'
+          : status.playing
+            ? 'توقفِ پیام صوتی'
+            : 'پخشِ پیام صوتی'
+      }
     >
       <View style={[styles.play, mine ? styles.playMine : styles.playTheirs]}>
-        <Ionicons
-          name={status.playing ? 'pause' : 'play'}
-          size={16}
-          color={mine ? colors.ink : colors.gold}
-        />
+        {showOverlay ? (
+          <MediaTransferOverlay
+            phase={overlayPhase}
+            progress={overlayProgress}
+            failed={failed}
+            compact
+          />
+        ) : (
+          <Ionicons
+            name={status.playing ? 'pause' : 'play'}
+            size={16}
+            color={mine ? colors.ink : colors.gold}
+          />
+        )}
       </View>
       <View style={styles.wave}>
         {bars.map((h, i) => (
@@ -99,6 +162,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface2,
+    overflow: 'hidden',
   },
   playMine: { backgroundColor: 'rgba(42,29,18,0.18)' },
   playTheirs: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line },

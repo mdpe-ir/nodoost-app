@@ -179,7 +179,7 @@ export function AndroidAppGateProvider({ children }: { children: React.ReactNode
               <View style={styles.methods}>
                 <InstallMethods methods={methods} />
               </View>
-              <PressableScale onPress={dismissNag} accessibilityRole="button" style={styles.nagLater} scaleTo={0.94} feedback="select">
+              <PressableScale onPress={dismissNag} accessibilityRole="button" style={styles.nagLater} scaleTo={0.94}>
                 <AppText variant="body" align="center" style={styles.nagLaterText}>
                   بعداً نصب می‌کنم
                 </AppText>

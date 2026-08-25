@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImageStyle, StyleProp } from 'react-native';
+import { ImageStyle, Platform, StyleProp } from 'react-native';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -22,20 +22,26 @@ export type IconName =
   | 'diamond-fill'
   | 'edit'
   | 'filter'
+  | 'happy'
   | 'headset'
+  | 'keypad'
   | 'heart-fill'
   | 'lightning-fill'
   | 'lightning'
   | 'lock'
   | 'map'
   | 'menu'
+  | 'mic'
+  | 'minus'
   | 'moon'
   | 'more'
   | 'chevron-down'
   | 'next-arrows'
+  | 'paperclip'
   | 'phone'
   | 'reply'
   | 'plus'
+  | 'trash'
   | 'rewind'
   | 'send-fill'
   | 'shield-check'
@@ -47,12 +53,20 @@ export type IconName =
   | 'tab-likes'
   | 'tab-profile';
 
-export type IconTint = 'gold' | 'white' | 'ink';
+export type IconTint = 'gold' | 'white' | 'ink' | 'ink2' | 'muted' | 'onGold';
 
 /** نام‌هایی که دارایی PNG ندارند و از Ionicons می‌آیند. */
 const VECTOR = {
   headset: 'headset-outline',
+  happy: 'happy-outline',
+  keypad: 'keypad-outline',
   menu: 'menu-outline',
+  mic: 'mic',
+  minus: 'remove',
+  paperclip: 'attach-outline',
+  trash: 'trash-outline',
+  // کاغذهوایِ پر — روی گرادیانِ طلایی با tint=ink خواناتر از PNGِ برند است.
+  'send-fill': 'paper-plane',
   'chevron-down': 'chevron-down',
   // پیکانِ پاسخ هم در پکِ برند نیست؛ مثلِ بقیه‌ی این فهرست از Ionicons می‌آید.
   reply: 'arrow-undo-outline',
@@ -65,11 +79,15 @@ const TINT_COLOR: Record<IconTint, string> = {
   gold: '#DAB877',
   white: '#FFFFFF',
   ink: '#241B15',
+  ink2: '#B2A8B0',
+  muted: '#8A8194',
+  /** آیکن روی گرادیانِ طلایی — قهوه‌ایِ گرم، نه سیاهِ خالص و نه سفید. */
+  onGold: '#7A5E3A',
 };
 
 // نگاشتِ ایستا — require باید رشته‌ی ثابت باشد تا Metro آن را بسته‌بندی کند
 /* eslint-disable @typescript-eslint/no-require-imports */
-const SOURCES: Record<IconTint, Record<PngName, number>> = {
+const SOURCES: Record<Exclude<IconTint, 'muted'>, Record<PngName, number>> = {
   gold: {
     bell: require('../../../assets/icons/gold/bell.png'),
     check: require('../../../assets/icons/gold/check.png'),
@@ -91,7 +109,6 @@ const SOURCES: Record<IconTint, Record<PngName, number>> = {
     phone: require('../../../assets/icons/gold/phone.png'),
     plus: require('../../../assets/icons/gold/plus.png'),
     rewind: require('../../../assets/icons/gold/rewind.png'),
-    'send-fill': require('../../../assets/icons/gold/send-fill.png'),
     'shield-check': require('../../../assets/icons/gold/shield-check.png'),
     shield: require('../../../assets/icons/gold/shield.png'),
     star: require('../../../assets/icons/gold/star.png'),
@@ -122,7 +139,6 @@ const SOURCES: Record<IconTint, Record<PngName, number>> = {
     phone: require('../../../assets/icons/white/phone.png'),
     plus: require('../../../assets/icons/white/plus.png'),
     rewind: require('../../../assets/icons/white/rewind.png'),
-    'send-fill': require('../../../assets/icons/white/send-fill.png'),
     'shield-check': require('../../../assets/icons/white/shield-check.png'),
     shield: require('../../../assets/icons/white/shield.png'),
     star: require('../../../assets/icons/white/star.png'),
@@ -153,7 +169,6 @@ const SOURCES: Record<IconTint, Record<PngName, number>> = {
     phone: require('../../../assets/icons/ink/phone.png'),
     plus: require('../../../assets/icons/ink/plus.png'),
     rewind: require('../../../assets/icons/ink/rewind.png'),
-    'send-fill': require('../../../assets/icons/ink/send-fill.png'),
     'shield-check': require('../../../assets/icons/ink/shield-check.png'),
     shield: require('../../../assets/icons/ink/shield.png'),
     star: require('../../../assets/icons/ink/star.png'),
@@ -180,13 +195,25 @@ export function Icon({ name, size = 24, tint = 'gold', style }: Props) {
         name={VECTOR[name as keyof typeof VECTOR]}
         size={size}
         color={TINT_COLOR[tint]}
-        style={style}
+        style={[
+          {
+            width: size,
+            height: size,
+            textAlign: 'center',
+            // بدونِ این، روی اندروید گلیفِ فونت با paddingِ اضافه پایین می‌افتد
+            // و داخلِ ظرف‌های absolute/وسط‌چین با PNGهای برند هم‌تراز نمی‌شود.
+            ...(Platform.OS === 'android'
+              ? { includeFontPadding: false, textAlignVertical: 'center' as const }
+              : { lineHeight: size }),
+          },
+          style,
+        ]}
       />
     );
   }
   return (
     <Image
-      source={SOURCES[tint][name as PngName]}
+      source={SOURCES[tint === 'muted' ? 'white' : tint][name as PngName]}
       style={[{ width: size, height: size }, style]}
       contentFit="contain"
     />

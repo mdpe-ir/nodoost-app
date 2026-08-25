@@ -43,7 +43,6 @@ function FollowRow({
   return (
     <PressableScale
       scaleTo={0.98}
-      feedback="select"
       style={styles.row}
       onPress={() => router.push({ pathname: '/user/[id]', params: { id: String(item.id) } })}
       accessibilityRole="button"

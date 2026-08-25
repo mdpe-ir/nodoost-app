@@ -27,7 +27,7 @@ interface Props extends Omit<PressableProps, 'style'> {
    */
   bg?: string;
   bgPressed?: string;
-  /** کدام لرزش هنگامِ فشار. `none` برای کنش‌های پرتکرار در فهرست‌های بلند. */
+  /** لرزش هنگامِ فشار — پیش‌فرض خاموش. فقط برای کنش‌های مهم/آستانه‌دار روشن کن. */
   feedback?: Feedback;
   style?: StyleProp<ViewStyle>;
 }
@@ -38,9 +38,8 @@ interface Props extends Omit<PressableProps, 'style'> {
  * تفاوتش با حالتِ قبلی (`pressed && { opacity, transform }`) این است که آن‌جا
  * دو حالتِ گسسته داشتیم: فشرده و رها. جسم بلافاصله می‌پرید به حالتِ دوم.
  * اینجا رهاکردن یک فنر است، پس انگشت که برداشته می‌شود جسم برمی‌گردد بالا —
- * همان چیزی که آدم از یک کلیدِ فیزیکی انتظار دارد. لرزش دقیقاً روی
- * `onPressIn` می‌نشیند، نه `onPress`؛ بازخوردِ لمسی باید هم‌زمان با لمس باشد،
- * نه بعد از انجامِ کار.
+ * همان چیزی که آدم از یک کلیدِ فیزیکی انتظار دارد. اگر `feedback` روشن باشد،
+ * لرزش روی `onPressIn` می‌نشیند، نه `onPress`.
  */
 export function PressableScale({
   children,
@@ -48,7 +47,7 @@ export function PressableScale({
   dimTo,
   bg,
   bgPressed,
-  feedback = 'tap',
+  feedback = 'none',
   style,
   onPressIn,
   onPressOut,

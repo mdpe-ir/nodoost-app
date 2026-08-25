@@ -42,7 +42,7 @@ export function InstallModal({
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="بستن" />
         <View style={[styles.card, shadow.card]}>
-          <PressableScale onPress={onClose} style={styles.close} accessibilityLabel="بستن" accessibilityRole="button" scaleTo={0.85} feedback="select">
+          <PressableScale onPress={onClose} style={styles.close} accessibilityLabel="بستن" accessibilityRole="button" scaleTo={0.85}>
             <Icon name="close" size={18} tint="gold" />
           </PressableScale>
 
@@ -77,11 +77,11 @@ export function InstallModal({
             )}
             <View style={styles.secondaryRow}>
               {showNativeButton ? (
-                <PressableScale onPress={onSnooze} accessibilityRole="button" scaleTo={0.94} feedback="select">
+                <PressableScale onPress={onSnooze} accessibilityRole="button" scaleTo={0.94}>
                   <Text style={styles.linkText}>بعداً</Text>
                 </PressableScale>
               ) : null}
-              <PressableScale onPress={onNever} accessibilityRole="button" scaleTo={0.94} feedback="select">
+              <PressableScale onPress={onNever} accessibilityRole="button" scaleTo={0.94}>
                 <Text style={styles.linkMuted}>دیگر نشان نده</Text>
               </PressableScale>
             </View>

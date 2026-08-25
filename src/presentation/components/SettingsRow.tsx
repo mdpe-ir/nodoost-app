@@ -100,7 +100,6 @@ export function SettingsLink({
       // ردیفِ تمام‌عرض نباید محسوس کوچک شود؛ بازخوردِ اصلی روشن‌شدنِ پس‌زمینه
       // است — قراردادِ فهرست‌ها روی هر دو سکو.
       scaleTo={0.985}
-      feedback="select"
       bg={ROW_BG}
       bgPressed={colors.surface2}
       style={styles.row}

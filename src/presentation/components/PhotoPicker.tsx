@@ -209,7 +209,7 @@ function PermissionDeniedModal({
               }}
               style={styles.cardBtn}
             />
-            <PressableScale onPress={onClose} hitSlop={8} accessibilityRole="button" scaleTo={0.85} feedback="select">
+            <PressableScale onPress={onClose} hitSlop={8} accessibilityRole="button" scaleTo={0.85}>
               <Text style={styles.later}>الان نه</Text>
             </PressableScale>
           </View>

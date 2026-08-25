@@ -68,7 +68,6 @@ export function InAppBanner() {
           accessibilityRole="button"
           accessibilityLabel="بستنِ پیام"
           scaleTo={0.85}
-          feedback="select"
         >
           <Icon name="close" size={14} tint="ink" />
         </PressableScale>

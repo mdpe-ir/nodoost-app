@@ -20,7 +20,6 @@ export function StackHeader({ title, trailing }: { title: string; trailing?: Rea
         accessibilityRole="button"
         accessibilityLabel="بازگشت"
         scaleTo={0.88}
-        feedback="select"
         bg={BACK_IDLE}
         bgPressed={colors.surface}
         style={styles.back}

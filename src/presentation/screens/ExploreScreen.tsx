@@ -73,7 +73,6 @@ export function ExploreView() {
     <Animated.View entering={FadeIn.duration(220)}>
       <PressableScale
         scaleTo={0.98}
-        feedback="select"
         style={[styles.cell, { width: cellW, height: cellW * 1.32 }]}
         onPress={() => vm.select(item)}
         accessibilityRole="button"

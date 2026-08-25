@@ -136,7 +136,6 @@ export function DiscoverScreen() {
               icon="close"
               size={62}
               variant="surface"
-              feedback="commit"
               onPress={() => cardRef.current?.swipe('pass')}
               accessibilityLabel="رد"
             />
@@ -153,7 +152,6 @@ export function DiscoverScreen() {
               icon="heart-fill"
               size={68}
               variant="gold"
-              feedback="commit"
               onPress={() => cardRef.current?.swipe('like')}
               accessibilityLabel="پسند"
             />

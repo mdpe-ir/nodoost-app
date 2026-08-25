@@ -288,7 +288,6 @@ function PlanPill({
   return (
     <PressableScale
       scaleTo={0.9}
-      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
@@ -482,7 +481,6 @@ function Disclosure({
   return (
     <PressableScale
       scaleTo={0.98}
-      feedback="select"
       onPress={onToggle}
       accessibilityRole="button"
       accessibilityState={{ expanded: open }}

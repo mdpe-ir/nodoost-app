@@ -82,7 +82,7 @@ export function ReviewPromptModal({ visible, cfg, onChoose }: Props) {
                 />
               </View>
               <View style={styles.footRow}>
-                <PressableScale onPress={close} hitSlop={8} scaleTo={0.85} feedback="select">
+                <PressableScale onPress={close} hitSlop={8} scaleTo={0.85}>
                   <Text style={styles.footLink}>{copyOf(cfg.laterLabel, reviewCopy.laterLabel)}</Text>
                 </PressableScale>
                 <Text style={styles.footSep}>·</Text>

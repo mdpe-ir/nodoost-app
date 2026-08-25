@@ -38,6 +38,9 @@ export interface MessageMediaMeta {
   bytes?: number;
 }
 
+/** فازِ انتقالِ رسانه روی حباب (مثل تلگرام). */
+export type MediaTransferPhase = 'preparing' | 'uploading' | 'downloading';
+
 /** یک پیام در گفتگو. */
 export interface Message {
   id?: number;
@@ -46,10 +49,19 @@ export interface Message {
   kind?: MessageKind;
   body: string;
   mediaMeta?: MessageMediaMeta;
+  /**
+   * شناسه‌ی سمتِ کلاینت برای پیامِ خوش‌بینانه قبل از پاسخِ سرور.
+   * با `id` سرور یکی نیست و فقط برای جایگزینی/تلاشِ دوباره استفاده می‌شود.
+   */
+  clientId?: string;
   /** uriِ محلی برای حبابِ خوش‌بینانه قبل از آپلود. */
   localUri?: string;
   pending?: boolean;
   failed?: boolean;
+  /** در حالِ آماده‌سازی / آپلود / دانلود. */
+  transferPhase?: MediaTransferPhase;
+  /** پیشرفتِ انتقال ۰ تا ۱؛ نامعلوم یعنی فقط اسپینر. */
+  transferProgress?: number;
   createdAt?: string;
   /** زمانِ خوانده‌شدن — سرور فقط روی پیام‌های خودم می‌فرستد (هر سطحی). */
   readAt?: string;

@@ -74,7 +74,6 @@ export function OnboardingScreen() {
       return;
     }
     if (step < STEPS - 1) {
-      haptics.select();
       setStep((s) => s + 1);
       return;
     }
@@ -203,7 +202,6 @@ export function OnboardingScreen() {
             <View style={styles.photoStep}>
               <PressableScale
                 scaleTo={0.98}
-                feedback="select"
                 style={styles.photoTile}
                 onPress={vm.pickPhoto}
                 accessibilityRole="button"
@@ -255,7 +253,6 @@ export function OnboardingScreen() {
           {step > 0 ? (
             <PressableScale
               scaleTo={0.9}
-              feedback="select"
               onPress={() => setStep((s) => s - 1)}
               style={styles.backBtn}
               accessibilityRole="button"

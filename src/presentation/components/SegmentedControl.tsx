@@ -27,7 +27,6 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             scaleTo={0.94}
-            feedback="select"
             style={[styles.seg, active && styles.segActive]}
           >
             <Text style={[styles.label, active && styles.labelActive]}>{o.label}</Text>

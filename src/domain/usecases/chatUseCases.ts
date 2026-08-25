@@ -2,6 +2,7 @@ import type {
   ChatRepository,
   DeleteScope,
   MessagePageOptions,
+  SendMediaOptions,
 } from '@/domain/repositories/ChatRepository';
 
 export const makeGetConversations = (r: ChatRepository) => (page?: number) =>
@@ -16,16 +17,17 @@ export const makeSendMessage =
     r.sendMessage(matchId, body, replyToId);
 export const makeSendMediaMessage =
   (r: ChatRepository) =>
-  (
-    matchId: number,
-    kind: 'photo' | 'voice',
-    uri: string,
-    opts?: { replyToId?: number; durationMs?: number; peaks?: number[]; mime?: string }
-  ) =>
+  (matchId: number, kind: 'photo' | 'voice', uri: string, opts?: SendMediaOptions) =>
     r.sendMediaMessage(matchId, kind, uri, opts);
 export const makeResolveMediaUri =
-  (r: ChatRepository) => (matchId: number, messageId: number, kind: 'photo' | 'voice', mime?: string) =>
-    r.resolveMediaUri(matchId, messageId, kind, mime);
+  (r: ChatRepository) =>
+  (
+    matchId: number,
+    messageId: number,
+    kind: 'photo' | 'voice',
+    mime?: string,
+    onProgress?: (ratio: number) => void
+  ) => r.resolveMediaUri(matchId, messageId, kind, mime, onProgress);
 export const makeEditMessage =
   (r: ChatRepository) => (messageId: number, body: string) => r.editMessage(messageId, body);
 export const makeDeleteMessage =

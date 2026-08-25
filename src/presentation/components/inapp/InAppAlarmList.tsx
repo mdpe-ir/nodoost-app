@@ -49,7 +49,6 @@ function AlarmCard({ m }: { m: InAppMessage }) {
       accessibilityRole="button"
       accessibilityLabel={m.title}
       scaleTo={0.98}
-      feedback="select"
       style={[styles.card, { borderColor: accent }]}
     >
       <View style={[styles.badge, { backgroundColor: `${accent}22` }]}>
@@ -77,7 +76,6 @@ function AlarmCard({ m }: { m: InAppMessage }) {
           accessibilityRole="button"
           accessibilityLabel="بستنِ اعلان"
           scaleTo={0.85}
-          feedback="select"
         >
           <Icon name="close" size={14} tint="ink" />
         </PressableScale>

@@ -19,7 +19,6 @@ export function SupportButton() {
       accessibilityRole="button"
       accessibilityLabel="پشتیبانی"
       scaleTo={0.88}
-      feedback="select"
       style={styles.btn}
     >
       <View style={styles.chip}>

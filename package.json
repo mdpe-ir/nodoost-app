@@ -1,12 +1,14 @@
 {
   "name": "nodoost-rn",
   "main": "expo-router/entry",
-  "version": "2.5.1",
+  "version": "2.5.3",
   "dependencies": {
     "@cafebazaar/react-native-poolakey": "^3.1.2",
     "@expo-google-fonts/vazirmatn": "^0.4.1",
     "@expo/ui": "~56.0.18",
     "@expo/vector-icons": "^15.0.0",
+    "@shopify/flash-list": "^2.0.2",
+    "@softwhere-uz/react-native-emoji-keyboard": "^0.10.0",
     "expo": "~56.0.12",
     "expo-application": "~56.0.3",
     "expo-audio": "~56.0.4",

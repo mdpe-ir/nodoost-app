@@ -24,6 +24,7 @@ import { Button } from '@/presentation/components/Button';
 import { TierBadge, tierName } from '@/presentation/components/TierBadge';
 import { VoiceBubble } from '@/presentation/components/VoiceBubble';
 import { PhotoBubble } from '@/presentation/components/PhotoBubble';
+import { MessageSendStatus } from '@/presentation/components/MessageSendStatus';
 import { ChatComposer } from '@/presentation/components/ChatComposer';
 import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
@@ -76,7 +77,7 @@ function buildRows(messages: Message[], myId?: number): Row[] {
     const sameAsNext = !!next && next.senderId === m.senderId && dayKey(next.createdAt) === day;
     rows.push({
       type: 'msg',
-      key: String(m.id ?? `i${i}`),
+      key: m.clientId ?? (m.id != null ? String(m.id) : `i${i}`),
       msg: m,
       mine: m.senderId === myId,
       firstOfGroup: !sameAsPrev,
@@ -100,33 +101,8 @@ function readReceiptText(m: Message | null): string | undefined {
 }
 
 /**
- * نشانه‌ی رسیدن و خواندن.
- *
- * دو تیکِ روی‌هم‌افتاده با یک شکلِ واحد ساخته می‌شود تا وقتی پیام خوانده شد،
- * تیکِ دوم *کنارِ* اولی ظاهر شود و شکلِ آشنای «دو تیک» را بسازد — نه اینکه
- * آیکنِ دیگری جایش بنشیند.
+ * چقدر می‌شود حباب را کشید، و از کجا رهاکردن یعنی «پاسخ بده».
  */
-function Ticks({ read }: { read: boolean }) {
-  return (
-    <View
-      style={[styles.ticks, read && styles.ticksRead]}
-      accessibilityLabel={read ? 'خوانده شد' : 'ارسال شد'}
-      accessibilityRole="image"
-    >
-      {/*
-       * هر دو تیک همیشه ته‌رنگِ `ink` دارند و رنگشان با خوانده‌شدن عوض
-       * نمی‌شود. تیک فقط روی حبابِ خودم رندر می‌شود و آن حباب پس‌زمینه‌ی
-       * طلایی دارد — پس ته‌رنگِ `gold` یعنی طلایی روی طلایی، یعنی نامرئی.
-       * تفاوتِ «رفت» و «خوانده شد» را تعدادِ تیک می‌گوید، نه رنگ؛ همان
-       * قراردادی که کاربر از پیام‌رسان‌های دیگر می‌شناسد.
-       */}
-      <Icon name="check" size={12} tint="ink" style={styles.tick} />
-      {read ? <Icon name="check" size={12} tint="ink" style={styles.tickSecond} /> : null}
-    </View>
-  );
-}
-
-/** چقدر می‌شود حباب را کشید، و از کجا رهاکردن یعنی «پاسخ بده». */
 const REPLY_MAX = 76;
 const REPLY_TRIGGER = 54;
 
@@ -155,6 +131,7 @@ function MessageBubble({
   onReply,
   onLongPress,
   onJumpToQuote,
+  onRetryMessage,
 }: {
   matchId: number;
   msg: Message;
@@ -166,6 +143,7 @@ function MessageBubble({
   onReply: () => void;
   onLongPress: () => void;
   onJumpToQuote: (id: number) => void;
+  onRetryMessage?: (clientId: string) => void;
 }) {
   /** ‎−۱ = حباب به چپ می‌رود (پیامِ من)، ‎+۱ = به راست (پیامِ او). */
   const dir = mine ? -1 : 1;
@@ -228,8 +206,14 @@ function MessageBubble({
         >
           <Pressable
             onLongPress={onLongPress}
+            onPress={
+              msg.failed && msg.clientId
+                ? () => onRetryMessage?.(msg.clientId!)
+                : undefined
+            }
             delayLongPress={280}
-            accessibilityRole="button"
+            // حباب ظرف است، دکمه نیست — نقل، ویس و تلاشِ دوباره خودشان دکمه‌اند.
+            // نقشِ button در وب به <button> تبدیل می‌شود و دکمه‌ی تو در تو نامعتبر است.
             accessibilityLabel={messagePreviewText(msg)}
             accessibilityHint="نگه‌داشتن برای پاسخ، ویرایش یا حذف · کشیدن به چپ برای پاسخ"
           >
@@ -241,7 +225,6 @@ function MessageBubble({
                 accessibilityRole="button"
                 accessibilityLabel="رفتن به پیامِ اصلی"
                 scaleTo={0.97}
-                feedback="select"
                 style={[styles.quote, mine ? styles.quoteMine : styles.quoteTheirs]}
               >
                 <Text
@@ -257,24 +240,42 @@ function MessageBubble({
               </PressableScale>
             ) : null}
 
-            {msg.kind === 'voice' && msg.id ? (
+            {msg.kind === 'voice' && (msg.id || msg.pending || msg.failed) ? (
               <VoiceBubble
                 matchId={matchId}
                 messageId={msg.id}
+                localUri={msg.localUri}
+                pending={msg.pending}
+                failed={msg.failed}
+                transferPhase={msg.transferPhase}
+                transferProgress={msg.transferProgress}
                 durationMs={msg.mediaMeta?.durationMs}
                 peaks={msg.mediaMeta?.peaks}
                 mine={mine}
+                onRetry={msg.clientId ? () => onRetryMessage?.(msg.clientId!) : undefined}
               />
-            ) : msg.kind === 'photo' && msg.id ? (
+            ) : msg.kind === 'photo' && (msg.id || msg.pending || msg.failed) ? (
               <PhotoBubble
                 matchId={matchId}
                 messageId={msg.id}
+                localUri={msg.localUri}
+                pending={msg.pending}
+                failed={msg.failed}
+                transferPhase={msg.transferPhase}
+                transferProgress={msg.transferProgress}
                 width={msg.mediaMeta?.width}
                 height={msg.mediaMeta?.height}
                 mine={mine}
+                onRetry={msg.clientId ? () => onRetryMessage?.(msg.clientId!) : undefined}
               />
             ) : (
-              <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
+              <Text
+                style={[
+                  styles.bubbleText,
+                  mine ? styles.mineText : styles.theirsText,
+                  msg.pending && styles.textPending,
+                ]}
+              >
                 {msg.body}
               </Text>
             )}
@@ -284,12 +285,16 @@ function MessageBubble({
                   {time}
                   {msg.editedAt ? '  · ویرایش‌شده' : ''}
                 </Text>
-                {/*
-                  * تیک فقط روی پیامِ خودم معنا دارد: یک تیک «رفت»، دو تیک
-                  * «خوانده شد». برای همه‌ی سطح‌ها باز است؛ «پیامم را خواند؟»
-                  * اطمینان است نه قابلیتِ فروشی.
-                  */}
-                {mine ? <Ticks read={!!msg.readAt} /> : null}
+                {mine ? (
+                  <MessageSendStatus
+                    pending={msg.pending}
+                    failed={msg.failed}
+                    read={!!msg.readAt}
+                    onRetry={
+                      msg.clientId ? () => onRetryMessage?.(msg.clientId!) : undefined
+                    }
+                  />
+                ) : null}
               </View>
             ) : null}
           </Pressable>
@@ -556,7 +561,6 @@ export function ThreadScreen({
       <View style={styles.header}>
         <PressableScale
           scaleTo={0.9}
-          feedback="select"
           hitSlop={10}
           onPress={() => router.back()}
           accessibilityRole="button"
@@ -574,7 +578,7 @@ export function ThreadScreen({
           accessibilityRole="button"
           accessibilityLabel={`پروفایلِ ${name ?? 'کاربر'}`}
         >
-          <Avatar uri={photoUrl} name={name} size={40} ring />
+          <Avatar uri={photoUrl} name={name} size={38} ring />
           <View style={styles.headerText}>
             <View style={styles.headerNameRow}>
               <Text style={styles.headerName} numberOfLines={1}>
@@ -604,7 +608,6 @@ export function ThreadScreen({
         </Pressable>
         <PressableScale
           scaleTo={0.9}
-          feedback="select"
           hitSlop={10}
           onPress={() => setThreadMenu(true)}
           accessibilityRole="button"
@@ -710,6 +713,7 @@ export function ThreadScreen({
                   onReply={() => vm.startReply(msg)}
                   onLongPress={() => setActionTarget(msg)}
                   onJumpToQuote={jumpToMessage}
+                  onRetryMessage={vm.retryMessage}
                 />
               );
             }}
@@ -736,8 +740,7 @@ export function ThreadScreen({
         <>
         {/*
           * نوارِ «در حالِ پاسخ به…» / «در حالِ ویرایش». هرگز هم‌زمان نیستند و
-          * عمداً بیرونِ composer است — composer یک ردیفِ row-reverse است و این
-          * نوار باید تمامِ عرض را بگیرد.
+          * عمداً بیرونِ composer است — نوار باید تمامِ عرض را بگیرد.
           */}
         {vm.replyTo || vm.editing ? (
           <View style={styles.contextBar}>
@@ -786,7 +789,6 @@ export function ThreadScreen({
             showStartWarning && convQuota ? (
               <PressableScale
                 scaleTo={0.9}
-                feedback="select"
                 onPress={() => setSheet({ kind: 'quota' })}
                 accessibilityRole="button"
                 style={[styles.quotaHint, isExhausted(convQuota) && styles.quotaHintOut]}
@@ -904,9 +906,11 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    // مثل تلگرام: هدر روی پترن می‌نشیند، فقط خطی نازک جدا می‌کند.
+    backgroundColor: 'rgba(11,9,16,0.82)',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
@@ -917,20 +921,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerPeer: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md },
-  headerText: { flex: 1 },
+  headerPeer: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
+  headerText: { flex: 1, minWidth: 0 },
   headerNameRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
-  presenceRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
+  presenceRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, marginTop: 1 },
   onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.ok },
   headerHintLive: { color: colors.gold2 },
   headerHint: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, textAlign: 'right' },
   headerName: {
     fontFamily: fonts.bold,
-    fontSize: fontSizes.lg,
-    lineHeight: lineHeights.lg,
+    fontSize: fontSizes.md,
+    lineHeight: lineHeights.md,
     color: colors.ink,
     textAlign: 'right',
     writingDirection: 'rtl',
+    flexShrink: 1,
   },
   emptyWrap: { flex: 1, justifyContent: 'center' },
   // فهرست وارونه است، پس paddingهای این ظرف هم وارونه دیده می‌شوند: paddingTop
@@ -941,32 +946,30 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderTopColor: colors.rim,
+    // مثل تلگرام: کپسولِ نیمه‌شفاف روی پترن، بدون قابِ ضخیم.
+    backgroundColor: 'rgba(32,30,40,0.72)',
   },
-  sepText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.ink3 },
+  sepText: { fontFamily: fonts.medium, fontSize: fontSizes.xs, color: colors.ink2 },
   bubble: {
     maxWidth: '78%',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
+    paddingVertical: 7,
+    // شعاعِ تلگرامی (~۱۸) با دمِ تیز روی آخرین پیامِ گروه.
+    borderRadius: 18,
     marginTop: 2,
   },
   firstOfGroup: { marginTop: spacing.sm + 2 },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.gold },
-  mineTail: { borderBottomRightRadius: 4 },
+  mineTail: { borderBottomRightRadius: 5 },
   theirs: {
     alignSelf: 'flex-start',
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.line,
-    borderTopColor: colors.rim,
   },
-  theirsTail: { borderBottomLeftRadius: 4 },
+  theirsTail: { borderBottomLeftRadius: 5 },
   bubbleText: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.md,
@@ -975,17 +978,11 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   mineText: { color: colors.onGold },
+  textPending: { opacity: 0.72 },
   theirsText: { color: colors.ink },
   time: { fontFamily: fonts.regular, fontSize: 10, textAlign: 'left' },
   // ساعت و تیک در یک ردیف؛ در RTL تیک سمتِ چپِ ساعت می‌نشیند.
-  metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 3, alignSelf: 'flex-start' },
-  // عرضِ یک تیک؛ با خوانده‌شدن جا برای تیکِ دوم باز می‌شود. اگر عرض ثابت
-  // می‌ماند، پیامِ خوانده‌نشده یک فاصله‌ی خالیِ بی‌دلیل کنارِ ساعت داشت.
-  ticks: { alignItems: 'center', width: 12, height: 12 },
-  ticksRead: { width: 17 },
-  tick: { position: 'absolute', left: 0 },
-  // تیکِ دوم کمی جلوتر تا هم‌پوشانیِ آشنای «دو تیک» ساخته شود.
-  tickSecond: { position: 'absolute', left: 5 },
+  metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 2, alignSelf: 'flex-end' },
   timeMine: { color: 'rgba(42,29,18,0.6)' },
   timeTheirs: { color: colors.ink3 },
 

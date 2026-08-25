@@ -41,7 +41,7 @@ export function NudgeBanner({ icon = 'shield', title, hint, ctaLabel, onPress, b
         </PressableScale>
       </View>
       {onDismiss ? (
-        <PressableScale onPress={onDismiss} hitSlop={10} accessibilityLabel="بستن" scaleTo={0.85} feedback="select">
+        <PressableScale onPress={onDismiss} hitSlop={10} accessibilityLabel="بستن" scaleTo={0.85}>
           <Icon name="close" size={16} tint="ink" />
         </PressableScale>
       ) : null}

@@ -55,7 +55,6 @@ export function ChatScreen() {
   const supportRow = support.enabled ? (
     <PressableScale
       scaleTo={0.98}
-      feedback="select"
       style={[styles.row, styles.supportRow]}
       accessibilityRole="button"
       accessibilityLabel="گفتگو با پشتیبانی"
@@ -141,7 +140,6 @@ export function ChatScreen() {
               <Stagger index={index}>
               <PressableScale
                 scaleTo={0.98}
-                feedback="select"
                 style={styles.row}
                 accessibilityRole="button"
                 accessibilityHint={item.isSupport ? undefined : 'نگه‌داشتن برای پاک‌کردن یا مسدود کردن'}

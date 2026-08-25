@@ -28,7 +28,6 @@ export function NotificationBell() {
       accessibilityRole="button"
       accessibilityLabel="اعلان‌ها"
       scaleTo={0.88}
-      feedback="select"
       bg={IDLE}
       bgPressed={colors.surface}
       style={styles.btn}

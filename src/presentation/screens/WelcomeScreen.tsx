@@ -120,7 +120,6 @@ export function WelcomeScreen() {
         {!isLast ? (
           <PressableScale
             scaleTo={0.9}
-            feedback="select"
             onPress={markSeen}
             hitSlop={10}
             accessibilityRole="button"
@@ -184,7 +183,6 @@ export function WelcomeScreen() {
             accessibilityRole="button"
             accessibilityLabel={`اسلایدِ ${i + 1}`}
             scaleTo={0.8}
-            feedback="select"
           >
             <StepDot active={i === index} />
           </PressableScale>
@@ -202,7 +200,6 @@ export function WelcomeScreen() {
         {index > 0 ? (
           <PressableScale
             scaleTo={0.9}
-            feedback="select"
             onPress={prev}
             hitSlop={8}
             style={styles.prevBtn}

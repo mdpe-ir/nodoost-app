@@ -19,13 +19,26 @@ import { StackHeader } from '@/presentation/components/StackHeader';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
+import { ActionSheet } from '@/presentation/components/ActionSheet';
 import { RowsSkeleton } from '@/presentation/components/Skeleton';
 import { inviteShareCaption, useInviteViewModel } from '@/presentation/hooks/useInviteViewModel';
+import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
+import {
+  usableMethods,
+  type InstallMethodKey,
+} from '@/core/config/installConfig';
 import { faNum } from '@/core/utils/faNum';
 import { clipboardAvailable, copyToClipboard } from '@/core/utils/clipboard';
 import { timeAgo } from '@/core/utils/time';
 import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
 import type { Invitee, ReferralStatus } from '@/domain/entities';
+
+/** توضیحِ کوتاهِ هر روشِ نصب — هم‌تراز با InstallMethods. */
+const DOWNLOAD_HINT: Record<InstallMethodKey, string> = {
+  bazaar: 'لینکِ صفحه‌ی کافه‌بازار',
+  myket: 'لینکِ صفحه‌ی مایکت',
+  direct: 'لینکِ دانلودِ مستقیمِ APK',
+};
 
 const STATUS_TEXT: Record<ReferralStatus, string> = {
   pending: 'در انتظارِ کامل‌کردنِ پروفایل',
@@ -51,19 +64,37 @@ const STATUS_COLOR: Record<ReferralStatus, string> = {
 export function InviteScreen() {
   const vm = useInviteViewModel();
   const router = useRouter();
+  const { install } = useRemoteConfig();
+  const downloadMethods = usableMethods(install);
   const s = vm.data?.summary;
 
   // بازخوردِ «کپی شد» خودش بعد از دو ثانیه می‌رود. تایمر در ref نگه داشته
   // می‌شود تا ضربه‌های پشتِ‌هم تایمرِ قبلی را جا نگذارند.
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [downloadSheet, setDownloadSheet] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (copyTimer.current) clearTimeout(copyTimer.current);
-  }, []);
+  const linkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      if (linkTimer.current) clearTimeout(linkTimer.current);
+    },
+    []
+  );
 
   const shareText = s ? inviteShareCaption(s) : '';
 
   const share = () => void Share.share({ message: shareText }).catch(() => undefined);
+
+  const flashCopied = (
+    setFlag: (v: boolean) => void,
+    timer: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+  ) => {
+    setFlag(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setFlag(false), 2000);
+  };
 
   /**
    * ضربه روی کد: رونوشت، و اگر این نسخه‌ی اپ رونوشت ندارد (باینریِ قدیمی که
@@ -72,12 +103,20 @@ export function InviteScreen() {
    */
   const onCodePress = async (code: string) => {
     if (await copyToClipboard(code)) {
-      setCopied(true);
-      if (copyTimer.current) clearTimeout(copyTimer.current);
-      copyTimer.current = setTimeout(() => setCopied(false), 2000);
+      flashCopied(setCopied, copyTimer);
       return;
     }
     share();
+  };
+
+  /** رونوشتِ لینکِ دانلودِ یکی از روش‌های نصب؛ بدونِ رونوشت → برگه‌ی اشتراک. */
+  const onCopyDownloadLink = async (url: string) => {
+    setDownloadSheet(false);
+    if (await copyToClipboard(url)) {
+      flashCopied(setLinkCopied, linkTimer);
+      return;
+    }
+    void Share.share({ message: url }).catch(() => undefined);
   };
 
   return (
@@ -115,7 +154,6 @@ export function InviteScreen() {
                 باز می‌کند و متنِ راهنما هم همان را می‌گوید. */}
             <PressableScale
               scaleTo={0.98}
-              feedback="select"
               onPress={() => void onCodePress(s.code)}
               accessibilityRole="button"
               accessibilityLabel={clipboardAvailable ? 'رونوشتِ کدِ دعوت' : 'فرستادنِ کدِ دعوت'}
@@ -143,6 +181,15 @@ export function InviteScreen() {
               onPress={share}
               style={{ marginTop: spacing.lg }}
             />
+            {downloadMethods.length > 0 ? (
+              <Button
+                label={linkCopied ? 'لینک کپی شد' : 'کپی لینکِ دانلود'}
+                variant="outline"
+                icon={linkCopied ? 'check' : 'paperclip'}
+                onPress={() => setDownloadSheet(true)}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
             {Platform.OS !== 'web' ? (
               <Button
                 label="ساخت پست"
@@ -215,6 +262,20 @@ export function InviteScreen() {
           )}
         </ScrollView>
       )}
+
+      <ActionSheet
+        visible={downloadSheet}
+        title="کپی لینکِ دانلود"
+        subtitle="کدام لینک را می‌خواهی رونوشت کنی؟"
+        actions={downloadMethods.map((m) => ({
+          key: m.key,
+          label: m.label,
+          hint: DOWNLOAD_HINT[m.key] ?? m.url,
+          icon: 'paperclip' as const,
+          onPress: () => void onCopyDownloadLink(m.url),
+        }))}
+        onDismiss={() => setDownloadSheet(false)}
+      />
     </ScreenContainer>
   );
 }

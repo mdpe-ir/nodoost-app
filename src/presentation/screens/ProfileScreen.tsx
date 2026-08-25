@@ -77,7 +77,6 @@ function Stat({ value, label, onPress }: { value: string; label: string; onPress
   return (
     <PressableScale
       scaleTo={0.9}
-      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${value}`}
@@ -104,7 +103,6 @@ function QuickTile({
   return (
     <PressableScale
       scaleTo={0.98}
-      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
@@ -242,7 +240,6 @@ export function ProfileScreen() {
         <View style={styles.idRow}>
           <PressableScale
             scaleTo={0.94}
-            feedback="tap"
             onPress={openPhotoSheet}
             style={[styles.avatarRing, shadow.gold]}
             accessibilityRole="button"
@@ -344,7 +341,6 @@ export function ProfileScreen() {
         <View style={[styles.statusCard, user?.isPlus && styles.statusCardPlus]}>
           <PressableScale
             scaleTo={0.98}
-            feedback="select"
             onPress={() => goToPlans()}
             accessibilityRole="button"
             accessibilityLabel={user?.isPlus ? 'تمدید یا ارتقای اشتراک' : 'خریدِ اشتراک'}

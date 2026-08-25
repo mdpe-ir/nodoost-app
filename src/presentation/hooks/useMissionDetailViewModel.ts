@@ -66,7 +66,6 @@ export function useMissionDetailViewModel(missionId: number) {
       // «فرستاده شد» هنوز موفقیت نیست — منتظرِ بررسی است. لرزشِ جشن را برای
       // لحظه‌ای نگه می‌داریم که امتیاز واقعاً نشسته باشد.
       if (done) haptics.success();
-      else haptics.tap();
       setToast(
         done ? `${res.mission.points} امتیاز گرفتی 🎉` : 'فرستاده شد؛ پس از بررسی امتیازت اضافه می‌شود.'
       );

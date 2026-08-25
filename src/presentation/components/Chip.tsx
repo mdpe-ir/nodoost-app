@@ -18,7 +18,6 @@ export function Chip({ label, active, onPress, style }: Props) {
       accessibilityRole="button"
       accessibilityState={{ selected: !!active }}
       scaleTo={0.94}
-      feedback="select"
       style={[styles.base, active && styles.active, style]}
     >
       <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>

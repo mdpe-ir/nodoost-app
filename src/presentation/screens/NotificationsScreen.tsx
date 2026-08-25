@@ -104,7 +104,6 @@ function NotificationCard({
   return (
     <PressableScale
       scaleTo={0.98}
-      feedback="select"
       onPress={() => onPress(n)}
       accessibilityRole="button"
       accessibilityLabel={n.title || n.body}
@@ -200,7 +199,6 @@ export function NotificationsScreen() {
           vm.hasUnread ? (
             <PressableScale
               scaleTo={0.9}
-              feedback="select"
               onPress={vm.markAllRead}
               hitSlop={8}
               accessibilityRole="button"

@@ -1,10 +1,25 @@
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
-import { File as ExpoFile } from 'expo-file-system';
+import { File as ExpoFile, UploadType } from 'expo-file-system';
 import * as Updates from 'expo-updates';
 import { ApiError } from './ApiError';
 import type { TokenStorage } from '@/core/storage/TokenStorage';
+
+/** پیشرفتِ آپلود/دانلود — نسبت ۰ تا ۱. */
+export type TransferProgressHandler = (ratio: number) => void;
+
+export interface MultipartUploadFields {
+  /** مسیرِ فایلِ محلی. */
+  fileUri: string;
+  /** نامِ فیلدِ فایل در multipart. */
+  fieldName?: string;
+  /** نامِ فایل در Content-Disposition. */
+  fileName?: string;
+  mimeType?: string;
+  /** فیلدهای متنیِ اضافی. */
+  parameters?: Record<string, string>;
+}
 
 const clientMetadataHeaders = (): Record<string, string> => ({
   'X-Client-Platform': Platform.OS,
@@ -154,6 +169,132 @@ export class HttpClient {
       throw new ApiError(res.status, code, body);
     }
     return (await res.json().catch(() => null)) as T;
+  }
+
+  /**
+   * آپلودِ multipart با گزارشِ پیشرفت — روی نیتیو از UploadTask و روی وب از XHR.
+   * مثلِ بقیه‌ی متدها روی ۴۰۱ یک‌بار refresh می‌کند.
+   */
+  async uploadFormWithProgress<T>(
+    path: string,
+    fields: MultipartUploadFields,
+    onProgress?: TransferProgressHandler,
+    retried = false
+  ): Promise<T> {
+    const token = await this.tokens.getAccess();
+    const headers: Record<string, string> = {
+      ...clientMetadataHeaders(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const url = this.baseUrl + path;
+    const fieldName = fields.fieldName ?? 'file';
+    const fileName =
+      fields.fileName ?? fields.fileUri.split('/').pop() ?? 'file';
+
+    if (Platform.OS === 'web') {
+      return this.uploadFormWithProgressWeb<T>(url, headers, fields, fieldName, fileName, onProgress, path, retried);
+    }
+
+    const file = new ExpoFile(fields.fileUri);
+    const result = await file.upload(url, {
+      httpMethod: 'POST',
+      uploadType: UploadType.MULTIPART,
+      fieldName,
+      mimeType: fields.mimeType,
+      parameters: fields.parameters,
+      headers,
+      sessionType: 'foreground',
+      onProgress: onProgress
+        ? ({ bytesSent, totalBytes }) => {
+            if (totalBytes > 0) onProgress(Math.min(1, bytesSent / totalBytes));
+          }
+        : undefined,
+    });
+
+    if (result.status === 401 && !retried) {
+      if (await this.tryRefresh()) {
+        return this.uploadFormWithProgress<T>(path, fields, onProgress, true);
+      }
+      throw new ApiError(401);
+    }
+    if (result.status < 200 || result.status >= 300) {
+      let body: Record<string, unknown> | undefined;
+      try {
+        body = JSON.parse(result.body) as Record<string, unknown>;
+      } catch {
+        /* noop */
+      }
+      const code = typeof body?.error === 'string' ? body.error : undefined;
+      throw new ApiError(result.status, code, body);
+    }
+    try {
+      return JSON.parse(result.body) as T;
+    } catch {
+      return null as T;
+    }
+  }
+
+  private uploadFormWithProgressWeb<T>(
+    url: string,
+    headers: Record<string, string>,
+    fields: MultipartUploadFields,
+    fieldName: string,
+    fileName: string,
+    onProgress: TransferProgressHandler | undefined,
+    path: string,
+    retried: boolean
+  ): Promise<T> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const blob = await (await fetch(fields.fileUri)).blob();
+        const form = new FormData();
+        if (fields.parameters) {
+          for (const [k, v] of Object.entries(fields.parameters)) form.append(k, v);
+        }
+        form.append(fieldName, blob, fileName);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+        if (onProgress) {
+          xhr.upload.onprogress = (ev) => {
+            if (ev.lengthComputable && ev.total > 0) {
+              onProgress(Math.min(1, ev.loaded / ev.total));
+            }
+          };
+        }
+        xhr.onload = async () => {
+          if (xhr.status === 401 && !retried) {
+            if (await this.tryRefresh()) {
+              try {
+                resolve(await this.uploadFormWithProgress<T>(path, fields, onProgress, true));
+              } catch (e) {
+                reject(e);
+              }
+              return;
+            }
+            reject(new ApiError(401));
+            return;
+          }
+          let body: Record<string, unknown> | undefined;
+          try {
+            body = JSON.parse(xhr.responseText) as Record<string, unknown>;
+          } catch {
+            /* noop */
+          }
+          if (xhr.status < 200 || xhr.status >= 300) {
+            const code = typeof body?.error === 'string' ? body.error : undefined;
+            reject(new ApiError(xhr.status, code, body));
+            return;
+          }
+          resolve((body ?? null) as T);
+        };
+        xhr.onerror = () => reject(new ApiError(0, 'network_error'));
+        xhr.send(form);
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 
   async authHeaders(): Promise<Record<string, string>> {

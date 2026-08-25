@@ -23,6 +23,7 @@ import { Avatar } from '@/presentation/components/Avatar';
 import { Icon } from '@/presentation/components/Icon';
 import { VoiceBubble } from '@/presentation/components/VoiceBubble';
 import { PhotoBubble } from '@/presentation/components/PhotoBubble';
+import { MessageSendStatus } from '@/presentation/components/MessageSendStatus';
 import { ChatComposer } from '@/presentation/components/ChatComposer';
 import { useSupportViewModel } from '@/presentation/hooks/useSupportViewModel';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
@@ -82,7 +83,7 @@ function buildRows(messages: Message[], myId?: number): Row[] {
     const sameAsNext = !!next && next.senderId === m.senderId && dayKey(next.createdAt) === day;
     rows.push({
       type: 'msg',
-      key: String(m.id ?? `i${i}`),
+      key: m.clientId ?? (m.id != null ? String(m.id) : `i${i}`),
       msg: m,
       mine: m.senderId === myId,
       firstOfGroup: !sameAsPrev,
@@ -240,7 +241,6 @@ export function SupportScreen() {
             {vm.topics.map((t) => (
               <PressableScale
                 scaleTo={0.98}
-                feedback="select"
                 key={t.slug}
                 onPress={() => void vm.startThread(t.slug)}
                 disabled={vm.starting}
@@ -274,7 +274,6 @@ export function SupportScreen() {
       <View style={styles.header}>
         <PressableScale
           scaleTo={0.9}
-          feedback="select"
           hitSlop={10}
           onPress={() => router.back()}
           accessibilityRole="button"
@@ -347,32 +346,61 @@ export function SupportScreen() {
                   ]}
                   accessibilityLabel={messagePreviewText(msg)}
                 >
-                  {msg.kind === 'voice' && msg.id && matchId ? (
+                  {msg.kind === 'voice' && (msg.id || msg.pending || msg.failed) ? (
                     <VoiceBubble
-                      matchId={matchId}
+                      matchId={matchId ?? msg.matchId}
                       messageId={msg.id}
+                      localUri={msg.localUri}
+                      pending={msg.pending}
+                      failed={msg.failed}
+                      transferPhase={msg.transferPhase}
+                      transferProgress={msg.transferProgress}
                       durationMs={msg.mediaMeta?.durationMs}
                       peaks={msg.mediaMeta?.peaks}
                       mine={mine}
+                      onRetry={msg.clientId ? () => vm.retryMessage(msg.clientId!) : undefined}
                     />
-                  ) : msg.kind === 'photo' && msg.id && matchId ? (
+                  ) : msg.kind === 'photo' && (msg.id || msg.pending || msg.failed) ? (
                     <PhotoBubble
-                      matchId={matchId}
+                      matchId={matchId ?? msg.matchId}
                       messageId={msg.id}
+                      localUri={msg.localUri}
+                      pending={msg.pending}
+                      failed={msg.failed}
+                      transferPhase={msg.transferPhase}
+                      transferProgress={msg.transferProgress}
                       width={msg.mediaMeta?.width}
                       height={msg.mediaMeta?.height}
                       mine={mine}
+                      onRetry={msg.clientId ? () => vm.retryMessage(msg.clientId!) : undefined}
                     />
                   ) : (
-                    <Text style={[styles.bubbleText, mine ? styles.mineText : styles.theirsText]}>
+                    <Text
+                      style={[
+                        styles.bubbleText,
+                        mine ? styles.mineText : styles.theirsText,
+                        msg.pending && styles.textPending,
+                      ]}
+                    >
                       {msg.body}
                     </Text>
                   )}
                   {lastOfGroup && time ? (
-                    <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
-                      {time}
-                      {mine && msg.readAt ? '  · خوانده شد' : ''}
-                    </Text>
+                    <View style={styles.metaRow}>
+                      <Text style={[styles.time, mine ? styles.timeMine : styles.timeTheirs]}>
+                        {time}
+                      </Text>
+                      {mine ? (
+                        <MessageSendStatus
+                          pending={msg.pending}
+                          failed={msg.failed}
+                          read={!!msg.readAt}
+                          onRetry={
+                            msg.clientId ? () => vm.retryMessage(msg.clientId!) : undefined
+                          }
+                        />
+                      ) : null}
+                    </View>
                   ) : null}
                 </View>
               );
@@ -576,8 +604,10 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   mineText: { color: colors.onGold },
+  textPending: { opacity: 0.72 },
   theirsText: { color: colors.ink },
-  time: { fontFamily: fonts.regular, fontSize: 10, marginTop: 3, textAlign: 'left' },
+  metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 3, alignSelf: 'flex-end' },
+  time: { fontFamily: fonts.regular, fontSize: 10, textAlign: 'left' },
   timeMine: { color: 'rgba(42,29,18,0.6)' },
   timeTheirs: { color: colors.ink3 },
   composer: {

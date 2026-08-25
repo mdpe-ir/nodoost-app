@@ -19,7 +19,7 @@ interface Props {
   icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
-  /** شدتِ لرزش. برای تأییدهای سنگین (خرید، حذف) `commit` بده. */
+  /** لرزش — پیش‌فرض خاموش. برای تأییدهای سنگین (خرید، حذف) `commit` بده. */
   feedback?: 'select' | 'tap' | 'commit' | 'none';
   style?: ViewStyle;
 }
@@ -32,7 +32,7 @@ export function Button({
   icon,
   loading,
   disabled,
-  feedback = 'tap',
+  feedback = 'none',
   style,
 }: Props) {
   const isDisabled = disabled || loading;

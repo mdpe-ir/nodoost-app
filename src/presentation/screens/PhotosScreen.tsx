@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Modal,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { GridSkeleton } from '@/presentation/components/Skeleton';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
 import { PhotoPicker } from '@/presentation/components/PhotoPicker';
+import { PhotoViewer } from '@/presentation/components/PhotoViewer';
 import { tierName } from '@/presentation/components/TierBadge';
 import { maxPhotosForTier } from '@/presentation/tiers/tierFeatures';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
@@ -73,7 +73,6 @@ export function PhotosScreen() {
             return (
               <PressableScale
                 scaleTo={0.98}
-                feedback="select"
                 key={p.id}
                 style={[styles.tile, { width: tile, height: tile }]}
                 onPress={() => uri && setViewer(p)}
@@ -118,7 +117,6 @@ export function PhotosScreen() {
           {countedPhotos < maxPhotos ? (
             <PressableScale
               scaleTo={0.98}
-              feedback="select"
               style={[styles.tile, styles.addTile, { width: tile, height: tile }]}
               onPress={() => vm.addPhoto()}
               disabled={vm.busy}
@@ -132,7 +130,6 @@ export function PhotosScreen() {
             // سقفِ سطحِ فعلی پر شده — کاشیِ قفل، دعوت به ارتقا.
             <PressableScale
               scaleTo={0.98}
-              feedback="select"
               style={[styles.tile, styles.addTile, styles.lockTile, { width: tile, height: tile }]}
               onPress={() =>
                 router.push({
@@ -165,36 +162,25 @@ export function PhotosScreen() {
         </View>
       </ScrollView>
 
-      {/* — نمایِ تمام‌صفحه‌ی عکس — */}
-      <Modal
+      <PhotoViewer
+        key={viewer ? mediaUrl(viewer.url) ?? 'closed' : 'closed'}
         visible={viewer != null}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setViewer(null)}
-      >
-        <Pressable style={styles.viewerBackdrop} onPress={() => setViewer(null)}>
-          {viewer ? (
-            <Image source={{ uri: mediaUrl(viewer.url) }} style={styles.viewerImage} contentFit="contain" transition={150} cachePolicy="memory-disk" />
-          ) : null}
-          <Pressable style={styles.viewerClose} onPress={() => setViewer(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="بستن">
-            <Icon name="close" size={20} tint="white" />
-          </Pressable>
-          {viewer && !viewer.isPrimary && viewer.status !== 'rejected' ? (
-            <View style={styles.viewerDock}>
-              <Button
-                label="عکسِ پروفایلم شود"
-                icon="check"
-                loading={vm.primaryBusyId === viewer.id}
-                onPress={async () => {
-                  const ok = await vm.setPrimaryPhoto(viewer.id);
-                  if (ok) setViewer(null);
-                }}
-              />
-            </View>
-          ) : null}
-        </Pressable>
-      </Modal>
+        uri={viewer ? mediaUrl(viewer.url) ?? null : null}
+        onClose={() => setViewer(null)}
+        footer={
+          viewer && !viewer.isPrimary && viewer.status !== 'rejected' ? (
+            <Button
+              label="عکسِ پروفایلم شود"
+              icon="check"
+              loading={vm.primaryBusyId === viewer.id}
+              onPress={async () => {
+                const ok = await vm.setPrimaryPhoto(viewer.id);
+                if (ok) setViewer(null);
+              }}
+            />
+          ) : null
+        }
+      />
 
       {/* برگه‌ی دوربین/گالری + ویرایشگرِ برش — همان جریانی که در تکمیلِ پروفایل است. */}
       <PhotoPicker
@@ -293,26 +279,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   rejectionReason: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: colors.rose, textAlign: 'right' },
-
-  // — لایت‌باکس —
-  viewerBackdrop: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
-  viewerImage: { width: '100%', height: '100%' },
-  viewerClose: {
-    position: 'absolute',
-    top: 44,
-    left: spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewerDock: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: spacing.xl,
-    paddingHorizontal: PAGE_PADDING,
-  },
 });

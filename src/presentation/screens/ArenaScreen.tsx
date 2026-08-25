@@ -218,7 +218,6 @@ function MissionsTab({ vm, now, onInvite }: { vm: VM; now: number; onInvite: () 
         <Animated.View entering={FadeInDown.duration(240)}>
           <PressableScale
             scaleTo={0.98}
-            feedback="select"
             onPress={onInvite}
             style={[styles.card, styles.inviteCard]}
           >
@@ -277,7 +276,6 @@ function MissionCard({ mission, vm, now }: { mission: Mission; vm: VM; now: numb
     <Animated.View entering={FadeInDown.duration(240)}>
       <PressableScale
         scaleTo={0.98}
-        feedback="select"
         onPress={() => router.push(`/mission/${mission.id}` as Href)}
         accessibilityRole="button"
         accessibilityLabel={`جزئیاتِ ${mission.title}`}

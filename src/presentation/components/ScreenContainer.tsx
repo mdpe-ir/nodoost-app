@@ -90,7 +90,6 @@ export function ScreenHeader({
           accessibilityRole="button"
           accessibilityLabel="بازگشت"
           scaleTo={0.88}
-          feedback="select"
           bg={HEAD_IDLE}
           bgPressed={colors.surface}
           style={styles.backBtn}
@@ -183,7 +182,6 @@ function SettingsButton() {
       accessibilityRole="button"
       accessibilityLabel="تنظیمات"
       scaleTo={0.88}
-      feedback="select"
       bg={HEAD_IDLE}
       bgPressed={colors.surface}
       style={styles.headBtn}

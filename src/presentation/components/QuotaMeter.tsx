@@ -143,7 +143,6 @@ export function QuotaChip({ item, onPress }: { item: QuotaItem; onPress?: () => 
       accessibilityRole="button"
       accessibilityLabel={label}
       scaleTo={0.92}
-      feedback="select"
       style={[chip.wrap, out && chip.wrapOut]}
     >
       {body}

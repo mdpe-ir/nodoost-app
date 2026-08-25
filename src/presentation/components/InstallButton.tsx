@@ -20,7 +20,6 @@ export function InstallButton() {
       accessibilityLabel="نصبِ اپلیکیشن"
       style={styles.pill}
       scaleTo={0.92}
-      feedback="select"
     >
       <Icon name="plus" size={14} tint="gold" />
       <Text style={styles.label}>نصبِ اپ</Text>

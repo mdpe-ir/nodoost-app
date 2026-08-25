@@ -16,7 +16,7 @@ interface Props {
   variant?: Variant;
   disabled?: boolean;
   accessibilityLabel: string;
-  /** شدتِ لرزش. برای کنش‌های برگشت‌ناپذیر (پسند/رد) `commit` بده. */
+  /** لرزش — پیش‌فرض خاموش. برای کنش‌های برگشت‌ناپذیر (پسند/رد) `commit` بده. */
   feedback?: 'select' | 'tap' | 'commit' | 'none';
   style?: ViewStyle;
 }
@@ -30,7 +30,7 @@ export function IconButton({
   variant = 'surface',
   disabled,
   accessibilityLabel,
-  feedback = 'tap',
+  feedback = 'none',
   style,
 }: Props) {
   const gold = variant === 'gold';

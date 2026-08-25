@@ -114,7 +114,6 @@ export function ReinstallNotice({ variant = 'alert', showAccountNote = true }: P
         accessibilityLabel="راهنمای رفعِ مشکلِ نصب"
         hitSlop={8}
         scaleTo={0.985}
-        feedback="select"
       >
         {header}
       </PressableScale>

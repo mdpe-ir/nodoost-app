@@ -161,7 +161,7 @@ export function LocationPermissionModal({
                 onPress={isBlocked ? onOpenSettings : onAllow}
                 style={styles.btnFull}
               />
-              <PressableScale onPress={onLater} disabled={stage === 'requesting'} hitSlop={8} scaleTo={0.94} feedback="select">
+              <PressableScale onPress={onLater} disabled={stage === 'requesting'} hitSlop={8} scaleTo={0.94}>
                 <Text style={styles.later}>الان نه</Text>
               </PressableScale>
             </View>

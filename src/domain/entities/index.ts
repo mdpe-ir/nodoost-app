@@ -31,7 +31,14 @@ export type {
   InAppMessage,
 } from './inappMessages';
 export type { FollowState, FollowUser, FollowListKind, BlockedUser } from './social';
-export type { Conversation, Message, Presence } from './chat';
+export type {
+  Conversation,
+  Message,
+  MessageKind,
+  MessageMediaMeta,
+  MediaTransferPhase,
+  Presence,
+} from './chat';
 export type {
   SupportTopic,
   SupportAccount,

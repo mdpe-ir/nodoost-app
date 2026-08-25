@@ -56,7 +56,6 @@ function FollowStat({
   return (
     <PressableScale
       scaleTo={0.9}
-      feedback="select"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${faNum(value)}`}
@@ -322,7 +321,6 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
 
         <PressableScale
           scaleTo={0.9}
-          feedback="select"
           accessibilityRole="button"
           accessibilityLabel="گزارش عکس پروفایل"
           onPress={() => setReportOpen(true)}
@@ -338,7 +336,6 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           */}
         <PressableScale
           scaleTo={0.9}
-          feedback="select"
           accessibilityRole="button"
           accessibilityLabel={`مسدود کردنِ ${p.name ?? 'این کاربر'}`}
           onPress={() => setBlockOpen(true)}

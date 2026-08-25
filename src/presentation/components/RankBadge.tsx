@@ -72,7 +72,6 @@ export function RankBadge({
       accessibilityRole="button"
       accessibilityLabel={`رتبه: ${rank.name}`}
       scaleTo={0.92}
-      feedback="select"
     >
       {body}
     </PressableScale>

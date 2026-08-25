@@ -101,7 +101,6 @@ function Row({ entry, index }: { entry: LeaderEntry; index: number }) {
         disabled={entry.isMe}
         accessibilityRole={entry.isMe ? undefined : 'button'}
         scaleTo={0.985}
-        feedback="select"
         style={[styles.row, entry.isMe && styles.rowMe]}
       >
         <View style={styles.rankSlot}>

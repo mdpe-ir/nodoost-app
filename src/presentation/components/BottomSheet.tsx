@@ -21,7 +21,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { hapticSelect } from '@/core/haptics';
 import { colors, durations, gradients, radius, shadow, spacing, springs } from '@/core/theme';
 
 /** فاصله‌ی سُرخوردنِ برگه از پایینِ صفحه؛ از بلندترین حالتِ برگه بیشتر است. */
@@ -95,7 +94,6 @@ export function BottomSheet({ visible, onDismiss, children, style, grabber = tru
           const far = drag.value > height.value * DISMISS_RATIO;
           const fast = e.velocityY > DISMISS_VELOCITY;
           if (far || fast) {
-            runOnJS(hapticSelect)();
             drag.value = withTiming(height.value, { duration: durations.quick }, (done) => {
               if (done) runOnJS(onDismiss)();
             });

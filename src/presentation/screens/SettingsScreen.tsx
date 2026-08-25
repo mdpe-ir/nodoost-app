@@ -176,7 +176,6 @@ export function SettingsScreen() {
                 {TRAVEL_CITIES.map((c) => (
                   <PressableScale
                     scaleTo={0.94}
-                    feedback="tap"
                     key={c.name}
                     style={styles.cityChip}
                     onPress={() => vm.startTravel(c.lat, c.lng)}

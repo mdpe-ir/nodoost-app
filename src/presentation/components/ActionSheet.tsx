@@ -49,7 +49,7 @@ export function ActionSheet({ visible, title, subtitle, actions, onDismiss }: Pr
             accessibilityLabel={a.label}
             accessibilityHint={a.hint}
             scaleTo={0.98}
-            feedback={a.danger ? 'commit' : 'select'}
+            feedback={a.danger ? 'commit' : undefined}
             style={styles.row}
           >
             {a.icon ? (
@@ -71,7 +71,6 @@ export function ActionSheet({ visible, title, subtitle, actions, onDismiss }: Pr
         onPress={onDismiss}
         style={styles.cancel}
         scaleTo={0.97}
-        feedback="select"
         accessibilityRole="button"
         accessibilityLabel="انصراف"
       >

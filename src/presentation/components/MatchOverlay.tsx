@@ -99,7 +99,7 @@ export function MatchOverlay({ peerName, peerPhotoUrl, onChat, onDismiss }: Prop
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(480).duration(durations.base)} style={styles.foot}>
-          <Button label="شروعِ گفتگو" onPress={onChat} feedback="commit" style={styles.cta} />
+          <Button label="شروعِ گفتگو" onPress={onChat} style={styles.cta} />
           <Pressable onPress={onDismiss} hitSlop={10} accessibilityRole="button">
             <Text style={styles.later}>بعداً</Text>
           </Pressable>

@@ -5,7 +5,8 @@ export function useChatMediaUri(
   matchId: number,
   messageId: number | undefined,
   kind: 'photo' | 'voice',
-  mime?: string
+  mime?: string,
+  onProgress?: (ratio: number) => void
 ) {
   const uc = useCases();
   const [uri, setUri] = useState<string | null>(null);
@@ -13,14 +14,26 @@ export function useChatMediaUri(
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!messageId) return;
+    if (!messageId) {
+      setUri(null);
+      setLoading(false);
+      setError(false);
+      return;
+    }
     let alive = true;
     setLoading(true);
     setError(false);
+    setUri(null);
+    onProgress?.(0);
     uc.chat
-      .resolveMediaUri(matchId, messageId, kind, mime)
+      .resolveMediaUri(matchId, messageId, kind, mime, (r) => {
+        if (alive) onProgress?.(r);
+      })
       .then((u) => {
-        if (alive) setUri(u);
+        if (alive) {
+          setUri(u);
+          onProgress?.(1);
+        }
       })
       .catch(() => {
         if (alive) setError(true);
@@ -31,6 +44,8 @@ export function useChatMediaUri(
     return () => {
       alive = false;
     };
+    // onProgress intentionally omitted — callers pass inline setters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uc, matchId, messageId, kind, mime]);
 
   return { uri, loading, error };

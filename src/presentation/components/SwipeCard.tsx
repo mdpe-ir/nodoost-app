@@ -15,7 +15,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum } from '@/core/utils/faNum';
-import { haptics, hapticCommit, hapticThreshold } from '@/core/haptics';
+import { hapticCommit, hapticThreshold } from '@/core/haptics';
 import {
   colors,
   fonts,
@@ -114,12 +114,7 @@ export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard(
   /** جابه‌جایی در نوارِ عکس؛ در دو سرِ نوار متوقف می‌شود، نه اینکه دور بزند. */
   const step = useCallback(
     (dir: 1 | -1) => {
-      setPhotoIndex((i) => {
-        const next = Math.min(photoCount - 1, Math.max(0, i + dir));
-        // لرزش فقط وقتی واقعاً چیزی عوض شد — رسیدن به تهِ نوار باید سکوت باشد.
-        if (next !== i) haptics.select();
-        return next;
-      });
+      setPhotoIndex((i) => Math.min(photoCount - 1, Math.max(0, i + dir)));
     },
     [photoCount]
   );

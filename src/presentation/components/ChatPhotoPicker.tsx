@@ -1,23 +1,25 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, Modal, StyleSheet, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, StyleSheet, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { PhotoSourceSheet, type PhotoSource } from './PhotoSourceSheet';
 import { Button } from './Button';
-import { toJpeg } from '@/core/media/normalizeImage';
 import { photoErrorMessage } from '@/core/media/photoErrors';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
-type Stage = 'idle' | 'sheet' | 'preparing' | 'denied';
+type Stage = 'idle' | 'sheet' | 'denied';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
+  /** uri خامِ انتخاب‌شده — آماده‌سازی/فشرده‌سازی در ویومدل انجام می‌شود. */
   onPicked: (uri: string) => void;
   onError: (message: string) => void;
 }
 
 /**
  * انتخابِ عکس برای گفتگو — بدونِ برش؛ دوربینِ پشت برای چت.
+ * بلافاصله بعد از انتخاب، uri را برمی‌گرداند تا حبابِ خوش‌بینانه ساخته شود
+ * (بدون دیالوگِ «آماده‌سازی»).
  */
 export function ChatPhotoPicker({ visible, onClose, onPicked, onError }: Props) {
   const [stage, setStage] = useState<Stage>('sheet');
@@ -60,9 +62,7 @@ export function ChatPhotoPicker({ visible, onClose, onPicked, onError }: Props) 
           return;
         }
 
-        setStage('preparing');
-        const prepared = await toJpeg(res.assets[0].uri, { maxSize: 1280, compress: 0.85 });
-        onPicked(prepared.uri);
+        onPicked(res.assets[0].uri);
         close();
       } catch (e) {
         onError(photoErrorMessage(e));
@@ -79,12 +79,6 @@ export function ChatPhotoPicker({ visible, onClose, onPicked, onError }: Props) 
         onSelect={pickFrom}
         onDismiss={close}
       />
-      <Modal visible={visible && stage === 'preparing'} transparent animationType="fade">
-        <View style={styles.overlay}>
-          <ActivityIndicator color={colors.gold} />
-          <Text style={styles.overlayText}>آماده‌سازیِ عکس…</Text>
-        </View>
-      </Modal>
       <Modal visible={visible && stage === 'denied'} transparent animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.deniedCard}>
@@ -112,12 +106,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
-  },
-  overlayText: {
-    marginTop: spacing.md,
-    fontFamily: fonts.medium,
-    fontSize: fontSizes.sm,
-    color: colors.ink,
   },
   deniedCard: {
     width: '100%',

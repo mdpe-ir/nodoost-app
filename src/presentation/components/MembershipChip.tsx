@@ -40,7 +40,6 @@ export function MembershipChip() {
         accessibilityRole="button"
         accessibilityLabel="ارتقای اشتراک"
         scaleTo={0.92}
-        feedback="select"
         style={[styles.chip, styles.chipFree]}
       >
         <Icon name="diamond-fill" size={13} tint="gold" />
@@ -56,7 +55,6 @@ export function MembershipChip() {
       accessibilityRole="button"
       accessibilityLabel={`اشتراکِ ${tierName(level)}${expiring ? ` — ${daysLeft} روز مانده` : ''}`}
       scaleTo={0.92}
-      feedback="select"
       style={[styles.chip, { borderColor: tierColor(level) }, expiring && styles.chipExpiring]}
     >
       <Text style={[styles.tierText, { color: tierColor(level) }]}>{tierName(level)}</Text>

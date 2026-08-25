@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Image, StyleSheet, Text, View, type ImageStyle, type StyleProp } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { mediaUrl } from '@/core/http/mediaUrl';
 import { colors, fonts, gradients } from '@/core/theme';
 
 const LOGO = require('../../../assets/logo/adaptive-icon-foreground.png');
@@ -42,6 +43,7 @@ export function ShareCardView({
   const s = Math.min(width, height) / 1080;
   const displayName = name.trim() || 'دوستِ نودوست';
   const monogram = displayName.charAt(0) || 'ن';
+  const resolvedPhoto = mediaUrl(photoUrl);
 
   if (look === 'photo') {
     return (
@@ -52,7 +54,7 @@ export function ShareCardView({
         name={displayName}
         code={code}
         monogram={monogram}
-        photoUrl={photoUrl}
+        photoUrl={resolvedPhoto}
         onReady={onReady}
       />
     );
@@ -75,7 +77,7 @@ export function ShareCardView({
       s={s}
       code={code}
       monogram={monogram}
-      photoUrl={photoUrl}
+      photoUrl={resolvedPhoto}
       onReady={onReady}
     />
   );
@@ -154,7 +156,7 @@ function CodeHero({
       <View
         style={[
           styles.codeFrame,
-          { borderWidth: 4 * s, borderRadius: 28 * s, padding: 48 * s },
+          { borderWidth: Math.max(2, 4 * s), borderRadius: 28 * s, padding: 48 * s },
         ]}
       >
         <Image
@@ -214,7 +216,7 @@ function PortraitChip({
             width: avatar,
             height: avatar,
             borderRadius: avatar / 2,
-            borderWidth: 5 * s,
+            borderWidth: Math.max(2, 5 * s),
             borderColor: colors.gold,
           }}
           onReady={onReady}
@@ -277,6 +279,7 @@ function Monogram({ letter, size }: { letter: string; size: number }) {
 /**
  * عکس را فقط بعد از onLoad نشان می‌دهیم؛ خطا = فالبکِ مونوگرام، نه تصویرِ شکسته.
  * تعویضِ uri با key کامپوننت را نو می‌کند تا failed نماند.
+ * تا قبل از load، فالبک زیرِ عکس می‌ماند تا جای خالیِ سیاه دیده نشود.
  */
 function CardPhoto({
   uri,
@@ -313,18 +316,29 @@ function RemotePhoto({
   onReady?: () => void;
 }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <>{fallback}</>;
+  const [loaded, setLoaded] = useState(false);
+
+  if (failed) {
+    return <View style={[style, styles.photoFrame]}>{fallback}</View>;
+  }
+
   return (
-    <Image
-      source={{ uri }}
-      style={style}
-      resizeMode="cover"
-      onLoad={onReady}
-      onError={() => {
-        setFailed(true);
-        onReady?.();
-      }}
-    />
+    <View style={[style, styles.photoFrame]}>
+      {!loaded ? <View style={styles.photoFallback}>{fallback}</View> : null}
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        onLoad={() => {
+          setLoaded(true);
+          onReady?.();
+        }}
+        onError={() => {
+          setFailed(true);
+          onReady?.();
+        }}
+      />
+    </View>
   );
 }
 
@@ -391,4 +405,6 @@ const styles = StyleSheet.create({
     color: colors.gold2,
     textAlign: 'center',
   },
+  photoFrame: { overflow: 'hidden' },
+  photoFallback: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
 });
