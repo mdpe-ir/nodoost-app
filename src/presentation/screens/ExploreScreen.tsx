@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   Pressable,
-  ScrollView,
   StyleSheet,
   FlatList,
   RefreshControl,
@@ -22,32 +21,19 @@ import { Button } from '@/presentation/components/Button';
 import { IconButton } from '@/presentation/components/IconButton';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { Scrim } from '@/presentation/components/Scrim';
-import { TierBadge, tierName } from '@/presentation/components/TierBadge';
-import { Chip } from '@/presentation/components/Chip';
-import { TierLockModal } from '@/presentation/components/TierLockModal';
-import {
-  EXPLORE_GENDER_OPTIONS,
-  GenderFilterRow,
-} from '@/presentation/components/GenderFilterRow';
+import { TierBadge } from '@/presentation/components/TierBadge';
+import { ExploreFilterPanel } from '@/presentation/components/ExploreFilterPanel';
 import { GridSkeleton } from '@/presentation/components/Skeleton';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { useExploreViewModel } from '@/presentation/hooks/useExploreViewModel';
 import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
 import { useSession } from '@/presentation/providers/SessionProvider';
-import type { Candidate, ActiveFilter } from '@/domain/entities';
+import type { Candidate } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
 
 const GAP = spacing.sm;
 const COLS = 2;
-
-/** گزینه‌های فیلترِ فعالیت + کمینه‌سطحِ لازم (سرور هم دوباره می‌سنجد). */
-const ACTIVE_OPTIONS: { key: ActiveFilter; label: string; minTier: number }[] = [
-  { key: '', label: 'همه', minTier: 1 },
-  { key: 'online', label: 'آنلاین', minTier: 3 },
-  { key: '1h', label: 'یک ساعتِ اخیر', minTier: 2 },
-  { key: 'today', label: 'امروز', minTier: 2 },
-];
 
 /** برچسبِ آخرین فعالیت برای برگه‌ی پیش‌نمایش. */
 const faLastActive = (isOnline?: boolean, min?: number): string | null => {
@@ -72,8 +58,6 @@ export function ExploreView() {
   const myTier = user?.tier ?? 1;
   const canFilterTier = myTier >= 2;
   const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
-  // پنجره‌ی paywall برای فیلترهای قفل — به‌جای پرتاب به تبِ عضویت.
-  const [lock, setLock] = useState<{ tier: number; title: string; message: string; feature: string } | null>(null);
 
   const renderItem = ({ item }: { item: Candidate }) => (
     <Animated.View entering={FadeIn.duration(220)}>
@@ -126,78 +110,18 @@ export function ExploreView() {
         />
       ) : null}
 
-      {/* فیلترِ جنسیت؛ از سطحِ تنظیم‌شده در پنلِ قابلیت‌ها باز می‌شود. */}
-      <GenderFilterRow
-        value={vm.genderFilter}
-        onChange={vm.setGender}
-        canFilter={canFilterGender}
-        requiredTier={genderMinTier}
-        options={EXPLORE_GENDER_OPTIONS}
-        freeKey=""
+      <ExploreFilterPanel
+        genderFilter={vm.genderFilter}
+        onGenderChange={vm.setGender}
+        canFilterGender={canFilterGender}
+        genderMinTier={genderMinTier}
+        activeFilter={vm.activeFilter}
+        onActiveChange={vm.setActive}
+        tierFilter={vm.tierFilter}
+        onTierChange={vm.setTier}
+        myTier={myTier}
+        canFilterTier={canFilterTier}
       />
-
-      {/* فیلترِ فعالیت؛ «یک ساعتِ اخیر/امروز» از برنزی، «آنلاین» از نقره‌ای. */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
-      >
-        {ACTIVE_OPTIONS.map((o) => {
-          const locked = myTier < o.minTier;
-          return (
-            <Chip
-              key={o.key || 'all'}
-              label={locked ? `${o.label} · قفل` : o.label}
-              active={vm.activeFilter === o.key}
-              onPress={() => {
-                if (locked)
-                  setLock({
-                    tier: o.minTier,
-                    title: 'این فیلتر قفل است',
-                    message: `فیلترِ «${o.label}» از سطحِ ${tierName(o.minTier)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
-                    feature: `فیلترِ «${o.label}»`,
-                  });
-                else vm.setActive(vm.activeFilter === o.key && o.key !== '' ? '' : o.key);
-              }}
-              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
-            />
-          );
-        })}
-      </ScrollView>
-
-      {/* فیلترِ سطحِ کاربران؛ گزینه‌های خارج از دسترس قفل‌اند و به صفحه‌ی عضویت می‌برند. */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
-      >
-        <Chip label="همه" active={vm.tierFilter === 0} onPress={() => vm.setTier(0)} style={styles.filterChip} />
-        {[1, 2, 3, 4, 5].map((lvl) => {
-          const locked = !canFilterTier || lvl > myTier;
-          return (
-            <Chip
-              key={lvl}
-              label={locked ? `${tierName(lvl)} · قفل` : tierName(lvl)}
-              active={vm.tierFilter === lvl}
-              onPress={() => {
-                if (locked)
-                  setLock({
-                    tier: Math.max(2, lvl),
-                    title: 'فیلترِ سطح قفل است',
-                    message: canFilterTier
-                      ? `برای فیلترِ کاربرانِ سطحِ ${tierName(lvl)} باید خودت هم به این سطح برسی.`
-                      : `فیلترِ سطحِ کاربران از سطحِ ${tierName(2)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
-                    feature: 'فیلترِ سطحِ کاربران',
-                  });
-                else vm.setTier(vm.tierFilter === lvl ? 0 : lvl);
-              }}
-              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
-            />
-          );
-        })}
-      </ScrollView>
 
       {vm.loading ? (
         <GridSkeleton count={6} />
@@ -330,14 +254,6 @@ export function ExploreView() {
         />
       ) : null}
 
-      <TierLockModal
-        visible={lock != null}
-        requiredTier={lock?.tier ?? 2}
-        title={lock?.title}
-        message={lock?.message}
-        feature={lock?.feature}
-        onClose={() => setLock(null)}
-      />
     </View>
   );
 }
@@ -345,37 +261,6 @@ export function ExploreView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: PAGE_PADDING },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // ردیف‌های فیلتر تا لبه‌ی صفحه اسکرول می‌شوند (marginِ افقیِ منفی، برابرِ padding صفحه).
-  // flexShrink:0 حیاتی است: زیرِ react-native-web ریشه‌ی ScrollView با flexShrink:1 و
-  // minHeight:0 می‌آید، پس سرریزِ شبکه (که flexBasis:auto دارد) بینِ هم‌نیاها پخش
-  // می‌شود و این ردیف‌ها را تا چند پیکسل له می‌کند — چیپ‌ها بریده دیده می‌شوند.
-  filterScroll: {
-    flexGrow: 0,
-    flexShrink: 0,
-    height: 50,
-    marginBottom: spacing.sm,
-    marginHorizontal: -PAGE_PADDING,
-  },
-  // nowrap تا چیپ‌ها به‌جای شکستن به سطرِ دوم («دو ستونی»)، افقی اسکرول شوند؛
-  // padding افقی چیپ‌ها را از لبه تو می‌برد ولی اسکرول تا لبه ادامه دارد.
-  filterRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'nowrap',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: PAGE_PADDING,
-  },
-  // pill مدرن با ارتفاعِ یکنواخت؛ flexShrink:0 تا زیرِ react-native-web فشرده نشوند.
-  filterChip: {
-    height: 40,
-    minHeight: 0,
-    paddingHorizontal: 16,
-    borderRadius: radius.pill,
-    flexShrink: 0,
-  },
-  filterChipLocked: { opacity: 0.5 },
-  // flex:1 یعنی flexBasis:0 — وگرنه شبکه به اندازه‌ی کلِ محتوایش باز می‌شود و
-  // ردیف‌های فیلتر را از جا در می‌کند (همان الگوی mapArea در نمای نقشه).
   grid: { flex: 1 },
   list: { paddingBottom: spacing.xl },
   row: { flexDirection: 'row-reverse', gap: GAP, marginBottom: GAP },

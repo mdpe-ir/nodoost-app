@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
-import type { MapUser, ActiveFilter } from '@/domain/entities';
+import type { MapUser, ActiveFilter, GenderFilter } from '@/domain/entities';
 
 export interface MyLocation {
   lat: number;
@@ -16,7 +16,7 @@ export type PermissionState = 'unknown' | 'granted' | 'denied';
  * PUT /api/me/location ذخیره می‌کند، سپس کاربرانِ نزدیکِ روی نقشه را می‌آورد.
  * منطقِ مجوز از useDiscoverViewModel بازاستفاده شده است.
  *
- * فیلترها (شعاع/فعالیت/چهره‌نما) روی سرور دوباره سنجیده می‌شوند؛ سقفِ شعاع از سطحِ
+ * فیلترها (شعاع/فعالیت/جنسیت) روی سرور دوباره سنجیده می‌شوند؛ سقفِ شعاع از سطحِ
  * عضویتِ کاربر می‌آید و در پاسخ (maxRadiusKm) برمی‌گردد. شعاعِ انتخابی null یعنی
  * «کلِ سقفِ سطح»؛ سرور همان سقف را اعمال و برمی‌گرداند.
  */
@@ -32,14 +32,15 @@ export function useMapViewModel() {
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [maxRadiusKm, setMaxRadiusKm] = useState<number>(0);
   const [active, setActive] = useState<ActiveFilter>('');
-  const [verified, setVerified] = useState<boolean>(false);
+  const [genderFilter, setGenderFilterState] = useState<GenderFilter>('');
+  const genderFilterRef = useRef<GenderFilter>('');
 
   const fetchUsers = useCallback(async () => {
     try {
       const res = await uc.discovery.getNearbyMapUsers({
         radiusM: radiusKm != null ? radiusKm * 1000 : undefined,
         active: active || undefined,
-        verified: verified || undefined,
+        gender: genderFilterRef.current || undefined,
       });
       setUsers(res.users);
       if (res.maxRadiusKm > 0) setMaxRadiusKm(res.maxRadiusKm);
@@ -48,7 +49,15 @@ export function useMapViewModel() {
       setUsers([]);
       setError(e instanceof ApiError ? e.code ?? `HTTP ${e.status}` : 'network');
     }
-  }, [uc, radiusKm, active, verified]);
+  }, [uc, radiusKm, active]);
+
+  const setGender = useCallback(
+    (g: GenderFilter) => {
+      genderFilterRef.current = g;
+      setGenderFilterState(g);
+    },
+    [],
+  );
 
   // مجوز را می‌گیرد، موقعیت را ذخیره می‌کند و me را ست می‌کند. حالتِ مجوز را برمی‌گرداند.
   // فقط ردِ مجوز (`denied`) صفحه‌ی «موقعیت روشن نیست» را نشان می‌دهد؛ اگر مجوز هست ولی
@@ -115,7 +124,7 @@ export function useMapViewModel() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radiusKm, active, verified]);
+  }, [radiusKm, active, genderFilter]);
 
   return {
     me,
@@ -128,9 +137,9 @@ export function useMapViewModel() {
     radiusKm,
     maxRadiusKm,
     active,
-    verified,
+    genderFilter,
     setRadiusKm,
     setActive,
-    setVerified,
+    setGender,
   };
 }

@@ -44,8 +44,8 @@ export type GenderFilter = '' | 'f' | 'm' | 'all';
 export interface MapQuery {
   radiusM?: number;
   active?: ActiveFilter;
-  /** «چهره‌نما»: فقط پروفایل‌های تأییدشده. */
-  verified?: boolean;
+  /** فیلترِ جنسیت: f/m؛ خالی = بدون قید. */
+  gender?: GenderFilter;
 }
 
 /** نتیجه‌ی نقشه — نشانگرها به‌همراهِ سقفِ شعاعِ سطحِ کاربر (کیلومتر). */

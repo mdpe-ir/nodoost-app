@@ -15,6 +15,7 @@ import { router, type Href } from 'expo-router';
 
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { StackHeader } from '@/presentation/components/StackHeader';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { EmptyState } from '@/presentation/components/EmptyState';
 import { Button } from '@/presentation/components/Button';
 import { Icon } from '@/presentation/components/Icon';
@@ -58,7 +59,7 @@ export function MissionDetailScreen({ missionId }: { missionId: number }) {
   if (vm.loading) {
     return (
       <ScreenContainer>
-        <StackHeader title="ماموریت" />
+        <StackHeader title="ماموریت" trailing={<ArenaLink />} />
         <RowsSkeleton />
       </ScreenContainer>
     );
@@ -67,7 +68,7 @@ export function MissionDetailScreen({ missionId }: { missionId: number }) {
   if (vm.notFound || !vm.mission) {
     return (
       <ScreenContainer>
-        <StackHeader title="ماموریت" />
+        <StackHeader title="ماموریت" trailing={<ArenaLink />} />
         <EmptyState
           icon={vm.error ? 'rewind' : 'star'}
           title={vm.error ? 'بارگذاری نشد' : 'این ماموریت دیگر در دسترس نیست'}
@@ -84,7 +85,7 @@ export function MissionDetailScreen({ missionId }: { missionId: number }) {
 
   return (
     <ScreenContainer>
-      <StackHeader title="ماموریت" />
+      <StackHeader title="ماموریت" trailing={<ArenaLink />} />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -171,6 +172,22 @@ export function MissionDetailScreen({ missionId }: { missionId: number }) {
         </Pressable>
       ) : null}
     </ScreenContainer>
+  );
+}
+
+function ArenaLink() {
+  return (
+    <PressableScale
+      scaleTo={0.9}
+      onPress={() => router.push('/arena' as Href)}
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel="رفتن به قهرمانی"
+      style={styles.arenaLink}
+    >
+      <Icon name="star" size={14} tint="gold" />
+      <Text style={styles.arenaLinkText}>قهرمانی</Text>
+    </PressableScale>
   );
 }
 
@@ -466,6 +483,23 @@ function BottomCTA({ mission, vm, readyIn }: { mission: Mission; vm: VM; readyIn
 const THUMB = 92;
 
 const styles = StyleSheet.create({
+  arenaLink: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.goldSoft,
+    backgroundColor: colors.goldFaint,
+  },
+  arenaLinkText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.xs,
+    color: colors.gold2,
+    writingDirection: 'rtl',
+  },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2, gap: spacing.lg },
 
   hero: { alignItems: 'center', gap: spacing.sm },

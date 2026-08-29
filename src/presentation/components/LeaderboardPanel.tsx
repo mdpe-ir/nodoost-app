@@ -45,7 +45,11 @@ export function LeaderboardPanel() {
   return (
     <View style={styles.root}>
       {vm.board?.total ? (
-        <Text style={styles.caption}>{faNum(vm.board.total)} نفر در رقابت‌اند</Text>
+        <Text style={styles.caption}>
+          {myRow
+            ? `رتبه‌ی تو ${faNum(myRow.rank)} از ${faNum(vm.board.total)} نفر`
+            : `${faNum(vm.board.total)} نفر در رقابت‌اند`}
+        </Text>
       ) : null}
 
       {vm.loading ? (
@@ -154,7 +158,7 @@ const styles = StyleSheet.create({
   },
   rowMe: { borderColor: colors.goldSoft, backgroundColor: colors.goldFaint },
 
-  rankSlot: { width: 28, alignItems: 'center' },
+  rankSlot: { minWidth: 36, alignItems: 'center' },
   medal: { fontSize: 18 },
   rankNum: { fontFamily: fonts.bold, fontSize: fontSizes.sm, color: colors.ink3 },
 

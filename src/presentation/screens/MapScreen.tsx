@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
@@ -7,8 +7,9 @@ import { EmptyState } from '@/presentation/components/EmptyState';
 import { MapSkeleton } from '@/presentation/components/Skeleton';
 import { Avatar } from '@/presentation/components/Avatar';
 import { Button } from '@/presentation/components/Button';
-import { Chip } from '@/presentation/components/Chip';
 import { IconButton } from '@/presentation/components/IconButton';
+import { MapFilterPanel } from '@/presentation/components/MapFilterPanel';
+import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
 import { LeafletWebView, type LeafletEvent } from '@/presentation/components/LeafletWebView';
 import { TierBadge } from '@/presentation/components/TierBadge';
 import { useCases } from '@/core/di/DIProvider';
@@ -16,22 +17,8 @@ import { useMapViewModel } from '@/presentation/hooks/useMapViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
-import type { MapUser, ActiveFilter } from '@/domain/entities';
+import type { MapUser } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
-
-/** فیلترِ فعالیت + کمینه‌سطحِ لازم (سرور هم دوباره می‌سنجد) — آینه‌ی صفحه‌ی کاوش. */
-const ACTIVE_OPTIONS: { key: ActiveFilter; label: string; minTier: number }[] = [
-  { key: '', label: 'همه', minTier: 1 },
-  { key: 'online', label: 'آنلاین', minTier: 3 },
-  { key: '1h', label: 'یک ساعتِ اخیر', minTier: 2 },
-  { key: 'today', label: 'امروز', minTier: 2 },
-];
-
-/** نردبانِ گزینه‌های شعاع (کیلومتر)؛ گزینه‌های بالاتر از سقفِ سطح قفل‌اند. */
-const RADIUS_LADDER = [5, 10, 25, 50, 100, 200];
-
-/** کمینه‌سطحِ لازم برای فیلترِ «چهره‌نما» — برنزی به بالا (سرور مرجعِ نهایی است). */
-const VERIFIED_MIN_TIER = 2;
 
 // HTML ثابتِ نقشه‌ی Leaflet. نشانگرها بعداً با postMessage تزریق می‌شوند تا
 // نیازی به بازسازیِ WebView نباشد. تایل‌ها از OpenStreetMap با فیلترِ تیره.
@@ -175,18 +162,9 @@ export function MapView() {
 
   // سطحِ مؤثرِ کاربر برای قفل/بازِ فیلترها (سرور دوباره می‌سنجد).
   const myTier = user?.tier ?? 1;
+  const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
   // شعاعِ اعمال‌شده (متر) برای رسمِ دایره — انتخابی، وگرنه سقفِ سطح.
   const radiusM = ((vm.radiusKm ?? vm.maxRadiusKm) || 0) * 1000;
-
-  // گزینه‌های شعاع: تا سقفِ سطح باز، بالاتر قفل (→ عضویت). سقف همیشه یک گزینه است.
-  const radiusOptions = useMemo(() => {
-    const cap = vm.maxRadiusKm;
-    if (!cap) return [] as { km: number; locked: boolean }[];
-    const below = RADIUS_LADDER.filter((k) => k < cap).map((km) => ({ km, locked: false }));
-    const above = RADIUS_LADDER.filter((k) => k > cap).map((km) => ({ km, locked: true }));
-    return [...below, { km: cap, locked: false }, ...above];
-  }, [vm.maxRadiusKm]);
-  const selectedRadiusKm = vm.radiusKm ?? vm.maxRadiusKm;
 
   const payload = useMemo(
     () =>
@@ -249,78 +227,18 @@ export function MapView() {
 
   return (
     <View style={styles.wrap}>
-      {/* فیلترِ فعالیت + «چهره‌نما»؛ گزینه‌های خارج از دسترس قفل‌اند و به عضویت می‌برند. */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
-      >
-        {ACTIVE_OPTIONS.map((o) => {
-          const locked = myTier < o.minTier;
-          return (
-            <Chip
-              key={o.key || 'all'}
-              label={locked ? `${o.label} · قفل` : o.label}
-              active={vm.active === o.key}
-              onPress={() => {
-                if (locked)
-                  router.push({
-                    pathname: '/plans',
-                    params: { required: String(o.minTier), feature: `فیلترِ «${o.label}»` },
-                  });
-                else vm.setActive(vm.active === o.key && o.key !== '' ? '' : o.key);
-              }}
-              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
-            />
-          );
-        })}
-        {(() => {
-          const locked = myTier < VERIFIED_MIN_TIER;
-          return (
-            <Chip
-              label={locked ? 'چهره‌نما · قفل' : 'چهره‌نما'}
-              active={vm.verified}
-              onPress={() => {
-                if (locked)
-                  router.push({
-                    pathname: '/plans',
-                    params: { required: String(VERIFIED_MIN_TIER), feature: 'فیلترِ چهره‌نما' },
-                  });
-                else vm.setVerified(!vm.verified);
-              }}
-              style={locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
-            />
-          );
-        })()}
-      </ScrollView>
-
-      {/* شعاعِ جست‌وجو؛ تا سقفِ سطح باز، بالاتر قفل. */}
-      {radiusOptions.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-          style={styles.filterScroll}
-        >
-          {radiusOptions.map((o) => (
-            <Chip
-              key={o.km}
-              label={o.locked ? `${faNum(o.km)} کیلومتر · قفل` : `${faNum(o.km)} کیلومتر`}
-              active={!o.locked && selectedRadiusKm === o.km}
-              onPress={() => {
-                if (o.locked)
-                  router.push({
-                    pathname: '/plans',
-                    params: { feature: 'شعاعِ جست‌وجوی بیشتر' },
-                  });
-                else vm.setRadiusKm(o.km);
-              }}
-              style={o.locked ? { ...styles.filterChip, ...styles.filterChipLocked } : styles.filterChip}
-            />
-          ))}
-        </ScrollView>
-      ) : null}
+      <MapFilterPanel
+        active={vm.active}
+        onActiveChange={vm.setActive}
+        genderFilter={vm.genderFilter}
+        onGenderChange={vm.setGender}
+        canFilterGender={canFilterGender}
+        genderMinTier={genderMinTier}
+        radiusKm={vm.radiusKm}
+        maxRadiusKm={vm.maxRadiusKm}
+        onRadiusChange={vm.setRadiusKm}
+        myTier={myTier}
+      />
 
       <View style={styles.mapArea}>
         <LeafletWebView html={MAP_HTML} payload={payload} onEvent={onEvent} />
@@ -431,12 +349,6 @@ export function MapView() {
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  // flexShrink:0 — ریشه‌ی ScrollView زیرِ react-native-web با flexShrink:1/minHeight:0
-  // می‌آید و در برابرِ سرریزِ هم‌نیا له می‌شود؛ ردیفِ فیلتر نباید کوتاه شود.
-  filterScroll: { flexGrow: 0, flexShrink: 0, marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
-  filterRow: { flexDirection: 'row-reverse', gap: spacing.sm, paddingVertical: 2 },
-  filterChip: { minHeight: 38, paddingHorizontal: 14 },
-  filterChipLocked: { opacity: 0.45 },
   mapArea: { flex: 1, overflow: 'hidden', borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
   badge: {
     position: 'absolute',

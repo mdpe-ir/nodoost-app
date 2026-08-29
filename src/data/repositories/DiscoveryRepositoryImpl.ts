@@ -44,7 +44,7 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     // شعاع اختیاری است؛ اگر ندهیم سرور سقفِ سطح را می‌گذارد و در پاسخ برمی‌گرداند.
     if (query.radiusM != null) params.set('radius_m', String(Math.round(query.radiusM)));
     if (query.active) params.set('active', query.active);
-    if (query.verified) params.set('verified', '1');
+    if (query.gender) params.set('gender', query.gender);
     const qs = params.toString();
     const d = await this.http.request<MapNearbyDTO>(`/api/map/nearby${qs ? `?${qs}` : ''}`);
     return {
