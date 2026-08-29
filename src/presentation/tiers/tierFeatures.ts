@@ -97,7 +97,7 @@ export const TIER_FEATURE_ROWS: Row[] = [
   {
     key: 'gender',
     icon: 'filter',
-    label: 'فیلترِ جنسیت در چتِ شانسی',
+    label: 'فیلترِ جنسیت در کاوش و چهره‌نما',
     value: (t) => (t.canFilterRandomGender ? 'دارد' : 'ندارد'),
     enabled: (t) => t.canFilterRandomGender,
     rank: (t) => (t.canFilterRandomGender ? 1 : 0),

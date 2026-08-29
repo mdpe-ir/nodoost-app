@@ -1,5 +1,5 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
+import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, GenderFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
 import type { CandidateDTO, MapNearbyDTO, PeerProfileDTO } from '@/data/dto';
 import { toCandidate, toMapUser, toPeerProfile } from '@/data/mappers';
@@ -10,16 +10,31 @@ const API_ACTION: Record<SwipeAction, string> = { like: 'like', super: 'super', 
 export class DiscoveryRepositoryImpl implements DiscoveryRepository {
   constructor(private readonly http: HttpClient) {}
 
-  async getCandidates(): Promise<Candidate[]> {
-    const d = await this.http.request<{ results: CandidateDTO[] }>('/api/discovery');
+  async getCandidates(gender?: GenderFilter): Promise<Candidate[]> {
+    const params = new URLSearchParams();
+    if (gender) params.set('gender', gender);
+    const qs = params.toString();
+    const d = await this.http.request<{ results: CandidateDTO[] }>(
+      `/api/discovery${qs ? `?${qs}` : ''}`,
+    );
     return (d?.results ?? []).map(toCandidate);
   }
 
-  async getExplore(page = 1, limit = 24, tier?: number, active?: ActiveFilter): Promise<Candidate[]> {
-    const tierParam = tier ? `&tier=${encodeURIComponent(tier)}` : '';
-    const activeParam = active ? `&active=${encodeURIComponent(active)}` : '';
+  async getExplore(
+    page = 1,
+    limit = 24,
+    tier?: number,
+    active?: ActiveFilter,
+    gender?: GenderFilter,
+  ): Promise<Candidate[]> {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (tier) params.set('tier', String(tier));
+    if (active) params.set('active', active);
+    if (gender) params.set('gender', gender);
     const d = await this.http.request<{ results: CandidateDTO[] }>(
-      `/api/explore?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}${tierParam}${activeParam}`
+      `/api/explore?${params.toString()}`,
     );
     return (d?.results ?? []).map(toCandidate);
   }

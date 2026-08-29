@@ -1,48 +1,51 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { PressableScale } from './PressableScale';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 
-import { SegmentedControl } from './SegmentedControl';
 import { EmptyState } from './EmptyState';
 import { RowsSkeleton } from './Skeleton';
 import { Icon } from './Icon';
 import { useLeaderboardViewModel } from '@/presentation/hooks/useLeaderboardViewModel';
+import { useSession } from '@/presentation/providers/SessionProvider';
 import { faNum } from '@/core/utils/faNum';
-import { colors, fonts, fontSizes, lineHeights, radius, spacing } from '@/core/theme';
-import type { LeaderEntry, LeaderWindow } from '@/domain/entities';
-
-const WINDOWS: { key: LeaderWindow; label: string }[] = [
-  { key: 'daily', label: 'روزانه' },
-  { key: 'weekly', label: 'هفتگی' },
-  { key: 'monthly', label: 'ماهانه' },
-  { key: 'all', label: 'کلی' },
-];
+import { colors, fonts, fontSizes, radius, spacing } from '@/core/theme';
+import type { LeaderEntry } from '@/domain/entities';
 
 /** مدالِ سه نفرِ اول. رتبه‌ی چهارم به بعد فقط شماره می‌گیرد. */
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 /**
- * جدولِ رتبه‌بندی با چهار بازه‌ی تقویمی.
+ * جدولِ رتبه‌بندیِ کلی (از ابتدا).
  *
- * دو چیز همیشه باید معلوم باشد: صدرِ جدول، و «من کجایم». ردیفِ خودِ کاربر
- * جداگانه و چسبیده پایین می‌ماند، چون کاربر معمولاً در صد نفرِ اول نیست و
- * جدولی که فقط قهرمان‌ها را نشان بدهد برای بقیه بی‌معناست.
+ * پنجاه نفرِ اول نشان داده می‌شود. اگر کاربر در این فهرست نباشد ولی رتبه‌ی
+ * کلی داشته باشد، ردیفِ خودش پایینِ جدول می‌آید — نه در جعبه‌ی جداگانه.
  */
 export function LeaderboardPanel() {
-  const vm = useLeaderboardViewModel();
+  const vm = useLeaderboardViewModel('all');
+  const { user } = useSession();
+
+  const myRow = useMemo((): LeaderEntry | null => {
+    const me = vm.board?.me;
+    if (!me || me.inTop || me.rank <= 0 || !user) return null;
+    const photoUrl =
+      user.photos?.find((p) => p.isPrimary)?.url ?? user.photos?.[0]?.url;
+    return {
+      rank: me.rank,
+      userId: user.id,
+      name: user.name ?? '',
+      photoUrl,
+      points: me.points,
+      isMe: true,
+    };
+  }, [vm.board?.me, user]);
 
   return (
     <View style={styles.root}>
-      <SegmentedControl options={WINDOWS} value={vm.window} onChange={vm.setWindow} />
-
-      {vm.board?.label ? (
-        <Text style={styles.caption}>
-          {vm.board.label}
-          {vm.board.total > 0 ? ` — ${faNum(vm.board.total)} نفر در رقابت‌اند` : ''}
-        </Text>
+      {vm.board?.total ? (
+        <Text style={styles.caption}>{faNum(vm.board.total)} نفر در رقابت‌اند</Text>
       ) : null}
 
       {vm.loading ? (
@@ -55,32 +58,27 @@ export function LeaderboardPanel() {
           actionLabel="تلاشِ دوباره"
           onAction={vm.reload}
         />
-      ) : !vm.board?.entries.length ? (
+      ) : !vm.board?.entries.length && !myRow ? (
         <EmptyState
           icon="star"
-          title="هنوز کسی در این بازه امتیازی نگرفته"
+          title="هنوز کسی امتیازی نگرفته"
           hint="اولین نفر باش — یک ماموریت انجام بده."
         />
       ) : (
         <>
-          {vm.board.entries.map((e, i) => (
+          {vm.board?.entries.map((e, i) => (
             <Row key={e.userId} entry={e} index={i} />
           ))}
 
-          {/* اگر خودم در فهرست نیستم، جایگاهم را جداگانه می‌گویم. */}
-          {!vm.board.me.inTop ? (
-            <View style={styles.myBox}>
-              <Text style={styles.myLabel}>جایگاهِ تو</Text>
-              {vm.board.me.rank > 0 ? (
-                <Text style={styles.myValue}>
-                  رتبه‌ی {faNum(vm.board.me.rank)} با {faNum(vm.board.me.points)} امتیاز
-                </Text>
-              ) : (
-                <Text style={styles.myValue}>
-                  در این بازه هنوز امتیازی نگرفته‌ای — با یک ماموریت وارد جدول شو.
-                </Text>
-              )}
-            </View>
+          {myRow ? (
+            <>
+              <View style={styles.gap}>
+                <View style={styles.gapLine} />
+                <Text style={styles.gapDots}>···</Text>
+                <View style={styles.gapLine} />
+              </View>
+              <Row entry={myRow} index={vm.board?.entries.length ?? 0} />
+            </>
           ) : null}
         </>
       )}
@@ -175,28 +173,12 @@ const styles = StyleSheet.create({
 
   points: { fontFamily: fonts.bold, fontSize: fontSizes.sm, color: colors.gold },
 
-  myBox: {
-    marginTop: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.goldSoft,
-    backgroundColor: colors.goldFaint,
-    gap: spacing.xs,
+  gap: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.xs,
   },
-  myLabel: {
-    fontFamily: fonts.bold,
-    fontSize: fontSizes.xs,
-    color: colors.gold,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  myValue: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.sm,
-    lineHeight: lineHeights.sm,
-    color: colors.ink2,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
+  gapLine: { flex: 1, height: 1, backgroundColor: colors.line },
+  gapDots: { fontFamily: fonts.bold, fontSize: fontSizes.sm, color: colors.ink3 },
 });

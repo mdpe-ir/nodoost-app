@@ -160,9 +160,14 @@ export function NotificationsScreen() {
   const openNotification = (n: AppNotification) => {
     vm.markRead(n.id);
     // مقصد را سرور تعیین می‌کند؛ قفل‌ها به صفحه‌ی سطح‌ها می‌روند.
-    const path = toAppPath(n.linkUrl);
+    let path = toAppPath(n.linkUrl);
+    // اعلانِ سیستمیِ قدیمی (مثل «امروز سر زدی») گاهی به /notifications برمی‌گردد —
+    // همان صفحه‌ای که کاربر الان رویش است و ضربه بی‌اثر می‌ماند. بفرستش قهرمانی.
+    if (!path || path === '/notifications') {
+      path = '/arena';
+    }
     // «as Href»: تایپِ مسیرها تولیدی است و مسیرِ پویا در زمانِ کامپایل شناخته نیست.
-    if (path) router.push(path as Href);
+    router.push(path as Href);
   };
 
   if (vm.loading) {

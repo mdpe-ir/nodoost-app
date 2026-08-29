@@ -16,9 +16,10 @@ import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
 import { QuotaMeter } from '@/presentation/components/QuotaMeter';
 import { useRandomViewModel } from '@/presentation/hooks/useRandomViewModel';
-import { useSession } from '@/presentation/providers/SessionProvider';
+import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { quotaOf } from '@/domain/entities';
+import { tierName } from '@/presentation/components/TierBadge';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 
 const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
@@ -33,12 +34,10 @@ const OPTIONS: { key: '' | 'f' | 'm'; label: string }[] = [
  */
 export function RandomView() {
   const vm = useRandomViewModel();
-  const { user } = useSession();
   const { quota } = useQuota();
   const randomQuota = quotaOf(quota, 'random');
   const waiting = vm.state === 'waiting';
-  // فیلترِ جنسیت فقط برای برنزی به بالا — سرور هم برای سطحِ ۱ آن را نادیده می‌گیرد.
-  const canFilter = (user?.tier ?? 1) >= 2;
+  const { open: canFilter, requiredTier: genderMinTier } = useGenderFilterGate();
   const [genderLock, setGenderLock] = useState(false);
 
   const scale = useSharedValue(1);
@@ -97,7 +96,9 @@ export function RandomView() {
             ))}
           </View>
           {!canFilter ? (
-            <Text style={styles.lockHint}>فیلترِ جنسیت از سطحِ برنزی باز می‌شود — برای فعال‌سازی سطحت را ارتقا بده.</Text>
+            <Text style={styles.lockHint}>
+              {`فیلترِ جنسیت از سطحِ ${tierName(genderMinTier)} باز می‌شود — برای فعال‌سازی سطحت را ارتقا بده.`}
+            </Text>
           ) : null}
           {/* سهمیه *قبل از* زدنِ دکمه دیده می‌شود، نه بعد از رد شدن. */}
           {randomQuota && !randomQuota.unlimited ? (
@@ -114,9 +115,9 @@ export function RandomView() {
 
       <TierLockModal
         visible={genderLock}
-        requiredTier={2}
+        requiredTier={genderMinTier}
         title="فیلترِ جنسیت قفل است"
-        message="انتخابِ جنسیتِ هم‌صحبت از سطحِ برنزی باز می‌شود. برای استفاده، حسابت را ارتقا بده."
+        message={`انتخابِ جنسیتِ هم‌صحبت از سطحِ ${tierName(genderMinTier)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`}
         feature="فیلترِ جنسیتِ هم‌صحبت"
         onClose={() => setGenderLock(false)}
       />

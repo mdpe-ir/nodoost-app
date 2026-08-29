@@ -31,6 +31,11 @@ import {
   parseChatConfig,
   type ChatConfig,
 } from '@/core/config/chatConfig';
+import {
+  emptyGenderFilter,
+  parseGenderFilter,
+  type GenderFilterGate,
+} from '@/core/config/genderFilter';
 
 /**
  * پیکربندیِ زمانِ اجرا که یک‌بار از `GET /api/config` خوانده و در کلِ اپ به اشتراک
@@ -50,6 +55,8 @@ interface RemoteConfigValue {
   missions: MissionsConfig;
   /** دروازه‌های پیامِ صوتی/عکس در گفتگو. */
   chat: ChatConfig;
+  /** دروازه‌ی فیلترِ جنسیت در کاوش و چهره‌نما. */
+  genderFilter: GenderFilterGate;
   loaded: boolean;
 }
 
@@ -61,6 +68,7 @@ const RemoteConfigContext = createContext<RemoteConfigValue>({
   review: emptyReviewConfig,
   missions: emptyMissionsConfig,
   chat: emptyChatConfig(),
+  genderFilter: emptyGenderFilter(),
   loaded: false,
 });
 
@@ -74,6 +82,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   const [review, setReview] = useState<ReviewConfig>(emptyReviewConfig);
   const [missions, setMissions] = useState<MissionsConfig>(emptyMissionsConfig);
   const [chat, setChat] = useState<ChatConfig>(emptyChatConfig());
+  const [genderFilter, setGenderFilter] = useState<GenderFilterGate>(emptyGenderFilter());
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -89,6 +98,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
           review?: unknown;
           missions?: unknown;
           chat?: unknown;
+          gender_filter?: unknown;
         };
         if (!alive) return;
         setInstall(parseInstallConfig(cfg.install));
@@ -97,6 +107,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
         setReview(parseReviewConfig(cfg.review));
         setMissions(parseMissionsConfig(cfg.missions));
         setChat(parseChatConfig(cfg.chat));
+        setGenderFilter(parseGenderFilter(cfg.gender_filter));
         // فیلدهای نسخه در ریشه‌ی پاسخ‌اند (نه زیرِ install)، پس کلِ cfg را می‌دهیم.
         setVersion(parseVersionConfig(cfg));
       } catch {
@@ -111,7 +122,9 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <RemoteConfigContext.Provider value={{ install, interests, version, rules, review, missions, chat, loaded }}>
+    <RemoteConfigContext.Provider
+      value={{ install, interests, version, rules, review, missions, chat, genderFilter, loaded }}
+    >
       {children}
     </RemoteConfigContext.Provider>
   );

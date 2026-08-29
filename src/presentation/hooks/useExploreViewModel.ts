@@ -5,7 +5,7 @@ import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import { recordInstallNagAction } from '@/core/installNag';
 import { recordReviewMoment } from '@/core/reviewMoments';
-import type { Candidate, MatchResult, ActiveFilter } from '@/domain/entities';
+import type { Candidate, MatchResult, ActiveFilter, GenderFilter } from '@/domain/entities';
 
 const PAGE_SIZE = 24;
 
@@ -33,6 +33,8 @@ export function useExploreViewModel() {
   // فیلترِ فعالیت ('' = همه). «1h» از برنزی، «online» از نقره‌ای — سرور دوباره می‌سنجد.
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('');
   const activeFilterRef = useRef<ActiveFilter>('');
+  const [genderFilter, setGenderFilterState] = useState<GenderFilter>('');
+  const genderFilterRef = useRef<GenderFilter>('');
   // شناسه‌هایی که کنش‌شان کرده‌ایم تا از گرید حذف شوند و دوباره برنگردند.
   const actedRef = useRef<Set<number>>(new Set());
 
@@ -47,7 +49,8 @@ export function useExploreViewModel() {
           p,
           PAGE_SIZE,
           tierFilterRef.current || undefined,
-          activeFilterRef.current || undefined
+          activeFilterRef.current || undefined,
+          genderFilterRef.current || undefined,
         );
         const fresh = list.filter((c) => !actedRef.current.has(c.id));
         setItems((prev) => (mode === 'more' ? [...prev, ...fresh] : fresh));
@@ -131,6 +134,15 @@ export function useExploreViewModel() {
     [loadPage]
   );
 
+  const setGender = useCallback(
+    (g: GenderFilter) => {
+      genderFilterRef.current = g;
+      setGenderFilterState(g);
+      loadPage(1, 'refresh');
+    },
+    [loadPage],
+  );
+
   const enableLocation = useCallback(async () => {
     if (locating) return;
     setLocating(true);
@@ -173,6 +185,8 @@ export function useExploreViewModel() {
     setTier,
     activeFilter,
     setActive,
+    genderFilter,
+    setGender,
     loadMore,
     refresh,
     reload: refresh,

@@ -9,7 +9,7 @@ import type { Leaderboard, LeaderWindow } from '@/domain/entities';
  * «این هفته» بی‌درنگ است و اسکلتون دوباره نمی‌پرد. تازه‌سازیِ دستی همیشه از
  * سرور می‌خواند — کشِ سرور خودش کوتاه‌عمر است.
  */
-export function useLeaderboardViewModel(initial: LeaderWindow = 'weekly') {
+export function useLeaderboardViewModel(initial: LeaderWindow = 'all') {
   const uc = useCases();
   const [window, setWindow] = useState<LeaderWindow>(initial);
   const [boards, setBoards] = useState<Partial<Record<LeaderWindow, Leaderboard>>>({});

@@ -221,6 +221,8 @@ function MessageBubble({
             {msg.replyTo ? (
               <PressableScale
                 onPress={() => msg.replyTo && onJumpToQuote(msg.replyTo.id)}
+                onLongPress={onLongPress}
+                delayLongPress={280}
                 disabled={msg.replyTo.deleted}
                 accessibilityRole="button"
                 accessibilityLabel="رفتن به پیامِ اصلی"
@@ -252,6 +254,7 @@ function MessageBubble({
                 durationMs={msg.mediaMeta?.durationMs}
                 peaks={msg.mediaMeta?.peaks}
                 mine={mine}
+                onLongPress={onLongPress}
                 onRetry={msg.clientId ? () => onRetryMessage?.(msg.clientId!) : undefined}
               />
             ) : msg.kind === 'photo' && (msg.id || msg.pending || msg.failed) ? (
@@ -266,6 +269,7 @@ function MessageBubble({
                 width={msg.mediaMeta?.width}
                 height={msg.mediaMeta?.height}
                 mine={mine}
+                onLongPress={onLongPress}
                 onRetry={msg.clientId ? () => onRetryMessage?.(msg.clientId!) : undefined}
               />
             ) : (
@@ -862,14 +866,17 @@ export function ThreadScreen({
          * روی خودِ حباب: تاریخِ کامل روی هر پیام، گفتگو را شلوغ می‌کند، ولی
          * وقتی کسی عمداً پیام را نگه می‌دارد دقیقاً دنبالِ همین جزئیات است.
          */
-        subtitle={readReceiptText(actionTarget) || actionTarget?.body}
+        subtitle={
+          readReceiptText(actionTarget) ||
+          (actionTarget ? messagePreviewText(actionTarget) : undefined)
+        }
         actions={messageActions}
         onDismiss={() => setActionTarget(null)}
       />
       <ActionSheet
         visible={deleteTarget != null}
         title="حذفِ پیام"
-        subtitle={deleteTarget?.body}
+        subtitle={deleteTarget ? messagePreviewText(deleteTarget) : undefined}
         actions={deleteActions}
         onDismiss={() => setDeleteTarget(null)}
       />

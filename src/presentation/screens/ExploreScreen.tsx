@@ -25,10 +25,15 @@ import { Scrim } from '@/presentation/components/Scrim';
 import { TierBadge, tierName } from '@/presentation/components/TierBadge';
 import { Chip } from '@/presentation/components/Chip';
 import { TierLockModal } from '@/presentation/components/TierLockModal';
+import {
+  EXPLORE_GENDER_OPTIONS,
+  GenderFilterRow,
+} from '@/presentation/components/GenderFilterRow';
 import { GridSkeleton } from '@/presentation/components/Skeleton';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { useExploreViewModel } from '@/presentation/hooks/useExploreViewModel';
+import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import type { Candidate, ActiveFilter } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
@@ -66,6 +71,7 @@ export function ExploreView() {
   // فیلترِ سطح از برنزی به بالا؛ فقط سطح‌هایی که کاربر به آن‌ها دسترسیِ پیام دارد.
   const myTier = user?.tier ?? 1;
   const canFilterTier = myTier >= 2;
+  const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
   // پنجره‌ی paywall برای فیلترهای قفل — به‌جای پرتاب به تبِ عضویت.
   const [lock, setLock] = useState<{ tier: number; title: string; message: string; feature: string } | null>(null);
 
@@ -119,6 +125,16 @@ export function ExploreView() {
           onPress={vm.enableLocation}
         />
       ) : null}
+
+      {/* فیلترِ جنسیت؛ از سطحِ تنظیم‌شده در پنلِ قابلیت‌ها باز می‌شود. */}
+      <GenderFilterRow
+        value={vm.genderFilter}
+        onChange={vm.setGender}
+        canFilter={canFilterGender}
+        requiredTier={genderMinTier}
+        options={EXPLORE_GENDER_OPTIONS}
+        freeKey=""
+      />
 
       {/* فیلترِ فعالیت؛ «یک ساعتِ اخیر/امروز» از برنزی، «آنلاین» از نقره‌ای. */}
       <ScrollView

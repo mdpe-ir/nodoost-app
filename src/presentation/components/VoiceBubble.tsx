@@ -5,16 +5,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useChatMediaUri } from '@/presentation/hooks/useChatMediaUri';
 import { MediaTransferOverlay } from './MediaTransferOverlay';
 import type { MediaTransferPhase } from '@/domain/entities';
-import { faNum } from '@/core/utils/faNum';
+import { faDuration } from '@/core/utils/time';
 import { colors, fonts, fontSizes, spacing } from '@/core/theme';
-
-function formatMs(ms?: number): string {
-  if (!ms || ms <= 0) return '0:00';
-  const s = Math.round(ms / 1000);
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${faNum(m)}:${faNum(r).padStart(2, '0')}`;
-}
 
 interface Props {
   matchId: number;
@@ -27,6 +19,7 @@ interface Props {
   durationMs?: number;
   peaks?: number[];
   mine: boolean;
+  onLongPress?: () => void;
   onRetry?: () => void;
 }
 
@@ -41,6 +34,7 @@ export function VoiceBubble({
   durationMs,
   peaks,
   mine,
+  onLongPress,
   onRetry,
 }: Props) {
   const [dlProgress, setDlProgress] = useState<number | undefined>();
@@ -75,7 +69,7 @@ export function VoiceBubble({
 
   const elapsed = status.currentTime ? status.currentTime * 1000 : 0;
   const total = durationMs ?? (status.duration ? status.duration * 1000 : 0);
-  const label = status.playing ? formatMs(elapsed) : formatMs(total);
+  const label = status.playing ? faDuration(elapsed) : faDuration(total);
 
   const uploading = !!pending && !failed;
   const downloading = needsRemote && loading && !uri;
@@ -98,7 +92,9 @@ export function VoiceBubble({
   return (
     <Pressable
       onPress={failed && onRetry ? onRetry : toggle}
-      disabled={(!uri && !failed) || loading}
+      onLongPress={onLongPress}
+      delayLongPress={280}
+      disabled={!onLongPress && !uri && !failed}
       style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}
       accessibilityRole="button"
       accessibilityLabel={
@@ -108,6 +104,7 @@ export function VoiceBubble({
             ? 'توقفِ پیام صوتی'
             : 'پخشِ پیام صوتی'
       }
+      accessibilityHint={onLongPress ? 'نگه‌داشتن برای پاسخ یا حذف' : undefined}
     >
       <View style={[styles.play, mine ? styles.playMine : styles.playTheirs]}>
         {showOverlay ? (

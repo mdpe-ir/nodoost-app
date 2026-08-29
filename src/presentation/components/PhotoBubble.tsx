@@ -19,6 +19,7 @@ interface Props {
   height?: number;
   mine: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
   onRetry?: () => void;
 }
 
@@ -34,6 +35,7 @@ export function PhotoBubble({
   height,
   mine,
   onPress,
+  onLongPress,
   onRetry,
 }: Props) {
   const [dlProgress, setDlProgress] = useState<number | undefined>();
@@ -94,9 +96,12 @@ export function PhotoBubble({
     <>
       <Pressable
         onPress={handlePress}
-        disabled={!displayUri && !failed}
+        onLongPress={onLongPress}
+        delayLongPress={280}
+        disabled={!onLongPress && !displayUri && !failed}
         accessibilityRole="image"
         accessibilityLabel="عکس"
+        accessibilityHint={onLongPress ? 'نگه‌داشتن برای پاسخ یا حذف' : undefined}
       >
         <View style={[styles.frame, mine ? styles.mine : styles.theirs, aspect]}>
           {displayUri ? (

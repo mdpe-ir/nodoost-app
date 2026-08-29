@@ -1,10 +1,12 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { SwipeAction, ActiveFilter, MapQuery } from '@/domain/entities';
+import type { SwipeAction, ActiveFilter, GenderFilter, MapQuery } from '@/domain/entities';
 
-export const makeGetCandidates = (r: DiscoveryRepository) => () => r.getCandidates();
+export const makeGetCandidates =
+  (r: DiscoveryRepository) => (gender?: GenderFilter) => r.getCandidates(gender);
 export const makeGetExplore =
-  (r: DiscoveryRepository) => (page?: number, limit?: number, tier?: number, active?: ActiveFilter) =>
-    r.getExplore(page, limit, tier, active);
+  (r: DiscoveryRepository) =>
+  (page?: number, limit?: number, tier?: number, active?: ActiveFilter, gender?: GenderFilter) =>
+    r.getExplore(page, limit, tier, active, gender);
 export const makeGetNearbyMapUsers =
   (r: DiscoveryRepository) => (query?: MapQuery) =>
     r.getNearbyMapUsers(query);

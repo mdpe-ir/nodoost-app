@@ -37,6 +37,8 @@ export interface MapUser {
 
 /** فیلترِ فعالیت در اطراف/نقشه: «1h/today» از برنزی، «online» از نقره‌ای. */
 export type ActiveFilter = '' | 'online' | '1h' | 'today';
+/** فیلترِ جنسیت: خالی = بدون قید (چهره‌نما)، all = همه (کاوش)، f/m = همان جنس. */
+export type GenderFilter = '' | 'f' | 'm' | 'all';
 
 /** پارامترهای پرس‌وجوی نقشه — شعاع (متر) و فیلترهای عضویتی. */
 export interface MapQuery {

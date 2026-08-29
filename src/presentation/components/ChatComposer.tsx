@@ -56,7 +56,7 @@ import { ChatPhotoPicker } from './ChatPhotoPicker';
 import { composerAction } from '@/presentation/chat/composerMode';
 import { chatGateOpen, type ChatConfig } from '@/core/config/chatConfig';
 import { haptics, hapticThreshold } from '@/core/haptics';
-import { faNum } from '@/core/utils/faNum';
+import { faDuration } from '@/core/utils/time';
 import {
   colors,
   fonts,
@@ -179,13 +179,6 @@ export interface ChatComposerProps {
   showQuotaHint?: React.ReactNode;
   /** وقتی پنل ایموجی باز است — برای جمع کردن فهرست/اسکرول در صفحهٔ میزبان. */
   onBottomInsetChange?: (height: number) => void;
-}
-
-function formatRecMs(ms: number): string {
-  const s = Math.max(0, Math.round(ms / 1000));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${faNum(m)}:${faNum(String(r).padStart(2, '0'))}`;
 }
 
 /** نقطهٔ قرمزِ تپنده — نشانِ «در حال ضبط». */
@@ -766,6 +759,19 @@ export function ChatComposer({
     ],
   }));
 
+  const recTrashIconStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(cancelProgress.value, [0.72, 0.92], [0, 1], Extrapolation.CLAMP),
+    transform: [
+      {
+        scale: interpolate(cancelProgress.value, [0.72, 1], [0.86, 1], Extrapolation.CLAMP),
+      },
+    ],
+  }));
+
+  const cancelFillStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(cancelProgress.value, [0.72, 0.92], [0, 1], Extrapolation.CLAMP),
+  }));
+
   const sendIconStyle = useAnimatedStyle(() => ({
     opacity: interpolate(actionMode.value, [0, 0.45, 1], [0, 0.2, 1]),
     transform: [
@@ -848,20 +854,20 @@ export function ChatComposer({
             </View>
           </Pressable>
         ) : (
-          <View style={[styles.action, willCancel && styles.actionCancel]}>
-            {willCancel ? (
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.rose }]} />
-            ) : (
-              <LinearGradient
-                colors={gradients.gold}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-            )}
+          <View style={styles.action}>
+            <LinearGradient
+              colors={gradients.gold}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <Animated.View style={[styles.actionCancelFill, cancelFillStyle]} pointerEvents="none" />
             <View style={styles.iconStack} pointerEvents="none">
               <Animated.View style={[styles.iconLayer, micIconStyle]}>
-                <Icon name={willCancel ? 'trash' : 'mic'} size={22} tint={willCancel ? 'white' : 'onGold'} />
+                <Icon name="mic" size={22} tint="onGold" />
+              </Animated.View>
+              <Animated.View style={[styles.iconLayer, recTrashIconStyle]}>
+                <Icon name="trash" size={22} tint="white" />
               </Animated.View>
             </View>
           </View>
@@ -888,7 +894,7 @@ export function ChatComposer({
               <View style={styles.recBody}>
                 <View style={styles.recLeft}>
                   <RecPulseDot />
-                  <Text style={styles.recTime}>{formatRecMs(recState.durationMillis)}</Text>
+                  <Text style={styles.recTime}>{faDuration(recState.durationMillis)}</Text>
                 </View>
 
                 <View style={styles.recWave}>
@@ -1126,8 +1132,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
   },
-  actionCancel: {
-    borderWidth: 0,
+  actionCancelFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.rose,
+    zIndex: 0,
   },
   actionOff: { opacity: 0.42 },
   // هم‌ارتفاع با کپسول؛ حلقه‌ی ضبط فقط موقع رکورد بزرگ می‌شود
@@ -1137,6 +1145,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
+    zIndex: 2,
+    elevation: 4,
   },
   micRing: {
     position: 'absolute',
@@ -1147,6 +1157,9 @@ const styles = StyleSheet.create({
   iconStack: {
     width: 28,
     height: 28,
+    position: 'relative',
+    zIndex: 1,
+    elevation: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1159,6 +1172,7 @@ const styles = StyleSheet.create({
   // —— نوار ضبط (الگوی تلگرام) ——
   recShell: {
     paddingLeft: spacing.md,
+    overflow: 'visible',
   },
   recBody: {
     flex: 1,

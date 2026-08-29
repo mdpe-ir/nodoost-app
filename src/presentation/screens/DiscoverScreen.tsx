@@ -17,13 +17,22 @@ import { InAppBanner } from '@/presentation/components/inapp/InAppBanner';
 import { CardSkeleton } from '@/presentation/components/Skeleton';
 import { IconButton } from '@/presentation/components/IconButton';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
+import {
+  DISCOVER_GENDER_OPTIONS,
+  GenderFilterRow,
+} from '@/presentation/components/GenderFilterRow';
 import { useDiscoverViewModel } from '@/presentation/hooks/useDiscoverViewModel';
+import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
 import { useSession } from '@/presentation/providers/SessionProvider';
+import { oppositeGenderFilter } from '@/core/config/genderFilter';
 import { spacing } from '@/core/theme';
 
 export function DiscoverScreen() {
   const vm = useDiscoverViewModel();
   const { user } = useSession();
+  const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
+  const defaultGender = oppositeGenderFilter(user?.gender);
+  const genderValue = vm.genderFilter ?? defaultGender;
   const cardRef = useRef<SwipeCardHandle>(null);
   /**
    * یک مقدارِ مشترک برای کلِ صفحه: کارت می‌نویسدش، دسته و دکمه‌ها می‌خوانندش.
@@ -41,6 +50,18 @@ export function DiscoverScreen() {
   const canRewind = (user?.tier ?? 1) >= 4 && Boolean(user?.isPlus);
   const [rewindLock, setRewindLock] = useState(false);
   const onUndo = () => (canRewind ? vm.undoLast() : setRewindLock(true));
+
+  const genderRow = (
+    <GenderFilterRow
+      value={genderValue}
+      onChange={vm.setGenderFilter}
+      canFilter={canFilterGender}
+      requiredTier={genderMinTier}
+      options={DISCOVER_GENDER_OPTIONS}
+      freeKey={defaultGender}
+      inset={spacing.lg}
+    />
+  );
 
   // بازکردنِ پروفایلِ کامل — همان‌جا دکمه‌های «ارسالِ پیام» و «پسند» هست.
   const openProfile = (id: number | string) =>
@@ -61,6 +82,7 @@ export function DiscoverScreen() {
     return (
       <ScreenContainer flush style={styles.wrap}>
         <ScreenHeader title="کاوش" membership />
+        {genderRow}
         <CardSkeleton />
       </ScreenContainer>
     );
@@ -69,6 +91,8 @@ export function DiscoverScreen() {
   return (
     <ScreenContainer flush style={styles.wrap}>
       <ScreenHeader title="کاوش" membership />
+
+      {genderRow}
 
       {/* بنرِ ادمین بالای همه‌چیز می‌نشیند، ولی زیرِ نیازهای عملیاتیِ خودِ اپ
           (مثلِ روشن‌کردنِ موقعیت) نمی‌آید — آن یکی مسدودکننده‌ی واقعیِ تجربه است. */}

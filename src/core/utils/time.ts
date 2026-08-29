@@ -25,6 +25,17 @@ export function faClock(iso?: string): string {
 }
 
 /**
+ * مدت «m:ss» با ارقامِ فارسی.
+ * padStart باید روی رقمِ لاتین باشد؛ وگرنه صفرِ انگلیسی کنار رقمِ فارسی می‌ماند.
+ */
+export function faDuration(ms = 0): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return faNum(`${m}:${String(r).padStart(2, '0')}`);
+}
+
+/**
  * برچسبِ روزِ پیام‌ها: «امروز»، «دیروز» یا تاریخِ شمسی.
  *
  * از `faJalali` استفاده می‌کند نه `toLocaleDateString('fa-IR')`. همان دلیلی که

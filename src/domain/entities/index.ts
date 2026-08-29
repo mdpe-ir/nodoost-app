@@ -5,6 +5,7 @@ export type {
   MapQuery,
   MapUsersResult,
   ActiveFilter,
+  GenderFilter,
   SwipeAction,
   MatchResult,
   Liker,

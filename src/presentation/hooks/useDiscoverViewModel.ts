@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
@@ -7,7 +7,7 @@ import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import { recordInstallNagAction } from '@/core/installNag';
 import { recordReviewMoment } from '@/core/reviewMoments';
-import type { Candidate, MatchResult } from '@/domain/entities';
+import type { Candidate, GenderFilter, MatchResult } from '@/domain/entities';
 
 /**
  * ویومدلِ کاوش. کارت‌ها بلافاصله بارگذاری می‌شوند و موقعیت در پس‌زمینه ست
@@ -38,13 +38,15 @@ export function useDiscoverViewModel() {
   );
   const [undoing, setUndoing] = useState(false);
   const { consume: consumeQuota, refresh: refreshQuota } = useQuota();
+  const [genderFilter, setGenderFilterState] = useState<GenderFilter | null>(null);
+  const genderFilterRef = useRef<GenderFilter | null>(null);
 
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
       setError(null);
       try {
-        const list = await uc.discovery.getCandidates();
+        const list = await uc.discovery.getCandidates(genderFilterRef.current ?? undefined);
         setCards(list);
         setIndex(0);
       } catch (e) {
@@ -157,6 +159,16 @@ export function useDiscoverViewModel() {
     if (ok) load(true);
   }, [locating, captureLocation, load]);
 
+  const setGenderFilter = useCallback(
+    (g: GenderFilter) => {
+      if (genderFilterRef.current === g) return;
+      genderFilterRef.current = g;
+      setGenderFilterState(g);
+      load(true);
+    },
+    [load],
+  );
+
   return {
     current,
     /**
@@ -178,6 +190,8 @@ export function useDiscoverViewModel() {
     undoLast,
     dismissLimit: () => setLimitHit(false),
     reload: () => load(),
+    genderFilter,
+    setGenderFilter,
     // بستنِ پنجره‌ی مَچ، نه ساختنش: پنجره‌ی درخواستِ نظر نباید روی خودِ
     // جشنِ مَچ بیفتد.
     dismissMatch: () => {
