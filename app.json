@@ -19,7 +19,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nodoost.app"
+      "bundleIdentifier": "com.nodoost.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "برای بازکردنِ سریعِ قفلِ برنامه با تشخیصِ چهره استفاده میشود."
+      }
     },
     "android": {
       "package": "com.nodoost.app",
@@ -74,6 +77,7 @@
         }
       ],
       "expo-secure-store",
+      "expo-local-authentication",
       "./plugins/withBazaarBilling",
       "./plugins/withReleaseSigning",
       "./plugins/withFetchySdk",

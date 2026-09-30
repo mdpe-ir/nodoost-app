@@ -9,6 +9,8 @@ import { AppVersionInfo } from '@/presentation/components/AppVersionInfo';
 import { SettingsGroup, SettingsLink, SettingsToggle } from '@/presentation/components/SettingsRow';
 import { useReviewPrompt } from '@/presentation/providers/ReviewPromptProvider';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
+import { useAccountSheet } from '@/presentation/providers/AccountSheetProvider';
+import { useAppLock } from '@/presentation/providers/AppLockProvider';
 import { tierName } from '@/presentation/components/TierBadge';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
@@ -47,6 +49,13 @@ export function SettingsScreen() {
   // این صفحه به عکس و شمارنده‌ها کاری ندارد.
   const vm = useProfileViewModel({ skipMedia: true });
   const reviewPrompt = useReviewPrompt();
+  const { openSwitch } = useAccountSheet();
+  const { configured, type } = useAppLock();
+  const appLockHint = configured
+    ? type === 'pattern'
+      ? 'فعال — الگو'
+      : 'فعال — رمز عددی'
+    : 'خاموش';
 
   const user = vm.user;
   const userTier = user?.tier ?? 1;
@@ -67,6 +76,18 @@ export function SettingsScreen() {
             title="ویرایشِ پروفایل"
             hint="نام، معرفی و علاقه‌مندی‌ها"
             onPress={() => router.push('/edit-profile' as Href)}
+          />
+          <SettingsLink
+            icon="menu"
+            title="حساب‌ها"
+            hint="جابه‌جایی بین حساب‌های این دستگاه"
+            onPress={openSwitch}
+          />
+          <SettingsLink
+            icon="lock"
+            title="قفلِ برنامه"
+            hint={appLockHint}
+            onPress={() => router.push('/app-lock' as Href)}
           />
           <SettingsLink
             icon="diamond-fill"

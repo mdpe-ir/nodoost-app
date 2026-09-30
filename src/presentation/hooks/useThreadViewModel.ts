@@ -96,6 +96,16 @@ export function useThreadViewModel(matchId: number) {
   const [editing, setEditing] = useState<Message | undefined>();
   const [editError, setEditError] = useState<string | undefined>();
   const olderInFlight = useRef(false);
+  // آینهی messages/hasMore برای `loadUntil` — که بدونِ بستهی کهنه، چند صفحه
+  // پشتِ سر هم میگیرد و همیشه به آخرین فهرست نگاه میکند.
+  const messagesRef = useRef<Message[]>([]);
+  const hasMoreRef = useRef(false);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
   const { consume: consumeQuota, refresh: refreshQuota } = useQuota();
 
   // بارگذاری/تازه‌سازیِ آخرین صفحه. در حالتِ silent با فهرستِ فعلی ادغام می‌کند
@@ -122,9 +132,12 @@ export function useThreadViewModel(matchId: number) {
 
   useEffect(() => {
     if (!matchId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     const timer = setInterval(() => load(true), 4000);
     return () => clearInterval(timer);
+    // بارگذاریِ داده در افکت دقیقاً کارِ افکت است؛ همین الگو در
+    // `useChatInfoViewModel` هم با توضیحِ کامل هست.
   }, [load, matchId]);
 
   /*
@@ -135,6 +148,61 @@ export function useThreadViewModel(matchId: number) {
    * خودِ همین درخواست، حضورِ *ما* را هم نزدِ طرفِ مقابل تازه نگه می‌دارد.
    */
   const [presence, setPresence] = useState<Presence | null>(null);
+
+  /*
+   * وضعیتِ گفتگو (بیصدا/سنجاق) — یک درخواستِ سبک هنگامِ ورود.
+   *
+   * جدا از حضور است چون کنشِ کاربر آن را عوض میکند، نه طرفِ مقابل؛ به‌محضِ
+   * تگلِ بیصدا یا سنجاق، همین state خوشبینانه تازه میشود و اگر سرور رد کرد
+   * برمیگردد به قبلی. سنجاقِ پنهانشده (مثلاً پیامِ حذفشده برای من) سرور
+   * اصلاً نمیفرستد — پس نوارِ سنجاق خودبهخود گم میشود، درست مثلِ تلگرام.
+   */
+  const [muted, setMuted] = useState(false);
+  const [pinned, setPinned] = useState<Message | undefined>();
+  useEffect(() => {
+    if (!matchId) return;
+    let alive = true;
+    uc.chat
+      .getThreadState(matchId)
+      .then((st) => {
+        if (!alive) return;
+        setMuted(st.muted);
+        setPinned(st.pinned);
+      })
+      .catch(() => {
+        /* بدونِ وضعیت هم میشود گفتگو کرد — فقط نوارِ سنجاق و تگل دیر میآید */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [uc, matchId]);
+
+  /** بیصدا/باصدا — خوشبینانه با بازگشتِ خطا، همان الگوی دنبالکردن. */
+  const toggleMuted = useCallback(async () => {
+    const next = !muted;
+    setMuted(next);
+    haptics.select();
+    try {
+      await uc.chat.setThreadMuted(matchId, next);
+    } catch {
+      setMuted(!next);
+      haptics.error();
+    }
+  }, [uc, matchId, muted]);
+
+  /** سنجاق/برداشتنِ سنجاق — فقط state محلی تازه میشود؛ ردیفِ پیام نمیمیرد. */
+  const togglePin = useCallback(
+    async (m: Message | null) => {
+      try {
+        await uc.chat.setPinnedMessage(matchId, m?.id ?? null);
+        setPinned(m ?? undefined);
+        haptics.success();
+      } catch {
+        haptics.error();
+      }
+    },
+    [uc, matchId],
+  );
   useEffect(() => {
     if (!matchId) return;
     let alive = true;
@@ -195,6 +263,46 @@ export function useThreadViewModel(matchId: number) {
     }
   }, [uc, matchId, hasMore, messages]);
 
+  /**
+   * بارگذاریِ گذشته تا رسیدن به یک پیامِ مشخص — برای پرش از جستوجو/سنجاق.
+   *
+   * چرا لازم است: پرش فقط وقتی معنا دارد که مقصد در `messages` باشد؛ پیامِ
+   * سنجاقشده یا نتیجهی جستوجو میتواند چند صفحه عقب باشد. حداکثر ۱۰ صفحه
+   * میگیریم — اگر بعد از ۳۰۰ پیام هم پیدا نشد (تاریخچهی پاکشده یا حدِ
+   * رسیدن به ابتدای گفتگو)، `false` برمیگردد و صفحه بازخوردِ «نشد» میدهد.
+   */
+  const loadUntil = useCallback(
+    async (messageId: number): Promise<boolean> => {
+      let guard = 0;
+      let current = messagesRef.current;
+      while (guard++ < 10) {
+        if (current.some((m) => m.id === messageId)) return true;
+        if (!hasMoreRef.current) return false;
+        const oldestId = current[0]?.id;
+        if (oldestId == null) return false;
+        // از `loadOlder` استفاده نمیکنیم چون بستهی کهنهی messages میگیرد؛
+        // همین‌جا خودمان صفحه میگیریم و رِف را تازه نگه میداریم.
+        olderInFlight.current = true;
+        setLoadingOlder(true);
+        try {
+          const older = await uc.chat.getMessages(matchId, { before: oldestId, limit: PAGE });
+          setHasMore(older.length >= PAGE);
+          hasMoreRef.current = older.length >= PAGE;
+          if (older.length === 0) return false;
+          current = mergeAsc(older, current);
+          setMessages(current);
+        } catch {
+          return false;
+        } finally {
+          olderInFlight.current = false;
+          setLoadingOlder(false);
+        }
+      }
+      return current.some((m) => m.id === messageId);
+    },
+    [uc, matchId],
+  );
+
   const patchByClientId = useCallback((clientId: string, patch: Partial<Message>) => {
     setMessages((prev) => prev.map((m) => (m.clientId === clientId ? { ...m, ...patch } : m)));
   }, []);
@@ -208,7 +316,9 @@ export function useThreadViewModel(matchId: number) {
         replyTo?: Message['replyTo'];
       }
     ) => {
-      const isStarting = !messages.some((m) => m.id != null);
+      // آینهی messagesRef را میخوانیم نه خودِ state را — وگرنه هر پیامِ تازه
+      // این کال‌بک را از نو می‌ساخت و ورودیِ گفتگو رندرِ اضافه می‌گرفت.
+      const isStarting = !messagesRef.current.some((m) => m.id != null);
       const clientId = opts?.clientId ?? newClientId();
       setBlock(undefined);
 
@@ -249,7 +359,7 @@ export function useThreadViewModel(matchId: number) {
         if (b?.kind === 'quota') refreshQuota();
       }
     },
-    [matchId, uc, messages, consumeQuota, refreshQuota, user?.id, patchByClientId]
+    [matchId, uc, consumeQuota, refreshQuota, user?.id, patchByClientId]
   );
 
   const send = useCallback(() => {
@@ -275,9 +385,10 @@ export function useThreadViewModel(matchId: number) {
       uri: string,
       opts?: { durationMs?: number; peaks?: number[]; clientId?: string; uploadUri?: string }
     ) => {
-      const isStarting = !messages.some((m) => m.id != null);
+      // مثلِ sendText: خواندن از آینه تا کال‌بک با هر پیام پایدار بماند.
+      const isStarting = !messagesRef.current.some((m) => m.id != null);
       const existing = opts?.clientId
-        ? messages.find((m) => m.clientId === opts.clientId)
+        ? messagesRef.current.find((m) => m.clientId === opts.clientId)
         : undefined;
       const replyId = existing?.replyTo?.id ?? replyTo?.id;
       const clientId = opts?.clientId ?? newClientId();
@@ -392,7 +503,6 @@ export function useThreadViewModel(matchId: number) {
     [
       matchId,
       uc,
-      messages.length,
       consumeQuota,
       refreshQuota,
       replyTo,
@@ -410,7 +520,8 @@ export function useThreadViewModel(matchId: number) {
 
   const retryMessage = useCallback(
     (clientId: string) => {
-      const target = messages.find((m) => m.clientId === clientId && m.failed);
+      // retry هم روی آینه کار میکند — رندرِ اضافه برای فهرستِ خطاها نمی‌سازد.
+      const target = messagesRef.current.find((m) => m.clientId === clientId && m.failed);
       if (!target) return;
       if (target.kind === 'photo' || target.kind === 'voice') {
         if (!target.localUri) return;
@@ -430,7 +541,7 @@ export function useThreadViewModel(matchId: number) {
         replyTo: target.replyTo,
       });
     },
-    [messages, sendMedia, sendText]
+    [sendMedia, sendText]
   );
 
   const submitEdit = useCallback(async () => {
@@ -511,10 +622,17 @@ export function useThreadViewModel(matchId: number) {
     loadingOlder,
     hasMore,
     loadOlder,
+    /** بارگذاریِ گذشته تا رسیدن به یک پیام — برای پرش از جستوجو/سنجاق. */
+    loadUntil,
     draft,
     setDraft,
     changeDraft,
     presence,
+    // — وضعیتِ گفتگو —
+    muted,
+    toggleMuted,
+    pinned,
+    togglePin,
     send,
     sendPhoto,
     sendVoice,

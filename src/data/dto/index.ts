@@ -277,6 +277,32 @@ export interface MessageDTO {
   deleted_by_admin?: boolean;
 }
 
+/** وضعیتِ بیصدا/سنجاقِ یک گفتگو (‎GET /api/matches/{id}/state‎). */
+export interface ThreadStateDTO {
+  muted: boolean;
+  pinned_message?: MessageDTO | null;
+}
+
+/** پاسخِ جستوجوی تاریخچه (‎GET /api/matches/{id}/messages/search‎). */
+export interface MessageSearchResponseDTO {
+  messages?: MessageDTO[] | null;
+  has_more?: boolean;
+}
+
+/** یک سطر از فهرستِ مدیای اشتراکی (‎GET /api/matches/{id}/media‎). */
+export interface SharedMediaItemDTO {
+  id: number;
+  kind: string;
+  created_at?: string;
+  media_meta?: Record<string, unknown> | null;
+}
+
+export interface SharedMediaResponseDTO {
+  items: SharedMediaItemDTO[];
+  has_more?: boolean;
+  counts?: { photo?: number; voice?: number };
+}
+
 /** یک سطر در فهرستِ کاربرانِ مسدودشده (‎GET /api/me/blocks‎). */
 export interface BlockedUserDTO {
   id: number;
@@ -333,6 +359,8 @@ export interface PurchaseResultDTO {
 export interface AuthDTO {
   access_token: string;
   refresh_token?: string;
+  user_id?: number;
+  session_id?: string;
   profile_complete?: boolean;
 }
 

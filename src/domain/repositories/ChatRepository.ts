@@ -1,4 +1,12 @@
-import type { Conversation, Message, Page, Presence } from '@/domain/entities';
+import type {
+  Conversation,
+  Message,
+  MessageSearchPage,
+  Page,
+  Presence,
+  SharedMediaPage,
+  ThreadState,
+} from '@/domain/entities';
 
 /** گزینه‌های صفحه‌بندیِ تاریخچه‌ی پیام: پیش از این شناسه‌ی پیام. */
 export interface MessagePageOptions {
@@ -20,9 +28,25 @@ export interface SendMediaOptions {
   onProgress?: (ratio: number) => void;
 }
 
+/** گزینه‌های صفحه‌بندیِ مدیای اشتراکی: پیش از این شناسه‌ی پیام. */
+export interface SharedMediaPageOptions {
+  /** فقط مدیای قدیمی‌تر از این شناسه (برای بارگذاریِ گذشته). */
+  before?: number;
+  limit?: number;
+}
+
 export interface ChatRepository {
   getConversations(page?: number): Promise<Page<Conversation>>;
   getMessages(matchId: number, opts?: MessagePageOptions): Promise<Message[]>;
+  /**
+   * مدیای اشتراکیِ گفتگو — کلِ تاریخچه (عکس/صدا) نه فقط چند تایِ آخرِ
+   * حافظه؛ برای صفحهی «مدیای اشتراکی» و پیشنمایشِ «اطلاعاتِ مخاطب».
+   */
+  getSharedMedia(
+    matchId: number,
+    kind: 'photo' | 'voice',
+    opts?: SharedMediaPageOptions
+  ): Promise<SharedMediaPage>;
   sendMessage(matchId: number, body: string, replyToId?: number): Promise<Message>;
   sendMediaMessage(
     matchId: number,
@@ -39,6 +63,17 @@ export interface ChatRepository {
   ): Promise<string>;
   /** گفتگوی مستقیم با یک کاربر را باز می‌کند (اگر نبود، می‌سازد) و matchId می‌دهد. */
   startDirect(userId: number): Promise<number>;
+  /** وضعیتِ بیصدا/سنجاقِ گفتگو — یک درخواستِ سبک هنگامِ ورود. */
+  getThreadState(matchId: number): Promise<ThreadState>;
+  /** بیصدا/باصدا کردنِ گفتگو برای خودم (فقط پوشِ سرور خاموش می‌شود). */
+  setThreadMuted(matchId: number, muted: boolean): Promise<void>;
+  /** سنجاق/برداشتنِ سنجاقِ یک پیام — یک سنجاق به ازای هر گفتگو. */
+  setPinnedMessage(matchId: number, messageId: number | null): Promise<void>;
+  /**
+   * جستوجوی متنی در تاریخچهی گفتگو — جدا از صفحه‌بندیِ ListMessages، با همان
+   * فیلترهای per-user. `before` = فقط نتایجِ قدیمی‌تر از این شناسهی پیام.
+   */
+  searchMessages(matchId: number, q: string, opts?: MessagePageOptions): Promise<MessageSearchPage>;
   /** متنِ پیامِ خودم را عوض می‌کند (فقط داخلِ پنجره‌ی مجاز). */
   editMessage(messageId: number, body: string): Promise<{ body: string; editedAt?: string }>;
   deleteMessage(messageId: number, scope: DeleteScope): Promise<void>;

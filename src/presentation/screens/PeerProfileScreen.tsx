@@ -27,6 +27,8 @@ import { TierLockModal } from '@/presentation/components/TierLockModal';
 import { MatchOverlay } from '@/presentation/components/MatchOverlay';
 import { FollowButton } from '@/presentation/components/FollowButton';
 import { ActionSheet } from '@/presentation/components/ActionSheet';
+import { FollowStatsRow } from '@/presentation/components/FollowStatsRow';
+import { ProfileInterests } from '@/presentation/components/ProfileInterests';
 import { useCases } from '@/core/di/DIProvider';
 import { usePeerProfileViewModel } from '@/presentation/hooks/usePeerProfileViewModel';
 import { useSession } from '@/presentation/providers/SessionProvider';
@@ -42,30 +44,6 @@ const faLastActive = (isOnline?: boolean, min?: number): string => {
   if (min < 60 * 24) return `فعال ${faNum(Math.floor(min / 60))} ساعت پیش`;
   return `فعال ${faNum(Math.floor(min / (60 * 24)))} روز پیش`;
 };
-
-/** شمارنده‌ی قابلِ ضربه‌ی «دنبال‌کننده/دنبال‌شده». */
-function FollowStat({
-  value,
-  label,
-  onPress,
-}: {
-  value: number;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <PressableScale
-      scaleTo={0.9}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${faNum(value)}`}
-      style={styles.followStat}
-    >
-      <Text style={styles.followStatValue}>{faNum(value)}</Text>
-      <Text style={styles.followStatLabel}>{label}</Text>
-    </PressableScale>
-  );
-}
 
 /** پروفایلِ عمومیِ یک کاربرِ دیگر — عکس‌ها، معرفی، علاقه‌مندی‌ها و کنشِ پسند. */
 export function PeerProfileScreen({ userId }: { userId: number }) {
@@ -202,19 +180,11 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
 
         {/* — گرافِ دنبال‌کردن: رایگان برای همه‌ی سطح‌ها، بدونِ هیچ قفلِ اشتراکی — */}
         <View style={styles.followRow}>
-          <View style={styles.followCounts}>
-            <FollowStat
-              value={p.followersCount}
-              label="دنبال‌کننده"
-              onPress={() => openFollowList('followers')}
-            />
-            <View style={styles.followDivider} />
-            <FollowStat
-              value={p.followingCount}
-              label="دنبال‌شده"
-              onPress={() => openFollowList('following')}
-            />
-          </View>
+          <FollowStatsRow
+            followersCount={p.followersCount}
+            followingCount={p.followingCount}
+            onOpen={openFollowList}
+          />
           <FollowButton
             isFollowing={p.isFollowing}
             busy={vm.followBusy}
@@ -230,41 +200,7 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
           </View>
         ) : null}
 
-        {p.bio ? (
-          <>
-            <Text style={styles.section}>درباره‌اش</Text>
-            <Text style={styles.bio}>{p.bio}</Text>
-          </>
-        ) : null}
-
-        {p.interests.length > 0 ? (() => {
-          // علاقه‌مندی‌های مشترک با بیننده طلایی و اول نمایش داده می‌شوند — نقطه‌ی اتصالِ گفتگو.
-          const mine = new Set(user?.interests ?? []);
-          const shared = p.interests.filter((l) => mine.has(l));
-          const rest = p.interests.filter((l) => !mine.has(l));
-          return (
-            <>
-              <Text style={styles.section}>علاقه‌مندی‌ها</Text>
-              {shared.length > 0 ? (
-                <Text style={styles.sharedNote}>
-                  {faNum(shared.length)} علاقه‌ی مشترک دارید ✨
-                </Text>
-              ) : null}
-              <View style={styles.interests}>
-                {[...shared, ...rest].map((label) => {
-                  const isShared = mine.has(label);
-                  return (
-                    <View key={label} style={[styles.interest, isShared && styles.interestShared]}>
-                      <Text style={[styles.interestText, isShared && styles.interestTextShared]}>
-                        {label}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </>
-          );
-        })() : null}
+        <ProfileInterests bio={p.bio} interests={p.interests} myInterests={user?.interests} />
 
         {/* کنش‌ها کنارِ هم — پسندیدن راست، ارسالِ پیام چپ */}
         <View style={styles.actions}>
@@ -502,57 +438,12 @@ const styles = StyleSheet.create({
   reportError: { marginTop: spacing.xs, fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.rose, textAlign: 'right' },
   modalActions: { flexDirection: 'row-reverse', gap: spacing.sm, marginTop: spacing.md },
   modalButton: { flex: 1 },
-  section: {
-    fontFamily: fonts.bold,
-    fontSize: fontSizes.md,
-    lineHeight: lineHeights.md,
-    color: colors.ink,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
-  },
-  bio: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.md,
-    lineHeight: lineHeights.md,
-    color: colors.ink2,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  interests: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing.sm },
-  interest: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderTopColor: colors.rim,
-  },
-  interestText: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.ink2 },
-  interestShared: { borderColor: colors.gold, backgroundColor: colors.goldFaint },
-  interestTextShared: { color: colors.gold2 },
-  sharedNote: {
-    fontFamily: fonts.regular,
-    fontSize: fontSizes.xs,
-    lineHeight: lineHeights.xs,
-    color: colors.gold2,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginBottom: spacing.sm,
-  },
   followRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: spacing.md,
     marginTop: spacing.lg,
   },
-  followCounts: { flex: 1, flexDirection: 'row-reverse', alignItems: 'center' },
-  followDivider: { width: 1, height: 24, backgroundColor: colors.line, marginHorizontal: spacing.md },
-  followStat: { alignItems: 'center' },
-  followStatValue: { fontFamily: fonts.bold, fontSize: fontSizes.md, color: colors.ink },
-  followStatLabel: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3 },
   followBtn: { minWidth: 132 },
   followsYou: {
     flexDirection: 'row-reverse',

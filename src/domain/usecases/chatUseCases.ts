@@ -3,6 +3,7 @@ import type {
   DeleteScope,
   MessagePageOptions,
   SendMediaOptions,
+  SharedMediaPageOptions,
 } from '@/domain/repositories/ChatRepository';
 
 export const makeGetConversations = (r: ChatRepository) => (page?: number) =>
@@ -10,6 +11,10 @@ export const makeGetConversations = (r: ChatRepository) => (page?: number) =>
 export const makeGetMessages =
   (r: ChatRepository) => (matchId: number, opts?: MessagePageOptions) =>
     r.getMessages(matchId, opts);
+export const makeGetSharedMedia =
+  (r: ChatRepository) =>
+  (matchId: number, kind: 'photo' | 'voice', opts?: SharedMediaPageOptions) =>
+    r.getSharedMedia(matchId, kind, opts);
 export const makeStartDirect =
   (r: ChatRepository) => (userId: number) => r.startDirect(userId);
 export const makeSendMessage =
@@ -36,10 +41,21 @@ export const makeDeleteMessage =
 export const makeClearChat = (r: ChatRepository) => (matchId: number) => r.clearChat(matchId);
 export const makeGetPresence = (r: ChatRepository) => (matchId: number) => r.getPresence(matchId);
 export const makeSendTyping = (r: ChatRepository) => (matchId: number) => r.sendTyping(matchId);
+export const makeGetThreadState = (r: ChatRepository) => (matchId: number) =>
+  r.getThreadState(matchId);
+export const makeSetThreadMuted = (r: ChatRepository) => (matchId: number, muted: boolean) =>
+  r.setThreadMuted(matchId, muted);
+export const makeSetPinnedMessage =
+  (r: ChatRepository) => (matchId: number, messageId: number | null) =>
+    r.setPinnedMessage(matchId, messageId);
+export const makeSearchMessages =
+  (r: ChatRepository) => (matchId: number, q: string, opts?: MessagePageOptions) =>
+    r.searchMessages(matchId, q, opts);
 
 export type ChatUseCases = {
   getConversations: ReturnType<typeof makeGetConversations>;
   getMessages: ReturnType<typeof makeGetMessages>;
+  getSharedMedia: ReturnType<typeof makeGetSharedMedia>;
   sendMessage: ReturnType<typeof makeSendMessage>;
   sendMediaMessage: ReturnType<typeof makeSendMediaMessage>;
   resolveMediaUri: ReturnType<typeof makeResolveMediaUri>;
@@ -49,4 +65,8 @@ export type ChatUseCases = {
   clearChat: ReturnType<typeof makeClearChat>;
   getPresence: ReturnType<typeof makeGetPresence>;
   sendTyping: ReturnType<typeof makeSendTyping>;
+  getThreadState: ReturnType<typeof makeGetThreadState>;
+  setThreadMuted: ReturnType<typeof makeSetThreadMuted>;
+  setPinnedMessage: ReturnType<typeof makeSetPinnedMessage>;
+  searchMessages: ReturnType<typeof makeSearchMessages>;
 };

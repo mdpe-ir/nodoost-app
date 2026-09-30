@@ -39,6 +39,11 @@ export type {
   MessageMediaMeta,
   MediaTransferPhase,
   Presence,
+  SharedMediaItem,
+  SharedMediaCounts,
+  SharedMediaPage,
+  ThreadState,
+  MessageSearchPage,
 } from './chat';
 export type {
   SupportTopic,
@@ -54,6 +59,8 @@ export type {
   PurchaseResult,
 } from './catalog';
 export type { AuthResult } from './auth';
+export type { AccountMeta, AccountIndex, AccountInput, TokenPair } from './account';
+export { emptyAccountIndex } from './account';
 export type { Quota, QuotaItem, QuotaKey, QuotaScope } from './quota';
 export { quotaOf } from './quota';
 export type {

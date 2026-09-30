@@ -3,12 +3,35 @@ import type {
   DeleteScope,
   MessagePageOptions,
   SendMediaOptions,
+  SharedMediaPageOptions,
 } from '@/domain/repositories/ChatRepository';
-import type { Conversation, Message, Page, Presence } from '@/domain/entities';
+import type {
+  Conversation,
+  Message,
+  MessageSearchPage,
+  Page,
+  Presence,
+  SharedMediaPage,
+  ThreadState,
+} from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { ConversationDTO, MessageDTO, PresenceDTO } from '@/data/dto';
+import type {
+  ConversationDTO,
+  MessageDTO,
+  MessageSearchResponseDTO,
+  PresenceDTO,
+  SharedMediaResponseDTO,
+  ThreadStateDTO,
+} from '@/data/dto';
 import { resolveChatMediaUri } from '@/core/media/fetchChatMedia';
-import { toConversation, toMessage, toPresence } from '@/data/mappers';
+import {
+  toConversation,
+  toMessage,
+  toMessageSearchPage,
+  toPresence,
+  toSharedMediaItem,
+  toThreadState,
+} from '@/data/mappers';
 
 export class ChatRepositoryImpl implements ChatRepository {
   constructor(private readonly http: HttpClient) {}
@@ -37,12 +60,63 @@ export class ChatRepositoryImpl implements ChatRepository {
     return (d?.messages ?? []).map(toMessage);
   }
 
+  async getSharedMedia(
+    matchId: number,
+    kind: 'photo' | 'voice',
+    opts?: SharedMediaPageOptions
+  ): Promise<SharedMediaPage> {
+    const params = new URLSearchParams({ kind });
+    if (opts?.before != null) params.set('before', String(opts.before));
+    if (opts?.limit != null) params.set('limit', String(opts.limit));
+    const d = await this.http.request<SharedMediaResponseDTO>(
+      `/api/matches/${matchId}/media?${params.toString()}`
+    );
+    return {
+      items: (d?.items ?? []).map(toSharedMediaItem),
+      hasMore: Boolean(d?.has_more),
+      counts: { photo: d?.counts?.photo ?? 0, voice: d?.counts?.voice ?? 0 },
+    };
+  }
+
   async startDirect(userId: number): Promise<number> {
     const d = await this.http.request<{ match_id: number }>('/api/matches/direct', {
       method: 'POST',
       body: { user_id: userId },
     });
     return d.match_id;
+  }
+
+  async getThreadState(matchId: number): Promise<ThreadState> {
+    const d = await this.http.request<ThreadStateDTO>(`/api/matches/${matchId}/state`);
+    return toThreadState(d);
+  }
+
+  async setThreadMuted(matchId: number, muted: boolean): Promise<void> {
+    await this.http.request(`/api/matches/${matchId}/mute`, {
+      method: muted ? 'POST' : 'DELETE',
+    });
+  }
+
+  async setPinnedMessage(matchId: number, messageId: number | null): Promise<void> {
+    if (messageId == null) {
+      await this.http.request(`/api/matches/${matchId}/pin`, { method: 'DELETE' });
+    } else {
+      await this.http.request(`/api/matches/${matchId}/pin/${messageId}`, { method: 'POST' });
+    }
+  }
+
+  async searchMessages(
+    matchId: number,
+    q: string,
+    opts?: MessagePageOptions
+  ): Promise<MessageSearchPage> {
+    const params = new URLSearchParams({ q });
+    if (opts?.before != null) params.set('before', String(opts.before));
+    if (opts?.limit != null) params.set('limit', String(opts.limit));
+    const d = await this.http.request<MessageSearchResponseDTO>(
+      `/api/matches/${matchId}/messages/search?${params.toString()}`
+    );
+    return toMessageSearchPage(d);
   }
 
   async sendMessage(matchId: number, body: string, replyToId?: number): Promise<Message> {

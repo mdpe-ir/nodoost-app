@@ -13,6 +13,7 @@ import type {
   MapUser,
   MatchResult,
   Message,
+  MessageMediaMeta,
   NotificationActor,
   NotificationKind,
   NotificationPrefs,
@@ -22,7 +23,10 @@ import type {
   ProfileDraft,
   PurchaseResult,
   QueuedSubscription,
+  SharedMediaItem,
   SupportOverview,
+  ThreadState,
+  MessageSearchPage,
   Tier,
   User,
   Viewer,
@@ -41,6 +45,8 @@ import type {
   MapUserDTO,
   MatchDTO,
   MessageDTO,
+  MessageSearchResponseDTO,
+  SharedMediaItemDTO,
   NotificationActorDTO,
   NotificationDTO,
   NotificationPrefsDTO,
@@ -238,22 +244,28 @@ export const toSupportOverview = (d: SupportOverviewDTO): SupportOverview => ({
   unread: d?.unread ?? 0,
 });
 
+/** نگاشتِ `media_meta` خامِ سرور — بینِ پیام و مدیای اشتراکی مشترک است. */
+const mediaMetaOf = (
+  m: Record<string, unknown> | null | undefined
+): MessageMediaMeta | undefined =>
+  m
+    ? {
+        durationMs: typeof m.duration_ms === 'number' ? m.duration_ms : undefined,
+        peaks: Array.isArray(m.peaks) ? (m.peaks as number[]) : undefined,
+        width: typeof m.width === 'number' ? m.width : undefined,
+        height: typeof m.height === 'number' ? m.height : undefined,
+        mime: typeof m.mime === 'string' ? m.mime : undefined,
+        bytes: typeof m.bytes === 'number' ? m.bytes : undefined,
+      }
+    : undefined;
+
 export const toMessage = (d: MessageDTO): Message => ({
   id: d.id,
   matchId: d.match_id,
   senderId: d.sender_id,
   kind: (d.kind as Message['kind']) ?? 'text',
   body: d.body,
-  mediaMeta: d.media_meta
-    ? {
-        durationMs: typeof d.media_meta.duration_ms === 'number' ? d.media_meta.duration_ms : undefined,
-        peaks: Array.isArray(d.media_meta.peaks) ? (d.media_meta.peaks as number[]) : undefined,
-        width: typeof d.media_meta.width === 'number' ? d.media_meta.width : undefined,
-        height: typeof d.media_meta.height === 'number' ? d.media_meta.height : undefined,
-        mime: typeof d.media_meta.mime === 'string' ? d.media_meta.mime : undefined,
-        bytes: typeof d.media_meta.bytes === 'number' ? d.media_meta.bytes : undefined,
-      }
-    : undefined,
+  mediaMeta: mediaMetaOf(d.media_meta),
   createdAt: d.created_at,
   readAt: undefIfNull(d.read_at),
   editedAt: undefIfNull(d.edited_at),
@@ -267,6 +279,27 @@ export const toMessage = (d: MessageDTO): Message => ({
     : undefined,
   deleted: Boolean(d.deleted),
   deletedByAdmin: Boolean(d.deleted_by_admin),
+});
+
+export const toSharedMediaItem = (d: SharedMediaItemDTO): SharedMediaItem => ({
+  id: d.id,
+  kind: (d.kind as SharedMediaItem['kind']) ?? 'photo',
+  createdAt: d.created_at,
+  mediaMeta: mediaMetaOf(d.media_meta),
+});
+
+/** وضعیتِ بیصدا/سنجاقِ گفتگو. `pinned` با همان نگاشتِ پیام ساخته می‌شود. */
+export const toThreadState = (d: { muted: boolean; pinned_message?: MessageDTO | null }): ThreadState => ({
+  muted: d.muted,
+  pinned: d.pinned_message ? toMessage(d.pinned_message) : undefined,
+});
+
+/** یک صفحه از نتایجِ جستوجوی تاریخچه. */
+export const toMessageSearchPage = (
+  d: MessageSearchResponseDTO
+): MessageSearchPage => ({
+  items: (d.messages ?? []).map(toMessage),
+  hasMore: Boolean(d.has_more),
 });
 
 export const toTier = (d: TierDTO): Tier => {
@@ -315,6 +348,8 @@ export const toPurchaseResult = (d: PurchaseResultDTO | undefined): PurchaseResu
 export const toAuthResult = (d: AuthDTO): AuthResult => ({
   accessToken: d.access_token,
   refreshToken: d.refresh_token,
+  userId: d.user_id,
+  sessionId: d.session_id,
   profileComplete: Boolean(d.profile_complete),
 });
 

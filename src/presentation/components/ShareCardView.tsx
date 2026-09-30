@@ -406,5 +406,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   photoFrame: { overflow: 'hidden' },
-  photoFallback: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  photoFallback: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
 });

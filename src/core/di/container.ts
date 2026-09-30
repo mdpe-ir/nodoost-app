@@ -1,5 +1,5 @@
 import { env } from '@/core/config/env';
-import { TokenStorage } from '@/core/storage/TokenStorage';
+import { accountStorage } from '@/core/storage/AccountStorage';
 import { HttpClient } from '@/core/http/HttpClient';
 
 import { AuthRepositoryImpl } from '@/data/repositories/AuthRepositoryImpl';
@@ -39,7 +39,9 @@ import * as missions from '@/domain/usecases/missionsUseCases';
  * این تنها جایی است که پیاده‌سازی‌های concrete به هم وصل می‌شوند.
  */
 export function createContainer() {
-  const tokens = new TokenStorage();
+  // نمونه‌ی مشترکِ اپ: `chatMedia` هم از همین استفاده می‌کند تا توکنِ رسانه و
+  // توکنِ درخواست‌های عادی همیشه از یک اکانت باشند.
+  const tokens = accountStorage;
   const http = new HttpClient(env.apiBaseUrl, tokens);
 
   const authRepo = new AuthRepositoryImpl(http);
@@ -64,6 +66,14 @@ export function createContainer() {
       verifyOtp: auth.makeVerifyOtp(authRepo, tokens),
       logout: auth.makeLogout(tokens),
       hasSession: auth.makeHasSession(tokens),
+      listAccounts: auth.makeListAccounts(tokens),
+      countAccounts: auth.makeCountAccounts(tokens),
+      getActiveAccount: auth.makeGetActiveAccount(tokens),
+      getActiveAccountId: auth.makeGetActiveAccountId(tokens),
+      switchAccount: auth.makeSwitchAccount(tokens),
+      logoutAccount: auth.makeLogoutAccount(tokens),
+      logoutAll: auth.makeLogoutAll(tokens),
+      updateAccountMeta: auth.makeUpdateAccountMeta(tokens),
     },
     profile: {
       getMe: profile.makeGetMe(profileRepo),
@@ -95,6 +105,7 @@ export function createContainer() {
     chat: {
       getConversations: chat.makeGetConversations(chatRepo),
       getMessages: chat.makeGetMessages(chatRepo),
+      getSharedMedia: chat.makeGetSharedMedia(chatRepo),
       sendMessage: chat.makeSendMessage(chatRepo),
       sendMediaMessage: chat.makeSendMediaMessage(chatRepo),
       resolveMediaUri: chat.makeResolveMediaUri(chatRepo),
@@ -104,6 +115,10 @@ export function createContainer() {
       clearChat: chat.makeClearChat(chatRepo),
       getPresence: chat.makeGetPresence(chatRepo),
       sendTyping: chat.makeSendTyping(chatRepo),
+      getThreadState: chat.makeGetThreadState(chatRepo),
+      setThreadMuted: chat.makeSetThreadMuted(chatRepo),
+      setPinnedMessage: chat.makeSetPinnedMessage(chatRepo),
+      searchMessages: chat.makeSearchMessages(chatRepo),
     },
     random: {
       join: random.makeJoinRandom(randomRepo),

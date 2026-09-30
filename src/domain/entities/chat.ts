@@ -77,6 +77,41 @@ export interface Message {
   deletedByAdmin?: boolean;
 }
 
+/** یک قلمِ مدیای اشتراکی در گفتگو (عکس یا پیام صوتی، بدونِ متن). */
+export interface SharedMediaItem {
+  id: number;
+  kind: MessageKind;
+  createdAt?: string;
+  mediaMeta?: MessageMediaMeta;
+}
+
+/** شمارنده‌ی کلِ هر نوعِ مدیا در گفتگو. */
+export interface SharedMediaCounts {
+  photo: number;
+  voice: number;
+}
+
+/** یک صفحه از مدیای اشتراکی + شمارنده‌های کل (برای ردیفِ «مدیای اشتراکی»). */
+export interface SharedMediaPage {
+  items: SharedMediaItem[];
+  hasMore: boolean;
+  counts: SharedMediaCounts;
+}
+
+/** وضعیتِ بیصدا/سنجاقِ یک گفتگو (‎GET /api/matches/{id}/state‎). */
+export interface ThreadState {
+  /** بیصدا = فقط پوشِ سرور خاموش است؛ فید و شمارنده سرِ جایشان می‌مانند. */
+  muted: boolean;
+  /** پیامِ سنجاقشده، اگر از دیدِ این کاربر پنهان نشده باشد. */
+  pinned?: Message;
+}
+
+/** یک صفحه از نتایجِ جستوجوی متن در تاریخچهی یک گفتگو. */
+export interface MessageSearchPage {
+  items: Message[];
+  hasMore: boolean;
+}
+
 /** وضعیتِ لحظه‌ایِ طرفِ مقابل در یک گفتگو. */
 export interface Presence {
   online: boolean;

@@ -17,6 +17,7 @@ export type IconName =
   | 'check'
   | 'chevron-next'
   | 'chevron-prev'
+  | 'backspace'
   | 'clock'
   | 'close'
   | 'diamond-fill'
@@ -29,6 +30,7 @@ export type IconName =
   | 'lightning-fill'
   | 'lightning'
   | 'lock'
+  | 'log-out'
   | 'map'
   | 'menu'
   | 'mic'
@@ -46,6 +48,12 @@ export type IconName =
   | 'send-fill'
   | 'shield-check'
   | 'shield'
+  | 'fingerprint'
+  | 'search'
+  | 'copy'
+  | 'info'
+  | 'pin'
+  | 'bell-off'
   | 'star'
   | 'sun'
   | 'tab-chat'
@@ -70,6 +78,19 @@ const VECTOR = {
   'chevron-down': 'chevron-down',
   // پیکانِ پاسخ هم در پکِ برند نیست؛ مثلِ بقیه‌ی این فهرست از Ionicons می‌آید.
   reply: 'arrow-undo-outline',
+  // خروج از اکانت — در پکِ PNGِ برند نیست و Ionicons هم‌سبکِ بقیه‌ی این فهرست است.
+  'log-out': 'log-out-outline',
+  // پاککنِ کیپدِ قفل — همان دلیلِ بالا.
+  backspace: 'backspace-outline',
+  // میانبرِ بیومتریکِ قفل — در پکِ PNGِ برند نیست.
+  fingerprint: 'finger-print-outline',
+  // آیکن‌های کنترلِ گفتگو (اطلاعاتِ مخاطب، منوی پیام، سنجاق، اعلانِ خاموش) در
+  // پکِ PNGِ برند نیستند و مثلِ بقیه‌ی همین فهرست از Ionicons می‌آیند.
+  search: 'search-outline',
+  copy: 'copy-outline',
+  info: 'information-circle-outline',
+  pin: 'pin-outline',
+  'bell-off': 'notifications-off-outline',
 } as const satisfies Partial<Record<IconName, React.ComponentProps<typeof Ionicons>['name']>>;
 
 type PngName = Exclude<IconName, keyof typeof VECTOR>;
@@ -86,8 +107,10 @@ const TINT_COLOR: Record<IconTint, string> = {
 };
 
 // نگاشتِ ایستا — require باید رشته‌ی ثابت باشد تا Metro آن را بسته‌بندی کند
-/* eslint-disable @typescript-eslint/no-require-imports */
-const SOURCES: Record<Exclude<IconTint, 'muted'>, Record<PngName, number>> = {
+/** پکِ PNGِ برند فقط سه تهرنگ دارد؛ بقیه‌ی تهرنگ‌ها به نزدیک‌ترین پک نگاشته می‌شوند. */
+type PngTint = 'gold' | 'white' | 'ink';
+
+const SOURCES: Record<PngTint, Record<PngName, number>> = {
   gold: {
     bell: require('../../../assets/icons/gold/bell.png'),
     check: require('../../../assets/icons/gold/check.png'),
@@ -179,7 +202,23 @@ const SOURCES: Record<Exclude<IconTint, 'muted'>, Record<PngName, number>> = {
     'tab-profile': require('../../../assets/icons/ink/tab-profile.png'),
   },
 };
-/* eslint-enable @typescript-eslint/no-require-imports */
+/**
+ * نگاشتِ هر تهرنگ به نزدیک‌ترین پکِ PNG.
+ *
+ * تلاشِ قبلی مستقیم روی `SOURCES[tint]` می‌انداخت؛ برای `ink2`/`onGold` کلیدِ
+ * تهی برمی‌گشت و آیکنِ PNG (مثلِ `check` روی گرادیانِ طلایی) می‌افتاد. پکِ
+ * خاکستریِ روشن و پکِ مخصوصِ «روی طلایی» در برند وجود ندارد، پس:
+ *   • ink2  → white (روشن‌ترین پک، نزدیک‌ترین به خاکستریِ روشن)
+ *   • onGold → ink  (قهوه‌ایِ تیره، همراستا با TINT_COLOR.onGold)
+ */
+const PNG_TINT: Record<IconTint, PngTint> = {
+  gold: 'gold',
+  white: 'white',
+  ink: 'ink',
+  ink2: 'white',
+  muted: 'white',
+  onGold: 'ink',
+};
 
 interface Props {
   name: IconName;
@@ -213,7 +252,7 @@ export function Icon({ name, size = 24, tint = 'gold', style }: Props) {
   }
   return (
     <Image
-      source={SOURCES[tint === 'muted' ? 'white' : tint][name as PngName]}
+      source={SOURCES[PNG_TINT[tint]][name as PngName]}
       style={[{ width: size, height: size }, style]}
       contentFit="contain"
     />

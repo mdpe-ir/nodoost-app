@@ -4,7 +4,8 @@ import Constants from 'expo-constants';
 import { File as ExpoFile, UploadType } from 'expo-file-system';
 import * as Updates from 'expo-updates';
 import { ApiError } from './ApiError';
-import type { TokenStorage } from '@/core/storage/TokenStorage';
+import type { AccountStorage } from '@/core/storage/AccountStorage';
+import { getDeviceId } from '@/core/utils/deviceId';
 
 /** پیشرفتِ آپلود/دانلود — نسبت ۰ تا ۱. */
 export type TransferProgressHandler = (ratio: number) => void;
@@ -21,13 +22,21 @@ export interface MultipartUploadFields {
   parameters?: Record<string, string>;
 }
 
-const clientMetadataHeaders = (): Record<string, string> => ({
+/**
+ * هدرهای شناساییِ کلاینت.
+ *
+ * `X-Device-ID` تازه است و سرور از آن برای گروه‌بندیِ نشست‌ها («دستگاه‌های
+ * متصل») و سنجشِ سقفِ تعدادِ اکانت روی یک دستگاه استفاده می‌کند. عمداً async
+ * شد: شناسه در SecureStore می‌نشیند و فقط یک‌بار خوانده میشود.
+ */
+const clientMetadataHeaders = async (): Promise<Record<string, string>> => ({
   'X-Client-Platform': Platform.OS,
   'X-Client-App-Version':
     Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '',
   'X-Client-Build-Version': Application.nativeBuildVersion ?? '',
   'X-Client-Update-ID':
     Updates.updateId ?? (Updates.isEmbeddedLaunch ? 'embedded' : ''),
+  'X-Device-ID': await getDeviceId(),
 });
 
 export interface RequestOptions {
@@ -44,20 +53,32 @@ export interface RequestOptions {
 export class HttpClient {
   constructor(
     private readonly baseUrl: string,
-    private readonly tokens: TokenStorage
+    private readonly tokens: AccountStorage
   ) {}
+
+  /**
+   * توکنِ اکانتِ فعال را «اسنپ‌شات» می‌کند.
+   *
+   * چرا لازم است: کاربر می‌تواند وسطِ یک درخواست اکانت عوض کند. اگر refresh
+   * روی «اکانتِ فعالِ لحظه‌ی خطا» کار کند، توکنِ تازه‌ی سرور در اسلاتِ اکانتِ
+   * اشتباه نوشته می‌شود و کاربرِ دیگر با نشستِ این یکی ادامه می‌دهد. پس
+   * شناسهی اکانت در شروعِ درخواست قفل می‌شود و تا پایان همان می‌ماند.
+   */
+  private async snapshotAuth(): Promise<{ accountId: string | null; token: string | null }> {
+    const accountId = await this.tokens.getActiveAccountId();
+    if (!accountId) return { accountId: null, token: null };
+    return { accountId, token: await this.tokens.getAccessFor(accountId) };
+  }
 
   async request<T>(path: string, opts: RequestOptions = {}, retried = false): Promise<T> {
     const method = opts.method ?? 'GET';
     const useAuth = opts.auth !== false;
+    const auth = useAuth ? await this.snapshotAuth() : { accountId: null, token: null };
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...clientMetadataHeaders(),
+      ...(await clientMetadataHeaders()),
     };
-    if (useAuth) {
-      const token = await this.tokens.getAccess();
-      if (token) headers.Authorization = `Bearer ${token}`;
-    }
+    if (auth.token) headers.Authorization = `Bearer ${auth.token}`;
     // این API کاملاً پویاست (کاوش، نزدیک‌ها، چت …). بدونِ این هدرها، لایه‌ی
     // کشِ OkHttp روی اندروید، وب‌ویو یا CDN می‌تواند پاسخِ کهنه بدهد — نشانه‌اش
     // «کاوش با بازکردنِ اپ به‌روز نمی‌شود». پس هر GET همیشه از سرور تازه گرفته می‌شود.
@@ -75,7 +96,8 @@ export class HttpClient {
     });
 
     if (res.status === 401 && useAuth && !retried) {
-      if (await this.tryRefresh()) return this.request<T>(path, opts, true);
+      if (auth.accountId && (await this.tryRefresh(auth.accountId)))
+        return this.request<T>(path, opts, true);
       throw new ApiError(401);
     }
     if (!res.ok) {
@@ -111,7 +133,7 @@ export class HttpClient {
    * ساخته می‌شود؛ بدنه‌ی مصرف‌شده قابلِ ارسالِ دوباره نیست.
    */
   async upload<T>(path: string, uri: string, field = 'photo', retried = false): Promise<T> {
-    const token = await this.tokens.getAccess();
+    const auth = await this.snapshotAuth();
     const form = new FormData();
     const name = uri.split('/').pop() || 'photo.jpg';
     if (Platform.OS === 'web') {
@@ -126,13 +148,14 @@ export class HttpClient {
     const res = await fetch(this.baseUrl + path, {
       method: 'POST',
       headers: {
-        ...clientMetadataHeaders(),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(await clientMetadataHeaders()),
+        ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
       },
       body: form,
     });
     if (res.status === 401 && !retried) {
-      if (await this.tryRefresh()) return this.upload<T>(path, uri, field, true);
+      if (auth.accountId && (await this.tryRefresh(auth.accountId)))
+        return this.upload<T>(path, uri, field, true);
       throw new ApiError(401);
     }
     if (!res.ok) {
@@ -147,17 +170,18 @@ export class HttpClient {
 
   /** multipart با فیلدهای دلخواه (پیامِ صوتی/عکس در گفتگو). */
   async uploadForm<T>(path: string, form: FormData, retried = false): Promise<T> {
-    const token = await this.tokens.getAccess();
+    const auth = await this.snapshotAuth();
     const res = await fetch(this.baseUrl + path, {
       method: 'POST',
       headers: {
-        ...clientMetadataHeaders(),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(await clientMetadataHeaders()),
+        ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
       },
       body: form,
     });
     if (res.status === 401 && !retried) {
-      if (await this.tryRefresh()) return this.uploadForm<T>(path, form, true);
+      if (auth.accountId && (await this.tryRefresh(auth.accountId)))
+        return this.uploadForm<T>(path, form, true);
       throw new ApiError(401);
     }
     if (!res.ok) {
@@ -181,10 +205,10 @@ export class HttpClient {
     onProgress?: TransferProgressHandler,
     retried = false
   ): Promise<T> {
-    const token = await this.tokens.getAccess();
+    const auth = await this.snapshotAuth();
     const headers: Record<string, string> = {
-      ...clientMetadataHeaders(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(await clientMetadataHeaders()),
+      ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
     };
     const url = this.baseUrl + path;
     const fieldName = fields.fieldName ?? 'file';
@@ -192,7 +216,17 @@ export class HttpClient {
       fields.fileName ?? fields.fileUri.split('/').pop() ?? 'file';
 
     if (Platform.OS === 'web') {
-      return this.uploadFormWithProgressWeb<T>(url, headers, fields, fieldName, fileName, onProgress, path, retried);
+      return this.uploadFormWithProgressWeb<T>(
+        url,
+        headers,
+        auth.accountId,
+        fields,
+        fieldName,
+        fileName,
+        onProgress,
+        path,
+        retried
+      );
     }
 
     const file = new ExpoFile(fields.fileUri);
@@ -212,7 +246,7 @@ export class HttpClient {
     });
 
     if (result.status === 401 && !retried) {
-      if (await this.tryRefresh()) {
+      if (auth.accountId && (await this.tryRefresh(auth.accountId))) {
         return this.uploadFormWithProgress<T>(path, fields, onProgress, true);
       }
       throw new ApiError(401);
@@ -237,6 +271,7 @@ export class HttpClient {
   private uploadFormWithProgressWeb<T>(
     url: string,
     headers: Record<string, string>,
+    accountId: string | null,
     fields: MultipartUploadFields,
     fieldName: string,
     fileName: string,
@@ -265,7 +300,7 @@ export class HttpClient {
         }
         xhr.onload = async () => {
           if (xhr.status === 401 && !retried) {
-            if (await this.tryRefresh()) {
+            if (accountId && (await this.tryRefresh(accountId))) {
               try {
                 resolve(await this.uploadFormWithProgress<T>(path, fields, onProgress, true));
               } catch (e) {
@@ -297,29 +332,42 @@ export class HttpClient {
     });
   }
 
+  /** هدرهای احرازِ اکانتِ فعال — برای مصرف‌کننده‌هایی مثلِ `<Image>`/`expo-audio`. */
   async authHeaders(): Promise<Record<string, string>> {
-    const token = await this.tokens.getAccess();
+    const auth = await this.snapshotAuth();
     return {
-      ...clientMetadataHeaders(),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(await clientMetadataHeaders()),
+      ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
     };
   }
 
-  private async tryRefresh(): Promise<boolean> {
-    const refreshToken = await this.tokens.getRefresh();
+  /**
+   * تازه‌کردنِ توکنِ **همان اکانتی** که درخواست با آن رفته بود.
+   *
+   * پارامتر `accountId` عمدی است: بدونِ آن، سوییچِ اکانت وسطِ یک درخواست
+   * می‌توانست توکنِ تازه را در اسلاتِ اکانتِ اشتباه بنویسد. سرور ممکن است
+   * `refresh_token`/`session_id` تازه هم بدهد؛ اگر نداد، مقدارِ قبلی دست‌نخورده
+   * می‌ماند (قراردادِ `undefined` در `saveFor`).
+   */
+  private async tryRefresh(accountId: string): Promise<boolean> {
+    const refreshToken = await this.tokens.getRefreshFor(accountId);
     if (!refreshToken) return false;
     try {
       const res = await fetch(this.baseUrl + '/api/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...clientMetadataHeaders(),
+          ...(await clientMetadataHeaders()),
         },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!res.ok) return false;
       const data = await res.json();
-      await this.tokens.save(data.access_token, data.refresh_token);
+      await this.tokens.saveFor(accountId, {
+        access: data.access_token,
+        refresh: data.refresh_token,
+        sessionId: data.session_id,
+      });
       return true;
     } catch {
       return false;

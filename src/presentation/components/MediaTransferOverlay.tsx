@@ -78,7 +78,7 @@ export function MediaTransferOverlay({
 
 const styles = StyleSheet.create({
   wrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.38)',
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   },
   /** فقط روی دکمه‌ی پخشِ ویس — بدون پس‌زمینه‌ی تیرهٔ تمام‌حباب. */
   wrapCompact: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

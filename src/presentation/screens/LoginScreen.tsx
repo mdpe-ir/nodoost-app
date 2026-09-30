@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
@@ -7,21 +8,45 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Icon } from '@/presentation/components/Icon';
 import { Button } from '@/presentation/components/Button';
+import { PressableScale } from '@/presentation/components/PressableScale';
 import { useLogin } from '@/presentation/hooks/useLogin';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, gradients, shadow } from '@/core/theme';
 import { enNum, faNum } from '@/core/utils/faNum';
 
 const CODE_LEN = 4;
 
-export function LoginScreen() {
+/**
+ * صفحه‌ی ورود. با `mode="add"` همان صفحه برای **افزودن حساب** به دستگاهی که
+ * از قبل حساب دارد استفاده می‌شود.
+ *
+ * چرا یک صفحه و نه دو تا: مسیرِ سرور یکی است (شماره → کد → توکن) و تنها
+ * تفاوت، متنی است که کاربر می‌بیند. دو صفحه‌ی جدا یعنی دو جا برای واگرا شدنِ
+ * رفتارِ ورود و دو جا برای فراموش‌کردنِ یک اصلاح.
+ */
+export function LoginScreen({ mode = 'login' }: { mode?: 'login' | 'add' }) {
   const vm = useLogin();
   const insets = useSafeAreaInsets();
+  const add = mode === 'add';
 
   return (
     <View style={styles.root}>
       <LinearGradient colors={['#141020', colors.bg]} style={StyleSheet.absoluteFill} />
       <View style={[styles.blob, styles.blobGold]} />
       <View style={[styles.blob, styles.blobRose]} />
+
+      {/* در حالتِ «افزودن حساب» راهِ برگشتی لازم است: کاربر از وسطِ اپ آمده و
+          اگر منصرف شود باید بتواند برگردد، بی‌آنکه چیزی وارد کند. */}
+      {add ? (
+        <PressableScale
+          onPress={() => router.back()}
+          scaleTo={0.88}
+          style={[styles.closeFab, { top: insets.top + spacing.sm }]}
+          accessibilityRole="button"
+          accessibilityLabel="بستن"
+        >
+          <Icon name="close" size={20} tint="gold" />
+        </PressableScale>
+      ) : null}
 
       {/*
        * KeyboardAwareScrollView (نه نسخه‌ی خودِ RN): چون اپ edge-to-edge است،
@@ -70,8 +95,12 @@ export function LoginScreen() {
         <Animated.View entering={FadeInUp.delay(180).duration(560)} style={[styles.card, shadow.card]}>
           {vm.step === 'phone' ? (
             <>
-              <Text style={styles.cardTitle}>ورود یا ثبت‌نام</Text>
-              <Text style={styles.cardSub}>شماره‌ات را وارد کن تا کدِ تأیید برایت بفرستیم.</Text>
+              <Text style={styles.cardTitle}>{add ? 'افزودن حساب' : 'ورود یا ثبت‌نام'}</Text>
+              <Text style={styles.cardSub}>
+                {add
+                  ? 'شماره‌ی حسابِ دیگری را وارد کن؛ هر دو روی همین دستگاه می‌مانند.'
+                  : 'شماره‌ات را وارد کن تا کدِ تأیید برایت بفرستیم.'}
+              </Text>
 
               <Text style={styles.label}>شماره‌ی موبایل</Text>
               <View style={styles.inputRow}>
@@ -93,7 +122,7 @@ export function LoginScreen() {
             </>
           ) : (
             <>
-              <Text style={styles.cardTitle}>کدِ تأیید</Text>
+              <Text style={styles.cardTitle}>{add ? 'کدِ تأییدِ حسابِ تازه' : 'کدِ تأیید'}</Text>
               <Text style={styles.cardSub}>کدِ ارسال‌شده به {faNum(vm.phone)} را وارد کن.</Text>
 
               <CodeBoxes value={vm.code} onChange={vm.setCode} />
@@ -102,7 +131,7 @@ export function LoginScreen() {
               {vm.error ? <Text style={styles.error}>{vm.error}</Text> : null}
 
               <Button
-                label="ورود"
+                label={add ? 'افزودن حساب' : 'ورود'}
                 onPress={vm.verify}
                 loading={vm.loading}
                 disabled={vm.code.trim().length < CODE_LEN}
@@ -164,6 +193,19 @@ function CodeBoxes({ value, onChange }: { value: string; onChange: (v: string) =
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  closeFab: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
   scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, justifyContent: 'center' },
 
   blob: { position: 'absolute', width: 340, height: 340, borderRadius: 170 },

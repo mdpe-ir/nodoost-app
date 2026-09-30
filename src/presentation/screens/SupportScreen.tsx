@@ -346,7 +346,17 @@ export function SupportScreen() {
                   ]}
                   accessibilityLabel={messagePreviewText(msg)}
                 >
-                  {msg.kind === 'voice' && (msg.id || msg.pending || msg.failed) ? (
+                  {msg.deleted ? (
+                    <Text
+                      style={[
+                        styles.bubbleText,
+                        styles.deletedText,
+                        mine ? styles.mineText : styles.theirsText,
+                      ]}
+                    >
+                      این پیام حذف شد
+                    </Text>
+                  ) : msg.kind === 'voice' && (msg.id || msg.pending || msg.failed) ? (
                     <VoiceBubble
                       matchId={matchId ?? msg.matchId}
                       messageId={msg.id}
@@ -604,6 +614,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   mineText: { color: colors.onGold },
+  deletedText: { fontStyle: 'italic', opacity: 0.75 },
   textPending: { opacity: 0.72 },
   theirsText: { color: colors.ink },
   metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 3, alignSelf: 'flex-end' },

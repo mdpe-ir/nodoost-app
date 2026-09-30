@@ -12,7 +12,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { ChatBackground } from '@/presentation/components/ChatBackground';
@@ -30,11 +30,15 @@ import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { messagePreviewText } from '@/core/media/messagePreview';
 import { ActionSheet, type SheetAction } from '@/presentation/components/ActionSheet';
+import { InfoSheet } from '@/presentation/components/InfoSheet';
+import { ReportReasonSheet } from '@/presentation/components/ReportReasonSheet';
+import { ChatSearch } from '@/presentation/components/ChatSearch';
+import { copyToClipboard } from '@/core/utils/clipboard';
 import { useCases } from '@/core/di/DIProvider';
 import { useThreadViewModel } from '@/presentation/hooks/useThreadViewModel';
 import { useQuota } from '@/presentation/providers/QuotaProvider';
 import { lowWarning, isLow, isExhausted } from '@/presentation/tiers/quotaCopy';
-import { faClock, faDayLabel, dayKey, lastSeenText } from '@/core/utils/time';
+import { faClock, faDayLabel, faJalali, dayKey, lastSeenText } from '@/core/utils/time';
 import {
   colors,
   fonts,
@@ -98,6 +102,40 @@ function buildRows(messages: Message[], myId?: number): Row[] {
 function readReceiptText(m: Message | null): string | undefined {
   if (!m?.readAt) return undefined;
   return `خوانده شد · ${faDayLabel(m.readAt)} ساعتِ ${faClock(m.readAt)}`;
+}
+
+/**
+ * سطرهای «اطلاعاتِ پیام» — زمانِ ارسال، ویرایش و خوانده‌شدن.
+ *
+ * این‌جا برخلافِ زیرنویسِ برگه‌ی کنش، «خوانده نشده» هم گفته می‌شود: کاربر عمداً
+ * اطلاعاتِ پیام را باز کرده و در این بافت، نبودنِ زمانِ خواندن یعنی «هنوز
+ * نخوانده». در برگه‌ی کنش اما سکوت می‌کردیم چون آن‌جا مقدارِ پیش‌فرض مهم‌تر بود.
+ */
+function messageInfoRows(m: Message, myId?: number): { label: string; value: string }[] {
+  const rows = [
+    {
+      label: 'ارسال',
+      value: m.createdAt ? `${faJalali(m.createdAt)} · ${faClock(m.createdAt)}` : '—',
+    },
+  ];
+  if (m.editedAt) {
+    rows.push({
+      label: 'ویرایش',
+      value: `${faJalali(m.editedAt)} · ${faClock(m.editedAt)}`,
+    });
+  }
+  // رسیدِ خواندن فقط برای پیامِ خودم معنا دارد؛ سرور هم فقط برای همان‌ها
+  // `read_at` می‌فرستد. برای پیامِ طرفِ مقابل «هنوز خوانده نشده» گفتن دروغ است.
+  if (m.senderId === myId) {
+    rows.push({
+      label: 'وضعیت',
+      value: m.readAt
+        ? `خوانده شد · ${faDayLabel(m.readAt)} ساعتِ ${faClock(m.readAt)}`
+        : 'هنوز خوانده نشده',
+    });
+  }
+  if (m.body && !m.deleted) rows.push({ label: 'متن', value: messagePreviewText(m) });
+  return rows;
 }
 
 /**
@@ -328,6 +366,12 @@ export function ThreadScreen({
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<Row>>(null);
   const rows = useMemo(() => buildRows(vm.messages, vm.myId), [vm.messages, vm.myId]);
+  // آینهی rows برای پرشِ پس از بارگذاریِ گذشته (`loadUntil`) — چون در آن لحظه
+  // `rows` داخلِ بسته هنوز کهنه است و scrollToIndex باید به فهرستِ تازه اشاره کند.
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
 
   // در فهرستِ وارونه، «انتها» یعنی قدیمی‌ترین پیام؛ پس صفحه‌بندیِ گذشته به onEndReached
   // وصل می‌شود. چون این پیام‌ها بعد از سطرهای موجود می‌آیند، اسکرول تکان نمی‌خورد و
@@ -347,16 +391,31 @@ export function ThreadScreen({
   const jumpToMessage = useCallback(
     (id: number) => {
       const idx = rows.findIndex((r) => r.type === 'msg' && r.msg.id === id);
-      // پیامِ اصلی هنوز در صفحه‌های بارگذاری‌شده نیست — سکوت بهتر از پرشِ
-      // اشتباه است، ولی لرزش می‌گوید «شنیدم، ولی نشد».
-      if (idx < 0) {
-        haptics.warn();
+      if (idx >= 0) {
+        listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+        setHighlightId(id);
         return;
       }
-      listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
-      setHighlightId(id);
+      // پیام در صفحاتِ بارگذاری‌شده نیست: گذشته را تا خودش میکشیم، بعد پرش.
+      // پیدا نشد (تاریخچه کوتاهتر از حدِ انتظار/پاک‌شده)؟ همان لرزشِ «نشد».
+      void vm.loadUntil(id).then((found) => {
+        if (!found) {
+          haptics.warn();
+          return;
+        }
+        // rows تازه هنوز رندر نشده؛ با تاخیرِ کوتاه، فهرستِ تازه را نشانه میگیریم.
+        requestAnimationFrame(() => {
+          const fresh = rowsRef.current.findIndex((r) => r.type === 'msg' && r.msg.id === id);
+          if (fresh >= 0) {
+            listRef.current?.scrollToIndex({ index: fresh, animated: true, viewPosition: 0.5 });
+            setHighlightId(id);
+          } else {
+            haptics.warn();
+          }
+        });
+      });
     },
-    [rows],
+    [rows, vm],
   );
 
   useEffect(() => {
@@ -401,6 +460,45 @@ export function ThreadScreen({
    */
   const [actionTarget, setActionTarget] = useState<Message | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  /** برگه‌ی «اطلاعاتِ پیام» — زمانِ ارسال/ویرایش/خوانده‌شدن. */
+  const [infoTarget, setInfoTarget] = useState<Message | null>(null);
+  /** مقصدِ گزارش: خودِ کاربر یا یک پیامِ مشخص. */
+  const [reportTarget, setReportTarget] = useState<
+    { kind: 'user' } | { kind: 'message'; msg: Message } | null
+  >(null);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportError, setReportError] = useState(false);
+
+  /**
+   * متنِ پیام را در کلیپ‌بورد می‌گذارد.
+   *
+   * فقط پیامِ متنیِ زنده کپی می‌شود: کپیِ «پیام صوتی» یا سنگِ قبر بی‌معنی است.
+   * موفقیت با هپتیک گفته می‌شود نه با متنِ شناور — اپ سامانه‌ی toast ندارد و
+   * ساختنش برای یک کنش، زبانِ بصریِ تازه‌ای تحمیل می‌کند.
+   */
+  const copyMessage = useCallback(async (m: Message) => {
+    const ok = await copyToClipboard(m.body);
+    if (ok) haptics.success();
+    else haptics.warn();
+  }, []);
+
+  const submitReport = useCallback(
+    async (reason: string, messageId?: number) => {
+      if (!peerId) return;
+      setReportBusy(true);
+      setReportError(false);
+      try {
+        await uc.safety.report(peerId, reason, undefined, messageId);
+        haptics.success();
+        setReportTarget(null);
+      } catch {
+        setReportError(true);
+      } finally {
+        setReportBusy(false);
+      }
+    },
+    [peerId, uc]
+  );
 
   const messageActions: SheetAction[] = actionTarget
     ? [
@@ -413,6 +511,23 @@ export function ThreadScreen({
             setActionTarget(null);
           },
         },
+        // کپی فقط برای متنِ زنده — روی عکس/صدا/سنگِ قبر چیزی برای کپی نیست.
+        ...(!actionTarget.deleted &&
+        (actionTarget.kind == null || actionTarget.kind === 'text') &&
+        !!actionTarget.body
+          ? [
+              {
+                key: 'copy',
+                label: 'کپی متن',
+                icon: 'copy' as const,
+                onPress: () => {
+                  const m = actionTarget;
+                  setActionTarget(null);
+                  void copyMessage(m);
+                },
+              },
+            ]
+          : []),
         ...(vm.canEdit(actionTarget)
           ? [
               {
@@ -422,6 +537,49 @@ export function ThreadScreen({
                 icon: 'edit' as const,
                 onPress: () => {
                   vm.startEdit(actionTarget);
+                  setActionTarget(null);
+                },
+              },
+            ]
+          : []),
+        {
+          key: 'info',
+          label: 'اطلاعاتِ پیام',
+          icon: 'info',
+          onPress: () => {
+            setInfoTarget(actionTarget);
+            setActionTarget(null);
+          },
+        },
+        /*
+         * سنجاق — فقط برای پیامِ زندهٔ سروری: سنگِ قبر چیزی برای نگه‌داشتن
+         * ندارد و پیامِ بهینه هنوز شناسهٔ سروری ندارد تا بعداً پیدا شود.
+         */
+        ...(actionTarget.id != null && !actionTarget.deleted
+          ? [
+              {
+                key: 'pin',
+                label: vm.pinned?.id === actionTarget.id ? 'برداشتنِ سنجاق' : 'سنجاق کردن',
+                hint: 'بالای گفتگو می‌ماند تا خودت برداری',
+                icon: 'pin' as const,
+                onPress: () => {
+                  const m = actionTarget;
+                  setActionTarget(null);
+                  void vm.togglePin(vm.pinned?.id === m.id ? null : m);
+                },
+              },
+            ]
+          : []),
+        ...(peerId
+          ? [
+              {
+                key: 'report',
+                label: 'گزارشِ پیام',
+                hint: 'تخلف را به تیمِ پشتیبانی بگو',
+                icon: 'shield' as const,
+                danger: true,
+                onPress: () => {
+                  setReportTarget({ kind: 'message', msg: actionTarget });
                   setActionTarget(null);
                 },
               },
@@ -511,26 +669,78 @@ export function ThreadScreen({
    */
   const presenceLine = (() => {
     const p = vm.presence;
-    if (!p || p.hidden) return peerId ? 'دیدنِ پروفایل' : '';
+    if (!p || p.hidden) return peerId ? 'اطلاعاتِ مخاطب' : '';
     if (p.typing) return 'در حالِ نوشتن…';
     if (p.online) return 'آنلاین';
-    return lastSeenText(p.lastActiveMin) || (peerId ? 'دیدنِ پروفایل' : '');
+    return lastSeenText(p.lastActiveMin) || (peerId ? 'اطلاعاتِ مخاطب' : '');
   })();
 
+  /**
+   * تپ روی هدر → «اطلاعاتِ مخاطب»، نه پروفایلِ اجتماعی.
+   *
+   * این همان تصمیمِ محوریِ فلوست: در پیام‌رسان، کسی که وسطِ گفتگوست با تپ روی
+   * نام، دنبالِ گزینه‌های گفتگو (مدیا، بی‌صدا، مسدود، پاک‌کردن) است. پروفایلِ
+   * اجتماعیِ دیتینگ یک ضربه دورتر، از داخلِ همان صفحه، در دسترس می‌ماند.
+   */
   const openPeerProfile = () => {
-    if (peerId) router.push({ pathname: '/user/[id]', params: { id: String(peerId) } });
+    if (peerId) {
+      // رشته‌ی صریح + `as Href`: تایپِ مسیرها تولیدی است و `/chat-info/[id]`
+      // تازه است، پس تا اجرای بعدیِ expo start در اتحادیه‌ی مسیرها نیست —
+      // همان قراردادی که PeerProfileScreen برای مسیرهای تازه دارد.
+      const q = new URLSearchParams({ peerId: String(peerId) });
+      if (name) q.set('name', name);
+      if (photoUrl) q.set('photoUrl', photoUrl);
+      if (peerTier != null) q.set('peerTier', String(peerTier));
+      router.push(`/chat-info/${matchId}?${q.toString()}` as Href);
+    }
   };
 
   /*
-   * منویِ خودِ گفتگو. «مسدود کردن» عمداً کنارِ «پاک‌کردنِ گفتگو» است: کسی که چت
-   * را پاک می‌کند اغلب واقعاً بلاک می‌خواهد، و تا امروز هیچ راهی به بلاک نداشت
-   * (اندپوینتش بود، دکمه‌اش نبود).
+   * منویِ خودِ گفتگو — همان گزینه‌های صفحه‌ی اطلاعات، برای کسی که نمی‌خواهد
+   * از تِرِد بیرون برود. ترتیب از مفید به خطرناک است: اطلاعات → پاک‌کردن →
+   * گزارش → مسدود کردن.
    */
   const [threadMenu, setThreadMenu] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  /** پوشهٔ جستجوی گفتگو — نتایج با پرش به خودِ پیام باز می‌شوند. */
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const threadActions: SheetAction[] = [
+    ...(peerId
+      ? [
+          {
+            key: 'profile',
+            label: 'اطلاعاتِ مخاطب',
+            hint: 'پروفایل، مدیا و تنظیماتِ گفتگو',
+            icon: 'tab-profile' as const,
+            onPress: () => {
+              setThreadMenu(false);
+              openPeerProfile();
+            },
+          },
+        ]
+      : []),
+    {
+      key: 'search',
+      label: 'جستجو در گفتگو',
+      hint: 'میانِ پیامهای قبلی بگرد',
+      icon: 'search' as const,
+      onPress: () => {
+        setThreadMenu(false);
+        setSearchOpen(true);
+      },
+    },
+    {
+      key: 'mute',
+      label: vm.muted ? 'باصدا کردنِ اعلانها' : 'بیصدا کردنِ اعلانها',
+      hint: 'فقط پوش میآید؛ خودِ گفتگو و شمارنده سرِ جایشان میمانند',
+      icon: 'bell-off' as const,
+      onPress: () => {
+        setThreadMenu(false);
+        void vm.toggleMuted();
+      },
+    },
     {
       key: 'clear',
       label: 'پاک‌کردنِ گفتگو',
@@ -544,10 +754,21 @@ export function ThreadScreen({
     ...(peerId
       ? [
           {
+            key: 'report',
+            label: 'گزارش',
+            hint: 'تخلف را به تیمِ پشتیبانی بگو',
+            icon: 'shield' as const,
+            danger: true,
+            onPress: () => {
+              setThreadMenu(false);
+              setReportTarget({ kind: 'user' });
+            },
+          },
+          {
             key: 'block',
             label: 'مسدود کردن',
             hint: 'دیگر نه پیامی، نه دیده‌شدنی',
-            icon: 'shield' as const,
+            icon: 'lock' as const,
             danger: true,
             onPress: () => {
               setThreadMenu(false);
@@ -574,13 +795,13 @@ export function ThreadScreen({
           {/* در RTL بازگشت به سمتِ راست است — شورونِ رو به راست */}
           <Icon name="chevron-next" size={22} tint="white" />
         </PressableScale>
-        {/* تپِ آواتار/نام → پروفایلِ طرفِ مقابل */}
+        {/* تپِ آواتار/نام → اطلاعاتِ مخاطب (فلوی تلگرام) */}
         <Pressable
           onPress={openPeerProfile}
           disabled={!peerId}
           style={styles.headerPeer}
           accessibilityRole="button"
-          accessibilityLabel={`پروفایلِ ${name ?? 'کاربر'}`}
+          accessibilityLabel={`اطلاعاتِ ${name ?? 'کاربر'}`}
         >
           <Avatar uri={photoUrl} name={name} size={38} ring />
           <View style={styles.headerText}>
@@ -593,7 +814,7 @@ export function ThreadScreen({
             {/*
               * یک خط، چهار حالت — به ترتیبِ فوریت. «در حالِ تایپ» از همه
               * جلوتر است چون تنها حالتی است که همین ثانیه معنا دارد؛
-              * «دیدنِ پروفایل» ته‌ی صف است چون راهنماست نه خبر.
+              * «اطلاعاتِ مخاطب» ته‌ی صف است چون راهنماست نه خبر.
               */}
             {presenceLine ? (
               <View style={styles.presenceRow}>
@@ -628,6 +849,14 @@ export function ThreadScreen({
        * کیبورد می‌آید تا حرکت روی رشته‌ی UI و بدونِ لرزش باشد.
        */}
       <View style={styles.flex}>
+        {/* نوارِ پیامِ سنجاقشده — همیشه بالای فهرست، مثلِ تلگرام. */}
+        {vm.pinned ? (
+          <PinnedBar
+            message={vm.pinned}
+            onJump={() => jumpToMessage(vm.pinned!.id!)}
+            onUnpin={() => void vm.togglePin(null)}
+          />
+        ) : null}
         {vm.loading ? (
           <BubblesSkeleton />
         ) : rows.length === 0 ? (
@@ -881,6 +1110,36 @@ export function ThreadScreen({
         onDismiss={() => setDeleteTarget(null)}
       />
 
+      {/* اطلاعاتِ پیام — سطرهای فقط‌خواندنی، نه کنش. */}
+      <InfoSheet
+        visible={infoTarget != null}
+        title="اطلاعاتِ پیام"
+        rows={infoTarget ? messageInfoRows(infoTarget, vm.myId) : []}
+        onDismiss={() => setInfoTarget(null)}
+      />
+
+      <ReportReasonSheet
+        visible={reportTarget != null}
+        peerName={name}
+        busy={reportBusy}
+        error={reportError}
+        onSubmit={(reason) =>
+          void submitReport(reason, reportTarget?.kind === 'message' ? reportTarget.msg.id : undefined)
+        }
+        onDismiss={() => {
+          setReportTarget(null);
+          setReportError(false);
+        }}
+      />
+
+      {/* جستجوی گفتگو — نتیجه‌ها با پرش به حبابِ خودشان باز می‌شوند. */}
+      <ChatSearch
+        visible={searchOpen}
+        matchId={matchId}
+        onJump={jumpToMessage}
+        onClose={() => setSearchOpen(false)}
+      />
+
       <UpgradeSheet
         visible={sheet != null}
         onClose={() => {
@@ -908,7 +1167,76 @@ export function ThreadScreen({
   );
 }
 
+/*
+ * نوارِ پیامِ سنجاقشده.
+ *
+ * یک سطرِ باریک بینِ هدر و فهرست: آیکنِ سنجاق، پیشنمایشِ پیام، و دو ناحیهی
+ * لمسی — تپِ روی متن میپرد به خودِ پیام (چون «پیدا کردنش در شلوغی» دلیلِ
+ * سنجاق است)، ضربدر آن را برمیدارد. چرا کامپوننتِ جدا: خواناییِ ThreadScreen
+ * و این که استایلِ نوار نباید به چرخهٔ رندرِ فهرست وابسته باشد.
+ */
+function PinnedBar({
+  message,
+  onJump,
+  onUnpin,
+}: {
+  message: Message;
+  onJump: () => void;
+  onUnpin: () => void;
+}) {
+  return (
+    <View style={styles.pinnedBar}>
+      <Pressable
+        onPress={onJump}
+        accessibilityRole="button"
+        accessibilityLabel="پرش به پیامِ سنجاقشده"
+        style={styles.pinnedBody}
+      >
+        <Icon name="pin" size={14} tint="gold" />
+        <Text style={styles.pinnedLabel} numberOfLines={1}>
+          {messagePreviewText(message)}
+        </Text>
+      </Pressable>
+      <Pressable
+        onPress={onUnpin}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel="برداشتنِ سنجاق"
+        style={styles.pinnedUnpin}
+      >
+        <Icon name="close" size={14} tint="muted" />
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  pinnedBar: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  pinnedBody: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pinnedLabel: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    lineHeight: lineHeights.sm,
+    color: colors.ink2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  pinnedUnpin: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   header: {
     flexDirection: 'row-reverse',

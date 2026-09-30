@@ -1133,7 +1133,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   actionCancelFill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.rose,
     zIndex: 0,
   },

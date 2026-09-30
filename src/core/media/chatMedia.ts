@@ -1,7 +1,11 @@
 import { env } from '@/core/config/env';
-import { TokenStorage } from '@/core/storage/TokenStorage';
+import { accountStorage } from '@/core/storage/AccountStorage';
 
-const tokens = new TokenStorage();
+/**
+ * نمونه‌ی مشترک با کانتینرِ DI — عمداً `new` نمی‌کنیم: هر نمونه ایندکسِ
+ * درون‌حافظه‌ی خودش را دارد و دو نسخه با هم اختلاف پیدا می‌کنند.
+ */
+const tokens = accountStorage;
 
 /** مسیرِ رسانه‌ی یک پیام — GET با Bearer. */
 export const chatMediaPath = (matchId: number, messageId: number) =>

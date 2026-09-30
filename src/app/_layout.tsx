@@ -26,6 +26,10 @@ import { BadgesProvider } from '@/presentation/providers/BadgesProvider';
 import { QuotaProvider } from '@/presentation/providers/QuotaProvider';
 import { InAppMessagesProvider } from '@/presentation/providers/InAppMessagesProvider';
 import { InAppPopup } from '@/presentation/components/inapp/InAppPopup';
+import { AccountScope } from '@/presentation/providers/AccountScope';
+import { AccountSheetProvider } from '@/presentation/providers/AccountSheetProvider';
+import { SwitchingAccountOverlay } from '@/presentation/components/accounts/SwitchingAccountOverlay';
+import { AppLockProvider } from '@/presentation/providers/AppLockProvider';
 import { isProfileComplete } from '@/domain/policies/profile';
 import { requestNotificationPermission } from '@/core/notifications/notificationPermission';
 import { Loading } from '@/presentation/components/Loading';
@@ -141,44 +145,63 @@ export default function RootLayout() {
       <KeyboardProvider>
         <DIProvider>
           <SessionProvider>
+            {/* قفلِ برنامه سطحِ دستگاه است و باید روی همهچیز — حتی صفحهی قفل —
+                بالاترین پوشش را داشته باشد؛ برای همین اولین لایه بعد از نشست است. */}
+            <AppLockProvider>
             <FetchyDeviceRegistration />
-            {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
-            <BadgesProvider>
-              {/* سهمیه هم مثلِ نشان‌ها بالای درختِ ناوبری است تا چیپِ کاوش،
-                  نوارِ گفتگو و کارتِ پروفایل یک عدد را نشان دهند. */}
-              <QuotaProvider>
-              {/*
-               * پیام‌های درون‌برنامه‌ای بالای درختِ ناوبری‌اند تا هر سه سطحشان یک
-               * منبع داشته باشند: بنرِ صفحه‌ی خانه، پاپ‌آپِ ریشه و کارت‌های
-               * صفحه‌ی اعلان‌ها. زیرِ BadgesProvider است چون نشانِ زنگوله
-               * اعلان‌های نخوانده‌ی این سامانه را هم می‌شمارد.
-               */}
-              <InAppMessagesProvider>
-              <RemoteConfigProvider>
-                <WelcomeProvider>
-                  <PwaInstallProvider>
-                    <UpdateGateProvider>
-                      <AndroidAppGateProvider>
-                        {/* درخواستِ ثبتِ نظر در بازار آخرین حلقه است: خودش صبر
-                            می‌کند تا تبریک و پاپ‌آپِ ادمین از صحنه بروند. */}
-                        <ReviewPromptProvider>
-                          <StatusBar style="light" />
-                          <AuthGate />
-                          <CelebrationModal />
-                          {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
-                              ارتقای سطح — که لحظه‌ای‌تر است — رویش نیفتد. */}
-                          <InAppPopup />
-                          <LocationPrimerProvider />
-                          {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
-                        </ReviewPromptProvider>
-                      </AndroidAppGateProvider>
-                    </UpdateGateProvider>
-                  </PwaInstallProvider>
-                </WelcomeProvider>
-              </RemoteConfigProvider>
-              </InAppMessagesProvider>
-              </QuotaProvider>
-            </BadgesProvider>
+            {/* پیکربندیِ ریموت سطحِ دستگاه است: یک منبع برای همه‌ی اکانت‌ها.
+                عمداً بیرونِ محدوده‌ی اکانت است تا با سوییچ از نو FETCH نشود. */}
+            <RemoteConfigProvider>
+              <WelcomeProvider>
+                <PwaInstallProvider>
+                  <UpdateGateProvider>
+                    <AndroidAppGateProvider>
+                      {/* پوششِ «در حالِ جابه‌جایی» بیرونِ محدوده‌ی اکانت است تا
+                          خودش با سوییچ بازسازی نشود و سوسو نزند. */}
+                      <SwitchingAccountOverlay />
+                      {/*
+                       * محدوده‌ی اکانت: هرچیزی که به داده‌ی اکانت وابسته است
+                       * (نشان‌ها، سهمیه، پیام‌های درون‌برنامه‌ای و درختِ ناوبری)
+                       * زیرِ این کلید است تا با عوض شدنِ اکانتِ فعال از صفر
+                       * ساخته شود و هیچ کشی بین دو اکانت درز نکند.
+                       */}
+                      <AccountScope>
+                        <AccountSheetProvider>
+                          {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
+                          <BadgesProvider>
+                            {/* سهمیه هم مثلِ نشان‌ها بالای درختِ ناوبری است تا چیپِ کاوش،
+                                نوارِ گفتگو و کارتِ پروفایل یک عدد را نشان دهند. */}
+                            <QuotaProvider>
+                              {/*
+                               * پیام‌های درون‌برنامه‌ای بالای درختِ ناوبری‌اند تا هر سه سطحشان یک
+                               * منبع داشته باشند: بنرِ صفحه‌ی خانه، پاپ‌آپِ ریشه و کارت‌های
+                               * صفحه‌ی اعلان‌ها. زیرِ BadgesProvider است چون نشانِ زنگوله
+                               * اعلان‌های نخوانده‌ی این سامانه را هم می‌شمارد.
+                               */}
+                              <InAppMessagesProvider>
+                                {/* درخواستِ ثبتِ نظر در بازار آخرین حلقه است: خودش صبر
+                                    می‌کند تا تبریک و پاپ‌آپِ ادمین از صحنه بروند. */}
+                                <ReviewPromptProvider>
+                                  <StatusBar style="light" />
+                                  <AuthGate />
+                                  <CelebrationModal />
+                                  {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
+                                      ارتقای سطح — که لحظه‌ای‌تر است — رویش نیفتد. */}
+                                  <InAppPopup />
+                                  <LocationPrimerProvider />
+                                  {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+                                </ReviewPromptProvider>
+                              </InAppMessagesProvider>
+                            </QuotaProvider>
+                          </BadgesProvider>
+                        </AccountSheetProvider>
+                      </AccountScope>
+                    </AndroidAppGateProvider>
+                  </UpdateGateProvider>
+                </PwaInstallProvider>
+              </WelcomeProvider>
+            </RemoteConfigProvider>
+            </AppLockProvider>
           </SessionProvider>
         </DIProvider>
       </KeyboardProvider>
