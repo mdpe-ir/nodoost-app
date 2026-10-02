@@ -28,8 +28,24 @@ export const makeVerifyOtp =
     return result;
   };
 
+const revokeAccountSession = async (
+  repo: AuthRepository,
+  session: SessionStore,
+  id: string
+): Promise<void> => {
+  try {
+    await repo.logout(id);
+  } catch {
+    // خروجِ محلی حتی هنگامِ قطعیِ شبکه باید ممکن بماند.
+  }
+};
+
 /** خروج از اکانتِ فعال (اگر اکانتِ دیگری بماند، همان فعال می‌شود). */
-export const makeLogout = (session: SessionStore) => () => session.clear();
+export const makeLogout = (repo: AuthRepository, session: SessionStore) => async () => {
+  const id = await session.getActiveAccountId();
+  if (id) await revokeAccountSession(repo, session, id);
+  await session.clear();
+};
 
 export const makeHasSession = (session: SessionStore) => async () =>
   Boolean(await session.getAccess());
@@ -48,10 +64,16 @@ export const makeGetActiveAccountId = (session: SessionStore) => () =>
 export const makeSwitchAccount = (session: SessionStore) => (id: string) =>
   session.setActiveAccount(id);
 
-export const makeLogoutAccount = (session: SessionStore) => (id: string) =>
-  session.removeAccount(id);
+export const makeLogoutAccount = (repo: AuthRepository, session: SessionStore) => async (id: string) => {
+  await revokeAccountSession(repo, session, id);
+  await session.removeAccount(id);
+};
 
-export const makeLogoutAll = (session: SessionStore) => () => session.removeAllAccounts();
+export const makeLogoutAll = (repo: AuthRepository, session: SessionStore) => async () => {
+  const accounts = await session.listAccounts();
+  await Promise.all(accounts.map((account) => revokeAccountSession(repo, session, account.id)));
+  await session.removeAllAccounts();
+};
 
 export const makeUpdateAccountMeta =
   (session: SessionStore) => (id: string, patch: Partial<AccountMeta>) =>

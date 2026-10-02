@@ -16,6 +16,7 @@ import {
 import { shouldAppLock } from '@/domain/policies/appLock';
 import { authenticateBiometric } from '@/core/security/biometrics';
 import { LockScreen } from '@/presentation/components/lock/LockScreen';
+import { Loading } from '@/presentation/components/Loading';
 
 interface AppLockValue {
   /** خواندنِ اولیهی رکورد تمام شده باشد. */
@@ -80,6 +81,13 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
       if (!alive) return;
       recordRef.current = loaded;
       setRecord(loaded);
+      setLocked(
+        shouldAppLock({
+          record: loaded,
+          backgroundedAt: null,
+          now: Date.now(),
+        })
+      );
       setReady(true);
     })();
     return () => {
@@ -176,7 +184,7 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         unlockWithBiometrics,
       }}
     >
-      {children}
+      {ready ? children : <Loading />}
       {locked && record ? <LockScreen record={record} /> : null}
     </AppLockContext.Provider>
   );

@@ -1,5 +1,6 @@
 import type { Message, SupportOverview } from '@/domain/entities';
 import type { MessagePageOptions } from '@/domain/repositories/ChatRepository';
+import type { TransferProgressHandler } from '@/core/http/HttpClient';
 
 /**
  * پشتیبانی مسیرِ HTTPِ خودش را دارد (نه /matches) چون سمتِ سرور بیرونِ دروازه‌ی
@@ -12,4 +13,5 @@ export interface SupportRepository {
   startThread(topic: string): Promise<number>;
   getMessages(opts?: MessagePageOptions): Promise<Message[]>;
   sendMessage(body: string, topic?: string): Promise<Message>;
+  sendPhoto(uri: string, topic?: string, onProgress?: TransferProgressHandler): Promise<Message>;
 }

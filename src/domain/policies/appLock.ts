@@ -26,6 +26,6 @@ export const shouldAppLock = ({
   graceMs = APP_LOCK_DEFAULT_GRACE_MS,
 }: AppLockDecisionInput): boolean => {
   if (!record) return false;
-  if (backgroundedAt === null) return false;
+  if (backgroundedAt === null) return true;
   return now - backgroundedAt >= graceMs;
 };

@@ -56,6 +56,25 @@ export class HttpClient {
     private readonly tokens: AccountStorage
   ) {}
 
+  async revokeSession(accountId: string): Promise<void> {
+    const send = async (accessToken: string) =>
+      fetch(this.baseUrl + '/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          ...(await clientMetadataHeaders()),
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    let accessToken = await this.tokens.getAccessFor(accountId);
+    if (!accessToken) return;
+    let res = await send(accessToken);
+    if (res.status === 401 && (await this.tryRefresh(accountId))) {
+      accessToken = (await this.tokens.getAccessFor(accountId)) ?? accessToken;
+      res = await send(accessToken);
+    }
+    if (!res.ok) throw new ApiError(res.status);
+  }
+
   /**
    * توکنِ اکانتِ فعال را «اسنپ‌شات» می‌کند.
    *

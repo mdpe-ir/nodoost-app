@@ -39,4 +39,22 @@ export class SupportRepositoryImpl implements SupportRepository {
     });
     return toMessage(dto);
   }
+
+  async sendPhoto(
+    uri: string,
+    topic?: string,
+    onProgress?: (ratio: number) => void
+  ): Promise<Message> {
+    const dto = await this.http.uploadFormWithProgress<MessageDTO>(
+      '/api/support/messages/photo',
+      {
+        fileUri: uri,
+        fieldName: 'photo',
+        mimeType: 'image/jpeg',
+        parameters: topic ? { topic } : undefined,
+      },
+      onProgress
+    );
+    return toMessage(dto);
+  }
 }

@@ -64,15 +64,15 @@ export function createContainer() {
     auth: {
       requestOtp: auth.makeRequestOtp(authRepo),
       verifyOtp: auth.makeVerifyOtp(authRepo, tokens),
-      logout: auth.makeLogout(tokens),
+      logout: auth.makeLogout(authRepo, tokens),
       hasSession: auth.makeHasSession(tokens),
       listAccounts: auth.makeListAccounts(tokens),
       countAccounts: auth.makeCountAccounts(tokens),
       getActiveAccount: auth.makeGetActiveAccount(tokens),
       getActiveAccountId: auth.makeGetActiveAccountId(tokens),
       switchAccount: auth.makeSwitchAccount(tokens),
-      logoutAccount: auth.makeLogoutAccount(tokens),
-      logoutAll: auth.makeLogoutAll(tokens),
+      logoutAccount: auth.makeLogoutAccount(authRepo, tokens),
+      logoutAll: auth.makeLogoutAll(authRepo, tokens),
       updateAccountMeta: auth.makeUpdateAccountMeta(tokens),
     },
     profile: {
@@ -161,6 +161,7 @@ export function createContainer() {
       startThread: support.makeStartSupportThread(supportRepo),
       getMessages: support.makeGetSupportMessages(supportRepo),
       sendMessage: support.makeSendSupportMessage(supportRepo),
+      sendPhoto: support.makeSendSupportPhoto(supportRepo),
     },
     quota: {
       get: quota.makeGetQuota(quotaRepo),

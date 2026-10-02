@@ -282,11 +282,8 @@ export function useSupportViewModel() {
           });
         }
 
-        const msg = await uc.chat.sendMediaMessage(mid, 'photo', uploadUri, {
-          mime: 'image/jpeg',
-          onProgress: (ratio) => {
-            patchByClientId(clientId, { transferPhase: 'uploading', transferProgress: ratio });
-          },
+        const msg = await uc.support.sendPhoto(uploadUri, overview?.topic, (ratio) => {
+          patchByClientId(clientId, { transferPhase: 'uploading', transferProgress: ratio });
         });
         setMessages((prev) =>
           prev.map((m) =>

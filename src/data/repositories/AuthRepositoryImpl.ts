@@ -24,4 +24,8 @@ export class AuthRepositoryImpl implements AuthRepository {
     });
     return toAuthResult(dto);
   }
+
+  logout(accountId: string): Promise<void> {
+    return this.http.revokeSession(accountId);
+  }
 }
