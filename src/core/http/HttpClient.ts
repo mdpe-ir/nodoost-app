@@ -56,7 +56,7 @@ export class HttpClient {
     private readonly tokens: AccountStorage
   ) {}
 
-  async revokeSession(accountId: string): Promise<void> {
+  async logoutSession(accountId: string): Promise<void> {
     const send = async (accessToken: string) =>
       fetch(this.baseUrl + '/api/auth/logout', {
         method: 'POST',

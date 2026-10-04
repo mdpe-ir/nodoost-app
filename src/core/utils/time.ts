@@ -71,10 +71,16 @@ export function dayKey(iso?: string): string {
 
 // — تبدیلِ تقویمِ میلادی به شمسی (جلالی) —
 // الگوریتمِ کلاسیکِ jdf (بورکوفسکی)؛ خودبسنده تا به Intlِ ناقصِ Hermes وابسته نباشیم.
-const JALALI_MONTHS = [
+export const JALALI_MONTHS = [
   'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
   'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
 ];
+
+/** نمایش روز و ماه تولد به فارسی: «۲۳ تیر». */
+export function faBirthday(day?: number, month?: number): string {
+  if (!day || !month || month < 1 || month > 12) return '';
+  return `${faNum(day)} ${JALALI_MONTHS[month - 1]}`;
+}
 
 /** میلادی → شمسی: {jy, jm, jd} (jm از ۱). */
 function toJalaali(gy: number, gm: number, gd: number): { jy: number; jm: number; jd: number } {

@@ -100,6 +100,7 @@ function AuthGate() {
       <Stack.Screen name="plans" />
       {/* مقصدهای صفحه‌ی «من» — هرکدام جای یکی از زبانه‌های قدیمیِ پروفایل. */}
       <Stack.Screen name="settings" />
+      <Stack.Screen name="sessions" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="interests" />
       <Stack.Screen name="photos" />
@@ -134,78 +135,78 @@ export default function RootLayout() {
     // ژست‌های مبتنی بر gesture-handler (کارتِ سواایپ، برش عکس) بدونِ این ریشه
     // روی اندروید بی‌صدا کار نمی‌کنند — هیچ خطایی نمی‌دهد، فقط لمس نمی‌گیرد.
     <GestureHandlerRootView style={styles.root}>
-    <SafeAreaProvider>
-      {/*
+      <SafeAreaProvider>
+        {/*
        * اپ edge-to-edge است (gradle.properties → edgeToEdgeEnabled=true)؛ در این حالت
        * اندروید `windowSoftInputMode=adjustResize` را نادیده می‌گیرد و پنجره با بازشدنِ
        * کیبورد کوچک نمی‌شود. پس ارتفاعِ کیبورد را از این پرووایدر می‌گیریم.
        * پرچم‌های statusBarTranslucent/navigationBarTranslucent را ندهید — با
        * react-native-edge-to-edge نادیده گرفته می‌شوند و فقط WARN تولید می‌کنند.
        */}
-      <KeyboardProvider>
-        <DIProvider>
-          <SessionProvider>
-            {/* قفلِ برنامه سطحِ دستگاه است و باید روی همهچیز — حتی صفحهی قفل —
+        <KeyboardProvider>
+          <DIProvider>
+            <SessionProvider>
+              {/* قفلِ برنامه سطحِ دستگاه است و باید روی همهچیز — حتی صفحهی قفل —
                 بالاترین پوشش را داشته باشد؛ برای همین اولین لایه بعد از نشست است. */}
-            <AppLockProvider>
-            <FetchyDeviceRegistration />
-            {/* پیکربندیِ ریموت سطحِ دستگاه است: یک منبع برای همه‌ی اکانت‌ها.
+              <AppLockProvider>
+                <FetchyDeviceRegistration />
+                {/* پیکربندیِ ریموت سطحِ دستگاه است: یک منبع برای همه‌ی اکانت‌ها.
                 عمداً بیرونِ محدوده‌ی اکانت است تا با سوییچ از نو FETCH نشود. */}
-            <RemoteConfigProvider>
-              <WelcomeProvider>
-                <PwaInstallProvider>
-                  <UpdateGateProvider>
-                    <AndroidAppGateProvider>
-                      {/* پوششِ «در حالِ جابه‌جایی» بیرونِ محدوده‌ی اکانت است تا
+                <RemoteConfigProvider>
+                  <WelcomeProvider>
+                    <PwaInstallProvider>
+                      <UpdateGateProvider>
+                        <AndroidAppGateProvider>
+                          {/* پوششِ «در حالِ جابه‌جایی» بیرونِ محدوده‌ی اکانت است تا
                           خودش با سوییچ بازسازی نشود و سوسو نزند. */}
-                      <SwitchingAccountOverlay />
-                      {/*
+                          <SwitchingAccountOverlay />
+                          {/*
                        * محدوده‌ی اکانت: هرچیزی که به داده‌ی اکانت وابسته است
                        * (نشان‌ها، سهمیه، پیام‌های درون‌برنامه‌ای و درختِ ناوبری)
                        * زیرِ این کلید است تا با عوض شدنِ اکانتِ فعال از صفر
                        * ساخته شود و هیچ کشی بین دو اکانت درز نکند.
                        */}
-                      <AccountScope>
-                        <AccountSheetProvider>
-                          {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
-                          <BadgesProvider>
-                            {/* سهمیه هم مثلِ نشان‌ها بالای درختِ ناوبری است تا چیپِ کاوش،
+                          <AccountScope>
+                            <AccountSheetProvider>
+                              {/* شمارنده‌های نشان بالای درختِ ناوبری‌اند تا زنگوله و تبِ گفتگو یک منبع داشته باشند. */}
+                              <BadgesProvider>
+                                {/* سهمیه هم مثلِ نشان‌ها بالای درختِ ناوبری است تا چیپِ کاوش،
                                 نوارِ گفتگو و کارتِ پروفایل یک عدد را نشان دهند. */}
-                            <QuotaProvider>
-                              {/*
+                                <QuotaProvider>
+                                  {/*
                                * پیام‌های درون‌برنامه‌ای بالای درختِ ناوبری‌اند تا هر سه سطحشان یک
                                * منبع داشته باشند: بنرِ صفحه‌ی خانه، پاپ‌آپِ ریشه و کارت‌های
                                * صفحه‌ی اعلان‌ها. زیرِ BadgesProvider است چون نشانِ زنگوله
                                * اعلان‌های نخوانده‌ی این سامانه را هم می‌شمارد.
                                */}
-                              <InAppMessagesProvider>
-                                {/* درخواستِ ثبتِ نظر در بازار آخرین حلقه است: خودش صبر
+                                  <InAppMessagesProvider>
+                                    {/* درخواستِ ثبتِ نظر در بازار آخرین حلقه است: خودش صبر
                                     می‌کند تا تبریک و پاپ‌آپِ ادمین از صحنه بروند. */}
-                                <ReviewPromptProvider>
-                                  <StatusBar style="light" />
-                                  <AuthGate />
-                                  <CelebrationModal />
-                                  {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
+                                    <ReviewPromptProvider>
+                                      <StatusBar style="light" />
+                                      <AuthGate />
+                                      <CelebrationModal />
+                                      {/* پاپ‌آپِ ادمین بعد از CelebrationModal می‌آید تا جشنِ
                                       ارتقای سطح — که لحظه‌ای‌تر است — رویش نیفتد. */}
-                                  <InAppPopup />
-                                  <LocationPrimerProvider />
-                                  {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
-                                </ReviewPromptProvider>
-                              </InAppMessagesProvider>
-                            </QuotaProvider>
-                          </BadgesProvider>
-                        </AccountSheetProvider>
-                      </AccountScope>
-                    </AndroidAppGateProvider>
-                  </UpdateGateProvider>
-                </PwaInstallProvider>
-              </WelcomeProvider>
-            </RemoteConfigProvider>
-            </AppLockProvider>
-          </SessionProvider>
-        </DIProvider>
-      </KeyboardProvider>
-    </SafeAreaProvider>
+                                      <InAppPopup />
+                                      <LocationPrimerProvider />
+                                      {!splashDone ? <AnimatedSplash onDone={() => setSplashDone(true)} /> : null}
+                                    </ReviewPromptProvider>
+                                  </InAppMessagesProvider>
+                                </QuotaProvider>
+                              </BadgesProvider>
+                            </AccountSheetProvider>
+                          </AccountScope>
+                        </AndroidAppGateProvider>
+                      </UpdateGateProvider>
+                    </PwaInstallProvider>
+                  </WelcomeProvider>
+                </RemoteConfigProvider>
+              </AppLockProvider>
+            </SessionProvider>
+          </DIProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

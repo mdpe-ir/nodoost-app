@@ -1,5 +1,5 @@
 import type { DiscoveryRepository } from '@/domain/repositories/DiscoveryRepository';
-import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, GenderFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
+import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, AgeRange, GenderFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
 import type { CandidateDTO, MapNearbyDTO, PeerProfileDTO } from '@/data/dto';
 import { toCandidate, toMapUser, toPeerProfile } from '@/data/mappers';
@@ -10,9 +10,11 @@ const API_ACTION: Record<SwipeAction, string> = { like: 'like', super: 'super', 
 export class DiscoveryRepositoryImpl implements DiscoveryRepository {
   constructor(private readonly http: HttpClient) {}
 
-  async getCandidates(gender?: GenderFilter): Promise<Candidate[]> {
+  async getCandidates(gender?: GenderFilter, age?: AgeRange): Promise<Candidate[]> {
     const params = new URLSearchParams();
     if (gender) params.set('gender', gender);
+    if (age?.min != null) params.set('age_min', String(age.min));
+    if (age?.max != null) params.set('age_max', String(age.max));
     const qs = params.toString();
     const d = await this.http.request<{ results: CandidateDTO[] }>(
       `/api/discovery${qs ? `?${qs}` : ''}`,
@@ -26,6 +28,7 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     tier?: number,
     active?: ActiveFilter,
     gender?: GenderFilter,
+    age?: AgeRange,
   ): Promise<Candidate[]> {
     const params = new URLSearchParams();
     params.set('page', String(page));
@@ -33,6 +36,8 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     if (tier) params.set('tier', String(tier));
     if (active) params.set('active', active);
     if (gender) params.set('gender', gender);
+    if (age?.min != null) params.set('age_min', String(age.min));
+    if (age?.max != null) params.set('age_max', String(age.max));
     const d = await this.http.request<{ results: CandidateDTO[] }>(
       `/api/explore?${params.toString()}`,
     );
@@ -43,6 +48,8 @@ export class DiscoveryRepositoryImpl implements DiscoveryRepository {
     const params = new URLSearchParams();
     // شعاع اختیاری است؛ اگر ندهیم سرور سقفِ سطح را می‌گذارد و در پاسخ برمی‌گرداند.
     if (query.radiusM != null) params.set('radius_m', String(Math.round(query.radiusM)));
+    if (query.age?.min != null) params.set('age_min', String(query.age.min));
+    if (query.age?.max != null) params.set('age_max', String(query.age.max));
     if (query.active) params.set('active', query.active);
     if (query.gender) params.set('gender', query.gender);
     const qs = params.toString();

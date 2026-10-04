@@ -21,8 +21,10 @@ import {
   DISCOVER_GENDER_OPTIONS,
   GenderFilterRow,
 } from '@/presentation/components/GenderFilterRow';
+import { AgeFilterRow } from '@/presentation/components/AgeFilterRow';
 import { useDiscoverViewModel } from '@/presentation/hooks/useDiscoverViewModel';
 import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
+import { useAgeFilterGate } from '@/presentation/hooks/useAgeFilterGate';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import { oppositeGenderFilter } from '@/core/config/genderFilter';
 import { spacing } from '@/core/theme';
@@ -31,6 +33,7 @@ export function DiscoverScreen() {
   const vm = useDiscoverViewModel();
   const { user } = useSession();
   const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
+  const { open: canFilterAge, requiredTier: ageMinTier } = useAgeFilterGate();
   const defaultGender = oppositeGenderFilter(user?.gender);
   const genderValue = vm.genderFilter ?? defaultGender;
   const cardRef = useRef<SwipeCardHandle>(null);
@@ -63,6 +66,16 @@ export function DiscoverScreen() {
     />
   );
 
+  const ageRow = (
+    <AgeFilterRow
+      value={vm.ageFilter}
+      onChange={vm.setAgeFilter}
+      canFilter={canFilterAge}
+      requiredTier={ageMinTier}
+      inset={spacing.lg}
+    />
+  );
+
   // بازکردنِ پروفایلِ کامل — همان‌جا دکمه‌های «ارسالِ پیام» و «پسند» هست.
   const openProfile = (id: number | string) =>
     router.push({ pathname: '/user/[id]', params: { id: String(id) } });
@@ -83,6 +96,7 @@ export function DiscoverScreen() {
       <ScreenContainer flush style={styles.wrap}>
         <ScreenHeader title="کاوش" membership />
         {genderRow}
+        {ageRow}
         <CardSkeleton />
       </ScreenContainer>
     );
@@ -93,6 +107,7 @@ export function DiscoverScreen() {
       <ScreenHeader title="کاوش" membership />
 
       {genderRow}
+      {ageRow}
 
       {/* بنرِ ادمین بالای همه‌چیز می‌نشیند، ولی زیرِ نیازهای عملیاتیِ خودِ اپ
           (مثلِ روشن‌کردنِ موقعیت) نمی‌آید — آن یکی مسدودکننده‌ی واقعیِ تجربه است. */}

@@ -8,3 +8,11 @@ export interface AuthResult {
   sessionId?: string;
   profileComplete: boolean;
 }
+
+export interface AuthSession {
+  sid: string;
+  platform: string;
+  deviceLabel: string;
+  createdAt: string;
+  lastSeenAt: string;
+}

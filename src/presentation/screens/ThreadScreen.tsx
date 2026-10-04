@@ -24,6 +24,7 @@ import { Button } from '@/presentation/components/Button';
 import { TierBadge, tierName } from '@/presentation/components/TierBadge';
 import { VoiceBubble } from '@/presentation/components/VoiceBubble';
 import { PhotoBubble } from '@/presentation/components/PhotoBubble';
+import { MessageText } from '@/presentation/components/MessageText';
 import { MessageSendStatus } from '@/presentation/components/MessageSendStatus';
 import { ChatComposer } from '@/presentation/components/ChatComposer';
 import { UpgradeSheet } from '@/presentation/components/UpgradeSheet';
@@ -170,6 +171,7 @@ function MessageBubble({
   onLongPress,
   onJumpToQuote,
   onRetryMessage,
+  onPressMention,
 }: {
   matchId: number;
   msg: Message;
@@ -182,6 +184,7 @@ function MessageBubble({
   onLongPress: () => void;
   onJumpToQuote: (id: number) => void;
   onRetryMessage?: (clientId: string) => void;
+  onPressMention?: (username: string) => void;
 }) {
   /** ‎−۱ = حباب به چپ می‌رود (پیامِ من)، ‎+۱ = به راست (پیامِ او). */
   const dir = mine ? -1 : 1;
@@ -311,15 +314,16 @@ function MessageBubble({
                 onRetry={msg.clientId ? () => onRetryMessage?.(msg.clientId!) : undefined}
               />
             ) : (
-              <Text
+              <MessageText
+                text={msg.body}
+                mine={mine}
                 style={[
                   styles.bubbleText,
                   mine ? styles.mineText : styles.theirsText,
                   msg.pending && styles.textPending,
                 ]}
-              >
-                {msg.body}
-              </Text>
+                onPressMention={onPressMention}
+              />
             )}
             {lastOfGroup && time ? (
               <View style={styles.metaRow}>
@@ -460,6 +464,8 @@ export function ThreadScreen({
    */
   const [actionTarget, setActionTarget] = useState<Message | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  /** منشنِ لمس‌شده برای باز کردنِ برگه‌ی هدایت یا کپی. */
+  const [mentionTarget, setMentionTarget] = useState<string | null>(null);
   /** برگه‌ی «اطلاعاتِ پیام» — زمانِ ارسال/ویرایش/خوانده‌شدن. */
   const [infoTarget, setInfoTarget] = useState<Message | null>(null);
   /** مقصدِ گزارش: خودِ کاربر یا یک پیامِ مشخص. */
@@ -468,6 +474,34 @@ export function ThreadScreen({
   >(null);
   const [reportBusy, setReportBusy] = useState(false);
   const [reportError, setReportError] = useState(false);
+
+  /** مدیریتِ تپ روی منشن‌های نامِ کاربری (@username). */
+  const handlePressMention = useCallback((username: string) => {
+    haptics.select();
+    setMentionTarget(username);
+  }, []);
+
+  /** کپی کردن نام کاربری منشن‌شده در کلیپ‌بورد. */
+  const copyMentionUsername = useCallback(async (username: string) => {
+    const ok = await copyToClipboard(`@${username}`);
+    if (ok) haptics.success();
+    else haptics.warn();
+    setMentionTarget(null);
+  }, []);
+
+  const mentionActions: SheetAction[] = mentionTarget
+    ? [
+        {
+          key: 'copy',
+          label: 'کپی نام کاربری',
+          hint: `@${mentionTarget}`,
+          icon: 'copy' as const,
+          onPress: () => {
+            void copyMentionUsername(mentionTarget);
+          },
+        },
+      ]
+    : [];
 
   /**
    * متنِ پیام را در کلیپ‌بورد می‌گذارد.
@@ -947,6 +981,7 @@ export function ThreadScreen({
                   onLongPress={() => setActionTarget(msg)}
                   onJumpToQuote={jumpToMessage}
                   onRetryMessage={vm.retryMessage}
+                  onPressMention={handlePressMention}
                 />
               );
             }}
@@ -1108,6 +1143,14 @@ export function ThreadScreen({
         subtitle={deleteTarget ? messagePreviewText(deleteTarget) : undefined}
         actions={deleteActions}
         onDismiss={() => setDeleteTarget(null)}
+      />
+
+      <ActionSheet
+        visible={mentionTarget != null}
+        title={mentionTarget ? `@${mentionTarget}` : 'کاربر'}
+        subtitle="نام کاربریِ منشن‌شده در پیام"
+        actions={mentionActions}
+        onDismiss={() => setMentionTarget(null)}
       />
 
       {/* اطلاعاتِ پیام — سطرهای فقط‌خواندنی، نه کنش. */}

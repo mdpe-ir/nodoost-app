@@ -1,6 +1,7 @@
 import type {
   AppNotification,
   AuthResult,
+  AuthSession,
   Badges,
   BlockedUser,
   Candidate,
@@ -34,6 +35,7 @@ import type {
 } from '@/domain/entities';
 import type {
   AuthDTO,
+  AuthSessionDTO,
   BadgesDTO,
   BlockedUserDTO,
   CandidateDTO,
@@ -79,6 +81,9 @@ export const toUser = (d: UserDTO): User => ({
   name: d.name,
   bio: d.bio,
   birthdate: d.birthdate,
+  username: undefIfNull(d.username),
+  city: undefIfNull(d.city),
+  province: undefIfNull(d.province),
   gender: d.gender as Gender | undefined,
   tier: d.tier,
   status: d.status,
@@ -122,6 +127,7 @@ export const fromProfileDraft = (draft: ProfileDraft) => ({
   bio: draft.bio,
   gender: draft.gender,
   birthdate: draft.birthdate,
+  username: draft.username,
   interests: draft.interests,
   prefs: draft.prefs
     ? {
@@ -182,6 +188,12 @@ export const toPeerProfile = (d: PeerProfileDTO): PeerProfile => ({
   id: d.id,
   name: undefIfNull(d.name),
   age: d.age ?? undefined,
+  username: undefIfNull(d.username),
+  birthdayDay: d.birthday_day ?? undefined,
+  birthdayMonth: d.birthday_month ?? undefined,
+  birthdayMonthDay: undefIfNull(d.birthday_month_day),
+  city: undefIfNull(d.city),
+  province: undefIfNull(d.province),
   gender: undefIfNull(d.gender),
   bio: undefIfNull(d.bio),
   verified: d.verified,
@@ -351,6 +363,14 @@ export const toAuthResult = (d: AuthDTO): AuthResult => ({
   userId: d.user_id,
   sessionId: d.session_id,
   profileComplete: Boolean(d.profile_complete),
+});
+
+export const toAuthSession = (d: AuthSessionDTO): AuthSession => ({
+  sid: d.sid,
+  platform: d.platform,
+  deviceLabel: d.device_label,
+  createdAt: d.created_at,
+  lastSeenAt: d.last_seen_at,
 });
 
 export const toMatchResult = (d: MatchDTO | undefined): MatchResult => ({

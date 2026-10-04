@@ -50,6 +50,13 @@ export const makeLogout = (repo: AuthRepository, session: SessionStore) => async
 export const makeHasSession = (session: SessionStore) => async () =>
   Boolean(await session.getAccess());
 
+export const makeGetCurrentSessionId = (session: SessionStore) => () => session.getSessionId();
+
+export const makeListSessions = (repo: AuthRepository) => () => repo.listSessions();
+
+export const makeRevokeSession = (repo: AuthRepository) => (sid: string) =>
+  repo.revokeSession(sid);
+
 // ─ چنداکانتی ────────────────────────────────────────────────
 export const makeListAccounts = (session: SessionStore) => () => session.listAccounts();
 
@@ -84,6 +91,9 @@ export type AuthUseCases = {
   verifyOtp: ReturnType<typeof makeVerifyOtp>;
   logout: ReturnType<typeof makeLogout>;
   hasSession: ReturnType<typeof makeHasSession>;
+  getCurrentSessionId: ReturnType<typeof makeGetCurrentSessionId>;
+  listSessions: ReturnType<typeof makeListSessions>;
+  revokeSession: ReturnType<typeof makeRevokeSession>;
   listAccounts: ReturnType<typeof makeListAccounts>;
   countAccounts: ReturnType<typeof makeCountAccounts>;
   getActiveAccount: ReturnType<typeof makeGetActiveAccount>;

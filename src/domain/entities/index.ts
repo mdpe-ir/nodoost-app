@@ -6,6 +6,7 @@ export type {
   MapUsersResult,
   ActiveFilter,
   GenderFilter,
+  AgeRange,
   SwipeAction,
   MatchResult,
   Liker,
@@ -58,7 +59,7 @@ export type {
   PurchaseOutcome,
   PurchaseResult,
 } from './catalog';
-export type { AuthResult } from './auth';
+export type { AuthResult, AuthSession } from './auth';
 export type { AccountMeta, AccountIndex, AccountInput, TokenPair } from './account';
 export { emptyAccountIndex } from './account';
 export type { Quota, QuotaItem, QuotaKey, QuotaScope } from './quota';

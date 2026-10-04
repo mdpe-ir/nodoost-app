@@ -155,8 +155,23 @@ export function PeerProfileScreen({ userId }: { userId: number }) {
               ماموریت‌ها دعوت می‌کند — همان‌جا که چرخه‌ی ویروسی بسته می‌شود. */}
           <RankBadge rank={p.rank} onPress={() => setRankSheet(true)} />
         </View>
+        {p.username ? (
+          <Text style={styles.usernameText}>@{p.username}</Text>
+        ) : null}
 
         <View style={styles.metaRow}>
+          {p.city || p.province ? (
+            <View style={styles.metaItem}>
+              <Icon name="map" size={13} tint="gold" />
+              <Text style={styles.metaText}>{[p.province, p.city].filter(Boolean).join('، ')}</Text>
+            </View>
+          ) : null}
+          {p.birthdayMonthDay ? (
+            <View style={styles.metaItem}>
+              <Icon name="calendar" size={13} tint="gold" />
+              <Text style={styles.metaText}>{p.birthdayMonthDay}</Text>
+            </View>
+          ) : null}
           {faDistance(p.distanceM) ? (
             <View style={styles.metaItem}>
               <Icon name="map" size={13} tint="gold" />
@@ -412,6 +427,14 @@ const styles = StyleSheet.create({
     color: colors.ink,
     textAlign: 'right',
     writingDirection: 'rtl',
+  },
+  usernameText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.gold2,
+    textAlign: 'right',
+    writingDirection: 'ltr',
+    marginTop: 2,
   },
   metaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs },
   metaItem: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },

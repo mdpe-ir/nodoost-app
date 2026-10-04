@@ -5,6 +5,16 @@ import { photoErrorMessage } from '@/core/media/photoErrors';
 import { resolveLocation } from '@/core/utils/location';
 import { useRefetchOnFocus } from '@/presentation/hooks/useRefetchOnFocus';
 import type { Photo, UserPreferences } from '@/domain/entities';
+import {
+  formatJalali,
+  isoToJalali,
+  jalaliToIso,
+  parseJalaliInput,
+  ageFromBirthdate,
+  type JalaliDate,
+} from '@/core/utils/jalali';
+import { DEFAULT_JALALI_BIRTHDATE } from '@/presentation/components/JalaliDatePicker';
+import { validateUsername } from '@/core/utils/username';
 
 /**
  * ویومدلِ پروفایل: عکس‌ها، ویرایشِ نام/بیو، آپلود/حذفِ عکس، حریمِ خصوصی، خروج.
@@ -34,9 +44,14 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
   const makePrimaryOnUpload = useRef(false);
 
   // — ویرایشِ نام، بیو و علاقه‌مندی‌ها —
-  const [draftName, setDraftName] = useState('');
-  const [draftBio, setDraftBio] = useState('');
-  const [draftInterests, setDraftInterests] = useState<string[]>([]);
+  const [draftName, setDraftName] = useState(user?.name ?? '');
+  const [draftBio, setDraftBio] = useState(user?.bio ?? '');
+  const [draftUsername, setDraftUsername] = useState(user?.username ?? '');
+  const initialJalali = isoToJalali(user?.birthdate);
+  const [draftJalaliDate, setDraftJalaliDate] = useState<JalaliDate | undefined>(initialJalali);
+  const [draftBirthdate, setDraftBirthdate] = useState(formatJalali(initialJalali));
+  const [draftInterests, setDraftInterests] = useState<string[]>(user?.interests ?? []);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
@@ -46,10 +61,21 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
   useEffect(() => {
     setDraftName(user?.name ?? '');
     setDraftBio(user?.bio ?? '');
+    setDraftUsername(user?.username ?? '');
+    const jDate = isoToJalali(user?.birthdate);
+    setDraftJalaliDate(jDate);
+    setDraftBirthdate(formatJalali(jDate));
     setDraftInterests(user?.interests ?? []);
     // فقط وقتی هویتِ کاربر عوض می‌شود مقداردهی کن، نه وسطِ تایپ.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  const openDatePicker = useCallback(() => setDatePickerOpen(true), []);
+  const closeDatePicker = useCallback(() => setDatePickerOpen(false), []);
+  const onConfirmBirthdate = useCallback((date: JalaliDate) => {
+    setDraftJalaliDate(date);
+    setDraftBirthdate(formatJalali(date));
+  }, []);
 
   /*
    * نام/بیو و علاقه‌مندی‌ها دو صفحه‌ی جدا شده‌اند، پس دو پیش‌نویسِ مستقل‌اند و
@@ -57,19 +83,37 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
    * ذخیره‌ی علاقه‌مندی‌ها نامِ ویرایش‌نشده‌ی صفحه‌ی دیگر را هم پس می‌فرستاد و
    * تغییرِ ذخیره‌نشده‌ی آن صفحه بی‌صدا از بین می‌رفت.
    */
+  const usernameError = validateUsername(draftUsername.trim());
+  const birthdateIso = draftJalaliDate
+    ? jalaliToIso(draftJalaliDate)
+    : draftBirthdate
+      ? jalaliToIso(parseJalaliInput(draftBirthdate) ?? { year: 0, month: 0, day: 0 })
+      : undefined;
+  const birthdateAge = birthdateIso ? ageFromBirthdate(birthdateIso) : undefined;
+  const birthdateError = draftBirthdate && (!birthdateIso || (birthdateAge ?? 0) < 18 || (birthdateAge ?? 0) > 99)
+    ? 'تاریخ تولد معتبر (۱۸ تا ۹۹ سال) وارد کن.'
+    : undefined;
   const dirty =
-    draftName.trim() !== (user?.name ?? '') || draftBio.trim() !== (user?.bio ?? '');
+    draftName.trim() !== (user?.name ?? '') ||
+    draftBio.trim() !== (user?.bio ?? '') ||
+    draftUsername.trim() !== (user?.username ?? '') ||
+    (birthdateIso ?? '') !== (user?.birthdate ?? '');
 
   const interestsDirty =
     [...draftInterests].sort().join('|') !== [...(user?.interests ?? [])].sort().join('|');
 
   /** true یعنی ذخیره شد — صفحه‌ی ویرایش با همین مقدار تصمیم می‌گیرد که برگردد یا نه. */
   const saveProfile = useCallback(async (): Promise<boolean> => {
-    if (draftName.trim().length < 2) return false;
+    if (draftName.trim().length < 2 || usernameError || birthdateError) return false;
     setSaving(true);
     setSaveError(false);
     try {
-      await uc.profile.updateProfile({ name: draftName.trim(), bio: draftBio.trim() });
+      await uc.profile.updateProfile({
+        name: draftName.trim(),
+        bio: draftBio.trim(),
+        username: draftUsername.trim() || undefined,
+        birthdate: birthdateIso,
+      });
       await refreshUser();
       return true;
     } catch {
@@ -78,7 +122,7 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
     } finally {
       setSaving(false);
     }
-  }, [draftName, draftBio, uc, refreshUser]);
+  }, [draftName, draftBio, draftUsername, usernameError, birthdateIso, birthdateError, uc, refreshUser]);
 
   /** ذخیره‌ی صفحه‌ی علاقه‌مندی‌ها — فقط همین یک فیلد. */
   const saveInterests = useCallback(async (): Promise<boolean> => {
@@ -300,6 +344,19 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
     logout,
     draftName,
     setDraftName,
+    draftUsername,
+    setDraftUsername,
+    usernameError,
+    draftBirthdate,
+    setDraftBirthdate,
+    draftJalaliDate,
+    setDraftJalaliDate,
+    datePickerOpen,
+    openDatePicker,
+    closeDatePicker,
+    onConfirmBirthdate,
+    birthdateAge,
+    birthdateError,
     draftBio,
     setDraftBio,
     draftInterests,

@@ -7,6 +7,9 @@ import { router, type Href } from 'expo-router';
 import { ScreenContainer } from '@/presentation/components/ScreenContainer';
 import { StackHeader } from '@/presentation/components/StackHeader';
 import { Button } from '@/presentation/components/Button';
+import { Icon } from '@/presentation/components/Icon';
+import { PressableScale } from '@/presentation/components/PressableScale';
+import { DEFAULT_JALALI_BIRTHDATE, JalaliDatePickerSheet } from '@/presentation/components/JalaliDatePicker';
 import { SettingsGroup, SettingsLink } from '@/presentation/components/SettingsRow';
 import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { faNum } from '@/core/utils/faNum';
@@ -74,6 +77,52 @@ export function EditProfileScreen() {
           />
           {tooShort ? <Text style={styles.fieldError}>نام باید دستِ‌کم دو نویسه باشد.</Text> : null}
 
+          <Text style={styles.fieldLabel}>نام کاربری</Text>
+          <TextInput
+            style={[styles.input, styles.handleInput]}
+            value={vm.draftUsername}
+            onChangeText={vm.setDraftUsername}
+            placeholder="username"
+            placeholderTextColor={colors.ink3}
+            textAlign="left"
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={30}
+          />
+          {vm.usernameError ? (
+            <Text style={styles.fieldError}>{vm.usernameError}</Text>
+          ) : (
+            <Text style={styles.fieldHint}>
+              اختیاری — ۱ تا ۳۰ نویسه، حروف انگلیسی، عدد، نقطه (.) و زیرخط (_). بدون دو نقطه پشت‌سرهم یا در ابتدا و انتها.
+            </Text>
+          )}
+
+          <Text style={styles.fieldLabel}>تاریخ تولد</Text>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={vm.openDatePicker}
+            style={styles.dateSelector}
+            accessibilityRole="button"
+            accessibilityLabel="انتخاب تاریخ تولد"
+          >
+            <View style={styles.dateSelectorContent}>
+              <Text style={styles.dateSelectorText}>
+                {vm.draftBirthdate ? vm.draftBirthdate : 'انتخاب تاریخ تولد'}
+              </Text>
+              {vm.birthdateAge != null ? (
+                <Text style={styles.dateSelectorAge}>({faNum(vm.birthdateAge)} ساله)</Text>
+              ) : null}
+            </View>
+            <Icon name="calendar" size={18} tint="gold" />
+          </PressableScale>
+          {vm.birthdateError ? (
+            <Text style={styles.fieldError}>{vm.birthdateError}</Text>
+          ) : (
+            <Text style={styles.fieldHint}>
+              سال تولد مخفی می‌ماند؛ دیگران فقط سن و روز و ماه تولد را می‌بینند.
+            </Text>
+          )}
+
           <Text style={styles.fieldLabel}>درباره‌ات</Text>
           <TextInput
             style={[styles.input, styles.bioInput]}
@@ -116,9 +165,16 @@ export function EditProfileScreen() {
           size="md"
           onPress={save}
           loading={vm.saving}
-          disabled={!vm.dirty || tooShort}
+          disabled={!vm.dirty || tooShort || Boolean(vm.usernameError) || Boolean(vm.birthdateError)}
         />
       </Animated.View>
+
+      <JalaliDatePickerSheet
+        visible={vm.datePickerOpen}
+        onDismiss={vm.closeDatePicker}
+        value={vm.draftJalaliDate ?? DEFAULT_JALALI_BIRTHDATE}
+        onConfirm={vm.onConfirmBirthdate}
+      />
     </ScreenContainer>
   );
 }
@@ -154,6 +210,35 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   fieldError: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.rose, textAlign: 'right' },
+  dateSelector: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderTopColor: colors.rim,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateSelectorContent: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dateSelectorText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.md,
+    color: colors.ink,
+    textAlign: 'right',
+  },
+  dateSelectorAge: {
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+    color: colors.gold2,
+  },
   input: {
     minHeight: 48,
     borderRadius: radius.md,
@@ -168,6 +253,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.md,
     writingDirection: 'rtl',
   },
+  handleInput: { writingDirection: 'ltr' },
   bioInput: { minHeight: 104, textAlignVertical: 'top' },
   bioCount: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink3, textAlign: 'left' },
   saveError: {

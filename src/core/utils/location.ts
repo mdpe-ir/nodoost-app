@@ -65,3 +65,17 @@ export async function resolveLocation(interactive = false): Promise<LocationResu
     return { ok: false, reason: 'unavailable' };
   }
 }
+
+/**
+ * نمایشِ برچسب‌های مکانی (شهر/استان) که توسطِ سرور ارسال شده‌اند.
+ * کاملاً نمایشی و بدونِ هیچ‌گونه درخواستِ شبکه یا فراخوانیِ ژئوکدینگ.
+ */
+export function formatLocation(city?: string, province?: string): string {
+  const c = city?.trim();
+  const p = province?.trim();
+  if (c && p) {
+    return c === p ? c : `${c}، ${p}`;
+  }
+  return c || p || '';
+}
+

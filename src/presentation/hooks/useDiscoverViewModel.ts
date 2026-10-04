@@ -7,7 +7,7 @@ import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
 import { recordInstallNagAction } from '@/core/installNag';
 import { recordReviewMoment } from '@/core/reviewMoments';
-import type { Candidate, GenderFilter, MatchResult } from '@/domain/entities';
+import type { Candidate, GenderFilter, MatchResult, AgeRange } from '@/domain/entities';
 
 /**
  * ویومدلِ کاوش. کارت‌ها بلافاصله بارگذاری می‌شوند و موقعیت در پس‌زمینه ست
@@ -40,13 +40,18 @@ export function useDiscoverViewModel() {
   const { consume: consumeQuota, refresh: refreshQuota } = useQuota();
   const [genderFilter, setGenderFilterState] = useState<GenderFilter | null>(null);
   const genderFilterRef = useRef<GenderFilter | null>(null);
+  const [ageFilter, setAgeFilterState] = useState<AgeRange | null>(null);
+  const ageFilterRef = useRef<AgeRange | null>(null);
 
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
       setError(null);
       try {
-        const list = await uc.discovery.getCandidates(genderFilterRef.current ?? undefined);
+        const list = await uc.discovery.getCandidates(
+          genderFilterRef.current ?? undefined,
+          ageFilterRef.current ?? undefined,
+        );
         setCards(list);
         setIndex(0);
       } catch (e) {
@@ -169,6 +174,15 @@ export function useDiscoverViewModel() {
     [load],
   );
 
+  const setAgeFilter = useCallback(
+    (a: AgeRange | null) => {
+      ageFilterRef.current = a;
+      setAgeFilterState(a);
+      load(true);
+    },
+    [load],
+  );
+
   return {
     current,
     /**
@@ -192,6 +206,8 @@ export function useDiscoverViewModel() {
     reload: () => load(),
     genderFilter,
     setGenderFilter,
+    ageFilter,
+    setAgeFilter,
     // بستنِ پنجره‌ی مَچ، نه ساختنش: پنجره‌ی درخواستِ نظر نباید روی خودِ
     // جشنِ مَچ بیفتد.
     dismissMatch: () => {

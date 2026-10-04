@@ -1,8 +1,8 @@
 import type { AuthRepository } from '@/domain/repositories/AuthRepository';
 import type { AuthResult } from '@/domain/entities';
 import type { HttpClient } from '@/core/http/HttpClient';
-import type { AuthDTO } from '@/data/dto';
-import { toAuthResult } from '@/data/mappers';
+import type { AuthDTO, AuthSessionDTO } from '@/data/dto';
+import { toAuthResult, toAuthSession } from '@/data/mappers';
 
 export class AuthRepositoryImpl implements AuthRepository {
   constructor(private readonly http: HttpClient) {}
@@ -26,6 +26,19 @@ export class AuthRepositoryImpl implements AuthRepository {
   }
 
   logout(accountId: string): Promise<void> {
-    return this.http.revokeSession(accountId);
+    return this.http.logoutSession(accountId);
+  }
+
+  async listSessions() {
+    const response = await this.http.request<{ sessions: AuthSessionDTO[] | null }>(
+      '/api/me/sessions'
+    );
+    return (response.sessions ?? []).map(toAuthSession);
+  }
+
+  async revokeSession(sid: string): Promise<void> {
+    await this.http.request(`/api/me/sessions/${encodeURIComponent(sid)}`, {
+      method: 'DELETE',
+    });
   }
 }

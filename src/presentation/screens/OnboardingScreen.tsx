@@ -17,6 +17,8 @@ import { normalizeInviteCode } from '@/presentation/hooks/useInviteViewModel';
 import { useCases } from '@/core/di/DIProvider';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
 import { enNum, faNum } from '@/core/utils/faNum';
+import { ageFromBirthdate, JALALI_MONTHS, jalaliToIso } from '@/core/utils/jalali';
+import { CURRENT_JALALI_YEAR, JalaliDatePicker } from '@/presentation/components/JalaliDatePicker';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
 import type { Gender } from '@/domain/entities';
 
@@ -43,7 +45,7 @@ export function OnboardingScreen() {
   const [step, setStep] = useState(() => {
     if (vm.name.trim().length < 2) return 0;
     if (!vm.gender) return 1;
-    if (!vm.age) return 2;
+    if (!vm.birthdate) return 2;
     if (!vm.hasPhoto) return 5; // درباره‌ات (۳) و علاقه‌مندی‌ها (۴) اختیاری‌اند
     return 0;
   });
@@ -62,9 +64,10 @@ export function OnboardingScreen() {
       return;
     }
     if (step === 2) {
-      const a = Number(vm.age);
-      if (!Number.isFinite(a) || a < 18 || a > 99) {
-        setLocal('سنت را درست وارد کن (۱۸ تا ۹۹)');
+      const iso = jalaliToIso(vm.jalaliDate);
+      const age = ageFromBirthdate(iso);
+      if (!iso || age == null || age < 18 || age > 99) {
+        setLocal('تاریخ تولد را درست وارد کن (۱۸ تا ۹۹ سال)');
         return;
       }
     }
@@ -91,7 +94,7 @@ export function OnboardingScreen() {
   const titles = [
     'اسمت چیه؟',
     'خودت رو معرفی کن',
-    'چند سالته؟',
+    'تاریخ تولدت چیه؟',
     'یک جمله درباره‌ات',
     'به چه چیزهایی علاقه داری؟',
     'یک عکس اضافه کن',
@@ -100,7 +103,7 @@ export function OnboardingScreen() {
   const subs = [
     'این نامی است که دیگران می‌بینند.',
     'برای نمایشِ بهترِ پروفایلت لازم است.',
-    'سن برای نمایش و پیشنهادِ افرادِ هم‌سن لازم است.',
+    'تاریخ تولد شمسی را وارد کن؛ سن دقیق برای نمایش و پیشنهادِ هم‌سن‌ها محاسبه می‌شود.',
     'اختیاری — اما کمک می‌کند بهتر دیده شوی.',
     'اختیاری — اما با انتخابش افرادِ هم‌سلیقه‌ات را خیلی بهتر پیدا می‌کنیم.',
     'برای استفاده از اپ حداقل یک عکس معتبر لازم است؛ عکس تازه بلافاصله فعال می‌شود.',
@@ -159,17 +162,29 @@ export function OnboardingScreen() {
           ) : null}
 
           {step === 2 ? (
-            <TextInput
-              style={styles.input}
-              value={vm.age}
-              onChangeText={(t) => vm.setAge(enNum(t).replace(/[^0-9]/g, '').slice(0, 2))}
-              placeholder="مثلاً ۲۶"
-              placeholderTextColor={colors.ink3}
-              keyboardType="number-pad"
-              textAlign="right"
-              autoFocus
-              maxLength={2}
-            />
+            <View style={styles.birthdateContainer}>
+              <View style={styles.pickerWrapper}>
+                <JalaliDatePicker
+                  value={vm.jalaliDate}
+                  onChange={vm.setJalaliDate}
+                  minYear={CURRENT_JALALI_YEAR - 99}
+                  maxYear={CURRENT_JALALI_YEAR - 18}
+                />
+              </View>
+              <View style={styles.birthdateSummary}>
+                <Text style={styles.birthdateConfirmedText}>
+                  {`${faNum(vm.jalaliDate.day)} ${JALALI_MONTHS[vm.jalaliDate.month - 1]} ${faNum(vm.jalaliDate.year)}`}
+                </Text>
+                {(() => {
+                  const age = ageFromBirthdate(jalaliToIso(vm.jalaliDate));
+                  return age != null ? (
+                    <Text style={styles.birthdateAgeText}>
+                      ({faNum(age)} ساله)
+                    </Text>
+                  ) : null;
+                })()}
+              </View>
+            </View>
           ) : null}
 
           {step === 3 ? (
@@ -318,6 +333,35 @@ const styles = StyleSheet.create({
     fontSize: 17,
     // جهتِ نوشتار rtl تا placeholder و متنِ فارسی درست چیده شوند
     writingDirection: 'rtl',
+  },
+  birthdateContainer: {
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  pickerWrapper: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  birthdateSummary: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  birthdateConfirmedText: {
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.md,
+    color: colors.gold2,
+  },
+  birthdateAgeText: {
+    fontFamily: fonts.medium,
+    fontSize: fontSizes.sm,
+    color: colors.ink2,
   },
   bio: { minHeight: 120, textAlignVertical: 'top' },
   interestsScroll: { flexGrow: 0, maxHeight: 380 },

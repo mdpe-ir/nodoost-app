@@ -20,6 +20,11 @@ export interface User {
   name?: string;
   bio?: string;
   birthdate?: string;
+  /** Public handle without @; availability is validated by the server. */
+  username?: string;
+  /** Server-provided, privacy-safe place labels. Never client geocoded. */
+  city?: string;
+  province?: string;
   gender?: Gender;
   tier: number;
   status: AccountStatus;
@@ -65,6 +70,7 @@ export interface ProfileDraft {
   bio?: string;
   gender?: Gender;
   birthdate?: string;
+  username?: string;
   interests?: string[];
   prefs?: Partial<UserPreferences>;
 }

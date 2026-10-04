@@ -7,9 +7,10 @@ import { BottomSheet } from './BottomSheet';
 import { TierLockModal } from './TierLockModal';
 import { tierName } from './TierBadge';
 import { EXPLORE_GENDER_OPTIONS } from './GenderFilterRow';
+import { AGE_RANGE_OPTIONS, isSameAgeRange, formatAgeRangeLabel } from '@/core/config/ageFilter';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
-import type { ActiveFilter, GenderFilter } from '@/domain/entities';
+import type { ActiveFilter, GenderFilter, AgeRange } from '@/domain/entities';
 
 /** فیلترِ فعالیت + کمینه‌سطحِ لازم (سرور هم دوباره می‌سنجد). */
 const ACTIVE_OPTIONS: { key: ActiveFilter; label: string; minTier: number }[] = [
@@ -34,10 +35,14 @@ interface Props {
   maxRadiusKm: number;
   onRadiusChange: (km: number | null) => void;
   myTier: number;
+  ageFilter?: AgeRange | null;
+  onAgeChange?: (a: AgeRange | null) => void;
+  canFilterAge?: boolean;
+  ageMinTier?: number;
 }
 
 /**
- * فیلترهای نقشه — نوارِ فشرده + برگه‌ی پایینی (فعالیت، جنسیت، شعاع).
+ * فیلترهای نقشه — نوارِ فشرده + برگه‌ی پایینی (فعالیت، جنسیت، سن، شعاع).
  */
 export function MapFilterPanel({
   active,
@@ -50,12 +55,17 @@ export function MapFilterPanel({
   maxRadiusKm,
   onRadiusChange,
   myTier,
+  ageFilter,
+  onAgeChange,
+  canFilterAge,
+  ageMinTier,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [lock, setLock] = useState<LockState | null>(null);
 
   const activeLabel = ACTIVE_OPTIONS.find((o) => o.key === active)?.label;
   const genderLabel = EXPLORE_GENDER_OPTIONS.find((o) => o.key === genderFilter)?.label;
+  const ageLabel = formatAgeRangeLabel(ageFilter);
   const selectedRadiusKm = radiusKm ?? maxRadiusKm;
 
   const radiusOptions = useMemo(() => {
@@ -82,6 +92,13 @@ export function MapFilterPanel({
         onClear: () => onGenderChange(''),
       });
     }
+    if (ageLabel && onAgeChange) {
+      items.push({
+        key: 'age',
+        label: ageLabel,
+        onClear: () => onAgeChange(null),
+      });
+    }
     if (radiusKm != null && maxRadiusKm > 0) {
       items.push({
         key: 'radius',
@@ -95,16 +112,19 @@ export function MapFilterPanel({
     activeLabel,
     genderFilter,
     genderLabel,
+    ageLabel,
     radiusKm,
     maxRadiusKm,
     onActiveChange,
     onGenderChange,
+    onAgeChange,
     onRadiusChange,
   ]);
 
   const clearAll = () => {
     if (active !== '') onActiveChange('');
     if (genderFilter !== '') onGenderChange('');
+    if (ageFilter != null && onAgeChange) onAgeChange(null);
     if (radiusKm != null) onRadiusChange(null);
   };
 
@@ -218,6 +238,39 @@ export function MapFilterPanel({
             );
           })}
         </FilterSection>
+
+        {onAgeChange ? (
+          <FilterSection title="بازه‌ی سن">
+            {AGE_RANGE_OPTIONS.map((o) => {
+              const isAll = o.key === 'all';
+              const locked = !canFilterAge && !isAll;
+              const active = isAll
+                ? !ageFilter || (ageFilter.min == null && ageFilter.max == null)
+                : isSameAgeRange(ageFilter, o.range);
+
+              return (
+                <Chip
+                  key={o.key}
+                  label={locked ? `${o.label} · قفل` : o.label}
+                  active={active}
+                  onPress={() => {
+                    if (locked) {
+                      setLock({
+                        tier: ageMinTier ?? 2,
+                        title: 'فیلترِ سن قفل است',
+                        message: `فیلترِ بازه‌ی سن از سطحِ ${tierName(ageMinTier ?? 2)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
+                        feature: 'فیلترِ سن',
+                      });
+                    } else {
+                      onAgeChange(isAll ? null : (active ? null : (o.range ?? null)));
+                    }
+                  }}
+                  style={locked ? { ...styles.sheetChip, ...styles.sheetChipLocked } : styles.sheetChip}
+                />
+              );
+            })}
+          </FilterSection>
+        ) : null}
 
         {radiusOptions.length > 0 ? (
           <FilterSection title="شعاعِ جست‌وجو">

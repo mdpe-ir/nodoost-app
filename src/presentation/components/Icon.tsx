@@ -14,6 +14,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
  */
 export type IconName =
   | 'bell'
+  | 'calendar'
   | 'check'
   | 'chevron-next'
   | 'chevron-prev'
@@ -65,6 +66,7 @@ export type IconTint = 'gold' | 'white' | 'ink' | 'ink2' | 'muted' | 'onGold';
 
 /** نام‌هایی که دارایی PNG ندارند و از Ionicons می‌آیند. */
 const VECTOR = {
+  calendar: 'calendar-outline',
   headset: 'headset-outline',
   happy: 'happy-outline',
   keypad: 'keypad-outline',

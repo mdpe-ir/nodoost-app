@@ -41,8 +41,11 @@ export type ActiveFilter = '' | 'online' | '1h' | 'today';
 export type GenderFilter = '' | 'f' | 'm' | 'all';
 
 /** پارامترهای پرس‌وجوی نقشه — شعاع (متر) و فیلترهای عضویتی. */
+export interface AgeRange { min?: number; max?: number; }
+
 export interface MapQuery {
   radiusM?: number;
+  age?: AgeRange;
   active?: ActiveFilter;
   /** فیلترِ جنسیت: f/m؛ خالی = بدون قید. */
   gender?: GenderFilter;
@@ -102,6 +105,12 @@ export interface PeerProfile {
   id: number;
   name?: string;
   age?: number;
+  username?: string;
+  birthdayDay?: number;
+  birthdayMonth?: number;
+  birthdayMonthDay?: string;
+  city?: string;
+  province?: string;
   gender?: string;
   bio?: string;
   verified?: boolean;

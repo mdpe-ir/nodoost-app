@@ -28,6 +28,7 @@ import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum, faDistance } from '@/core/utils/faNum';
 import { useExploreViewModel } from '@/presentation/hooks/useExploreViewModel';
 import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
+import { useAgeFilterGate } from '@/presentation/hooks/useAgeFilterGate';
 import { useSession } from '@/presentation/providers/SessionProvider';
 import type { Candidate } from '@/domain/entities';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow } from '@/core/theme';
@@ -58,6 +59,7 @@ export function ExploreView() {
   const myTier = user?.tier ?? 1;
   const canFilterTier = myTier >= 2;
   const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
+  const { open: canFilterAge, requiredTier: ageMinTier } = useAgeFilterGate();
 
   const renderItem = ({ item }: { item: Candidate }) => (
     <Animated.View entering={FadeIn.duration(220)}>
@@ -121,6 +123,10 @@ export function ExploreView() {
         onTierChange={vm.setTier}
         myTier={myTier}
         canFilterTier={canFilterTier}
+        ageFilter={vm.ageFilter}
+        onAgeChange={vm.setAge}
+        canFilterAge={canFilterAge}
+        ageMinTier={ageMinTier}
       />
 
       {vm.loading ? (

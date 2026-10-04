@@ -84,6 +84,12 @@ export function SettingsScreen() {
             onPress={openSwitch}
           />
           <SettingsLink
+            icon="phone"
+            title="دستگاه‌های متصل"
+            hint="نشست‌های فعال را ببین و دسترسی دستگاه‌های دیگر را ببند"
+            onPress={() => router.push('/sessions' as Href)}
+          />
+          <SettingsLink
             icon="lock"
             title="قفلِ برنامه"
             hint={appLockHint}

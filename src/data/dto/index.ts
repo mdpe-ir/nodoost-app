@@ -14,6 +14,9 @@ export interface UserDTO {
   name?: string;
   bio?: string;
   birthdate?: string;
+  username?: string;
+  city?: string | null;
+  province?: string | null;
   gender?: string;
   tier: number;
   status: 'active' | 'banned' | 'pending_review';
@@ -80,6 +83,12 @@ export interface PeerProfileDTO {
   id: number;
   name?: string | null;
   age?: number | null;
+  username?: string | null;
+  birthday_day?: number | null;
+  birthday_month?: number | null;
+  birthday_month_day?: string | null;
+  city?: string | null;
+  province?: string | null;
   gender?: string | null;
   bio?: string | null;
   verified?: boolean;
@@ -362,6 +371,14 @@ export interface AuthDTO {
   user_id?: number;
   session_id?: string;
   profile_complete?: boolean;
+}
+
+export interface AuthSessionDTO {
+  sid: string;
+  platform: string;
+  device_label: string;
+  created_at: string;
+  last_seen_at: string;
 }
 
 export interface MatchDTO {

@@ -36,6 +36,8 @@ import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum } from '@/core/utils/faNum';
 import { faJalali, daysUntil } from '@/core/utils/time';
+import { ageFromBirthdate } from '@/core/utils/jalali';
+import { formatLocation } from '@/core/utils/location';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradients } from '@/core/theme';
 
 /**
@@ -200,6 +202,9 @@ export function ProfileScreen() {
   }
 
   const user = vm.user;
+  const age = ageFromBirthdate(user?.birthdate);
+  const birthday = user?.birthdate ? faJalali(user.birthdate, false) : '';
+  const location = formatLocation(user?.city, user?.province);
   const primary = vm.photos.find((p) => p.isPrimary) ?? vm.photos[0];
   const heroUri = mediaUrl(primary?.url);
   const userTier = user?.tier ?? 1;
@@ -263,6 +268,12 @@ export function ProfileScreen() {
               {user?.verified ? <Icon name="shield-check" size={16} tint="gold" /> : null}
             </View>
             <RankBadge rank={user?.points?.rank} height={20} onPress={() => setRankSheet(true)} />
+            {user?.username ? <Text style={styles.username}>@{user.username}</Text> : null}
+            {user?.city || user?.province ? (
+              <Text style={styles.location} numberOfLines={1}>
+                {[user.province, user.city].filter(Boolean).join('، ')}
+              </Text>
+            ) : null}
             <Text style={styles.bio} numberOfLines={2}>
               {user?.bio?.trim() || 'هنوز چیزی درباره‌ی خودت ننوشته‌ای.'}
             </Text>
@@ -513,6 +524,8 @@ const styles = StyleSheet.create({
     color: colors.ink,
     writingDirection: 'rtl',
   },
+  username: { fontFamily: fonts.medium, fontSize: fontSizes.sm, color: colors.gold2, writingDirection: 'ltr' },
+  location: { fontFamily: fonts.regular, fontSize: fontSizes.xs, color: colors.ink2, writingDirection: 'rtl' },
   bio: {
     fontFamily: fonts.regular,
     fontSize: fontSizes.sm,

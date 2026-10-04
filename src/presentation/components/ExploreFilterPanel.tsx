@@ -7,9 +7,10 @@ import { BottomSheet } from './BottomSheet';
 import { TierLockModal } from './TierLockModal';
 import { tierName } from './TierBadge';
 import { EXPLORE_GENDER_OPTIONS } from './GenderFilterRow';
+import { AGE_RANGE_OPTIONS, isSameAgeRange, formatAgeRangeLabel } from '@/core/config/ageFilter';
 import { faNum } from '@/core/utils/faNum';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';
-import type { ActiveFilter, GenderFilter } from '@/domain/entities';
+import type { ActiveFilter, GenderFilter, AgeRange } from '@/domain/entities';
 
 /** گزینه‌های فیلترِ فعالیت + کمینه‌سطحِ لازم (سرور هم دوباره می‌سنجد). */
 const ACTIVE_OPTIONS: { key: ActiveFilter; label: string; minTier: number }[] = [
@@ -32,6 +33,10 @@ interface Props {
   onTierChange: (t: number) => void;
   myTier: number;
   canFilterTier: boolean;
+  ageFilter?: AgeRange | null;
+  onAgeChange?: (a: AgeRange | null) => void;
+  canFilterAge?: boolean;
+  ageMinTier?: number;
 }
 
 /**
@@ -50,6 +55,10 @@ export function ExploreFilterPanel({
   onTierChange,
   myTier,
   canFilterTier,
+  ageFilter,
+  onAgeChange,
+  canFilterAge,
+  ageMinTier,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [lock, setLock] = useState<LockState | null>(null);
@@ -57,6 +66,7 @@ export function ExploreFilterPanel({
   const genderLabel = EXPLORE_GENDER_OPTIONS.find((o) => o.key === genderFilter)?.label;
   const activeLabel = ACTIVE_OPTIONS.find((o) => o.key === activeFilter)?.label;
   const tierLabel = tierFilter > 0 ? tierName(tierFilter) : null;
+  const ageLabel = formatAgeRangeLabel(ageFilter);
 
   const activeSummaries = useMemo(() => {
     const items: { key: string; label: string; onClear: () => void }[] = [];
@@ -81,6 +91,13 @@ export function ExploreFilterPanel({
         onClear: () => onTierChange(0),
       });
     }
+    if (ageLabel && onAgeChange) {
+      items.push({
+        key: 'age',
+        label: ageLabel,
+        onClear: () => onAgeChange(null),
+      });
+    }
     return items;
   }, [
     genderFilter,
@@ -89,15 +106,18 @@ export function ExploreFilterPanel({
     activeLabel,
     tierFilter,
     tierLabel,
+    ageLabel,
     onGenderChange,
     onActiveChange,
     onTierChange,
+    onAgeChange,
   ]);
 
   const clearAll = () => {
     if (genderFilter !== '') onGenderChange('');
     if (activeFilter !== '') onActiveChange('');
     if (tierFilter > 0) onTierChange(0);
+    if (ageFilter != null && onAgeChange) onAgeChange(null);
   };
 
   const showGenderLock = () =>
@@ -210,6 +230,39 @@ export function ExploreFilterPanel({
             );
           })}
         </FilterSection>
+
+        {onAgeChange ? (
+          <FilterSection title="بازه‌ی سن">
+            {AGE_RANGE_OPTIONS.map((o) => {
+              const isAll = o.key === 'all';
+              const locked = !canFilterAge && !isAll;
+              const active = isAll
+                ? !ageFilter || (ageFilter.min == null && ageFilter.max == null)
+                : isSameAgeRange(ageFilter, o.range);
+
+              return (
+                <Chip
+                  key={o.key}
+                  label={locked ? `${o.label} · قفل` : o.label}
+                  active={active}
+                  onPress={() => {
+                    if (locked) {
+                      setLock({
+                        tier: ageMinTier ?? 2,
+                        title: 'فیلترِ سن قفل است',
+                        message: `فیلترِ بازه‌ی سن از سطحِ ${tierName(ageMinTier ?? 2)} باز می‌شود. برای استفاده، حسابت را ارتقا بده.`,
+                        feature: 'فیلترِ سن',
+                      });
+                    } else {
+                      onAgeChange(isAll ? null : (active ? null : (o.range ?? null)));
+                    }
+                  }}
+                  style={locked ? { ...styles.sheetChip, ...styles.sheetChipLocked } : styles.sheetChip}
+                />
+              );
+            })}
+          </FilterSection>
+        ) : null}
 
         <FilterSection title="سطحِ کاربران">
           <Chip

@@ -10,6 +10,7 @@ import { Button } from '@/presentation/components/Button';
 import { IconButton } from '@/presentation/components/IconButton';
 import { MapFilterPanel } from '@/presentation/components/MapFilterPanel';
 import { useGenderFilterGate } from '@/presentation/hooks/useGenderFilterGate';
+import { useAgeFilterGate } from '@/presentation/hooks/useAgeFilterGate';
 import { LeafletWebView, type LeafletEvent } from '@/presentation/components/LeafletWebView';
 import { TierBadge } from '@/presentation/components/TierBadge';
 import { useCases } from '@/core/di/DIProvider';
@@ -163,6 +164,7 @@ export function MapView() {
   // سطحِ مؤثرِ کاربر برای قفل/بازِ فیلترها (سرور دوباره می‌سنجد).
   const myTier = user?.tier ?? 1;
   const { open: canFilterGender, requiredTier: genderMinTier } = useGenderFilterGate();
+  const { open: canFilterAge, requiredTier: ageMinTier } = useAgeFilterGate();
   // شعاعِ اعمال‌شده (متر) برای رسمِ دایره — انتخابی، وگرنه سقفِ سطح.
   const radiusM = ((vm.radiusKm ?? vm.maxRadiusKm) || 0) * 1000;
 
@@ -238,6 +240,10 @@ export function MapView() {
         maxRadiusKm={vm.maxRadiusKm}
         onRadiusChange={vm.setRadiusKm}
         myTier={myTier}
+        ageFilter={vm.ageFilter}
+        onAgeChange={vm.setAge}
+        canFilterAge={canFilterAge}
+        ageMinTier={ageMinTier}
       />
 
       <View style={styles.mapArea}>

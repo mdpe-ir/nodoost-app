@@ -4,21 +4,15 @@ import { useSession } from '@/presentation/providers/SessionProvider';
 import { useCases } from '@/core/di/DIProvider';
 import { photoErrorMessage } from '@/core/media/photoErrors';
 import type { Gender } from '@/domain/entities';
-
-/** سن را به تاریخِ تولدِ تقریبی (میلادی) تبدیل می‌کند — کاوش به birthdate نیاز دارد. */
-function ageToBirthdate(age: number): string {
-  const year = new Date().getFullYear() - age;
-  return `${year}-06-15`;
-}
-
-/** از تاریخِ تولدِ ذخیره‌شده سنِ تقریبی را درمی‌آورد (برای پیش‌پرکردنِ فرم). */
-function birthdateToAge(bd?: string): string {
-  if (!bd) return '';
-  const y = Number(bd.slice(0, 4));
-  if (!Number.isFinite(y)) return '';
-  const a = new Date().getFullYear() - y;
-  return a >= 18 && a <= 99 ? String(a) : '';
-}
+import {
+  ageFromBirthdate,
+  formatJalali,
+  isoToJalali,
+  type JalaliDate,
+  jalaliToIso,
+  parseJalaliInput,
+} from '@/core/utils/jalali';
+import { DEFAULT_JALALI_BIRTHDATE } from '@/presentation/components/JalaliDatePicker';
 
 /**
  * ویومدلِ تکمیلِ پروفایل (نام، جنسیت، سن، درباره، علاقه‌مندی‌ها + عکسِ اجباری).
@@ -29,7 +23,24 @@ export function useOnboarding() {
   const { user, refreshUser } = useSession();
   const [name, setName] = useState(user?.name ?? '');
   const [gender, setGender] = useState<Gender | null>(user?.gender ?? null);
-  const [age, setAge] = useState(birthdateToAge(user?.birthdate));
+
+  const initialJalali = isoToJalali(user?.birthdate) ?? DEFAULT_JALALI_BIRTHDATE;
+  const [jalaliDate, setJalaliDateState] = useState<JalaliDate>(initialJalali);
+  const [birthdate, setBirthdateState] = useState(formatJalali(initialJalali));
+
+  const setJalaliDate = useCallback((date: JalaliDate) => {
+    setJalaliDateState(date);
+    setBirthdateState(formatJalali(date));
+  }, []);
+
+  const setBirthdate = useCallback((str: string) => {
+    setBirthdateState(str);
+    const parsed = parseJalaliInput(str);
+    if (parsed) {
+      setJalaliDateState(parsed);
+    }
+  }, []);
+
   const [bio, setBio] = useState(user?.bio ?? '');
   const [interests, setInterests] = useState<string[]>(user?.interests ?? []);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -66,9 +77,10 @@ export function useOnboarding() {
       setError('جنسیت را انتخاب کن');
       return;
     }
-    const ageNum = Number(age);
-    if (!Number.isFinite(ageNum) || ageNum < 18 || ageNum > 99) {
-      setError('سنت را درست وارد کن (۱۸ تا ۹۹)');
+    const isoBirthdate = jalaliToIso(jalaliDate);
+    const age = ageFromBirthdate(isoBirthdate);
+    if (!isoBirthdate || age == null || age < 18 || age > 99) {
+      setError('تاریخ تولد را درست وارد کن (۱۸ تا ۹۹ سال)');
       return;
     }
     if (!hasPhoto) {
@@ -82,7 +94,7 @@ export function useOnboarding() {
         name: name.trim(),
         gender,
         bio: bio.trim(),
-        birthdate: ageToBirthdate(ageNum),
+        birthdate: isoBirthdate,
         interests,
       });
       if (photoUri) await uc.profile.addPhoto(photoUri);
@@ -103,15 +115,17 @@ export function useOnboarding() {
     }
     setLoading(false);
     router.replace('/discover');
-  }, [name, gender, age, bio, interests, photoUri, hasPhoto, uc, refreshUser]);
+  }, [name, gender, jalaliDate, bio, interests, photoUri, hasPhoto, uc, refreshUser]);
 
   return {
     name,
     setName,
     gender,
     setGender,
-    age,
-    setAge,
+    birthdate,
+    setBirthdate,
+    jalaliDate,
+    setJalaliDate,
     bio,
     setBio,
     interests,

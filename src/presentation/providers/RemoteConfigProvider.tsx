@@ -37,6 +37,11 @@ import {
   type GenderFilterGate,
 } from '@/core/config/genderFilter';
 import {
+  emptyAgeFilter,
+  parseAgeFilter,
+  type AgeFilterGate,
+} from '@/core/config/ageFilter';
+import {
   defaultAccountsConfig,
   parseAccountsConfig,
   type AccountsConfig,
@@ -67,6 +72,8 @@ interface RemoteConfigValue {
   chat: ChatConfig;
   /** دروازهی فیلترِ جنسیت در کاوش و چهره‌نما. */
   genderFilter: GenderFilterGate;
+  /** دروازه‌ی فیلترِ سن در کاوش و نقشه. */
+  ageFilter: AgeFilterGate;
   /** سقفِ تعدادِ اکانت روی یک دستگاه — برگه‌ی سوییچ و صفحه‌ی «حسابها». */
   accounts: AccountsConfig;
   /** دروازه‌ی قفلِ برنامه (عددی/الگو). */
@@ -83,6 +90,7 @@ const RemoteConfigContext = createContext<RemoteConfigValue>({
   missions: emptyMissionsConfig,
   chat: emptyChatConfig(),
   genderFilter: emptyGenderFilter(),
+  ageFilter: emptyAgeFilter(),
   accounts: defaultAccountsConfig(),
   appLock: defaultAppLockConfig(),
   loaded: false,
@@ -99,6 +107,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
   const [missions, setMissions] = useState<MissionsConfig>(emptyMissionsConfig);
   const [chat, setChat] = useState<ChatConfig>(emptyChatConfig());
   const [genderFilter, setGenderFilter] = useState<GenderFilterGate>(emptyGenderFilter());
+  const [ageFilter, setAgeFilter] = useState<AgeFilterGate>(emptyAgeFilter());
   const [accounts, setAccounts] = useState<AccountsConfig>(defaultAccountsConfig());
   const [appLock, setAppLock] = useState<AppLockConfig>(defaultAppLockConfig());
   const [loaded, setLoaded] = useState(false);
@@ -117,6 +126,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
           missions?: unknown;
           chat?: unknown;
           gender_filter?: unknown;
+          age_filter?: unknown;
           accounts?: unknown;
           app_lock?: unknown;
         };
@@ -128,6 +138,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
         setMissions(parseMissionsConfig(cfg.missions));
         setChat(parseChatConfig(cfg.chat));
         setGenderFilter(parseGenderFilter(cfg.gender_filter));
+        setAgeFilter(parseAgeFilter(cfg.age_filter));
         setAccounts(parseAccountsConfig(cfg.accounts));
         setAppLock(parseAppLockConfig(cfg.app_lock));
         // فیلدهای نسخه در ریشه‌ی پاسخ‌اند (نه زیرِ install)، پس کلِ cfg را می‌دهیم.
@@ -145,7 +156,7 @@ export function RemoteConfigProvider({ children }: { children: React.ReactNode }
 
   return (
     <RemoteConfigContext.Provider
-      value={{ install, interests, version, rules, review, missions, chat, genderFilter, accounts, appLock, loaded }}
+      value={{ install, interests, version, rules, review, missions, chat, genderFilter, ageFilter, accounts, appLock, loaded }}
     >
       {children}
     </RemoteConfigContext.Provider>

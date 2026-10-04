@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCases } from '@/core/di/DIProvider';
 import { ApiError } from '@/core/http/ApiError';
 import { resolveLocation } from '@/core/utils/location';
-import type { MapUser, ActiveFilter, GenderFilter } from '@/domain/entities';
+import type { MapUser, ActiveFilter, GenderFilter, AgeRange } from '@/domain/entities';
 
 export interface MyLocation {
   lat: number;
@@ -34,6 +34,8 @@ export function useMapViewModel() {
   const [active, setActive] = useState<ActiveFilter>('');
   const [genderFilter, setGenderFilterState] = useState<GenderFilter>('');
   const genderFilterRef = useRef<GenderFilter>('');
+  const [ageFilter, setAgeFilterState] = useState<AgeRange | null>(null);
+  const ageFilterRef = useRef<AgeRange | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -41,6 +43,7 @@ export function useMapViewModel() {
         radiusM: radiusKm != null ? radiusKm * 1000 : undefined,
         active: active || undefined,
         gender: genderFilterRef.current || undefined,
+        age: ageFilterRef.current ?? undefined,
       });
       setUsers(res.users);
       if (res.maxRadiusKm > 0) setMaxRadiusKm(res.maxRadiusKm);
@@ -55,6 +58,14 @@ export function useMapViewModel() {
     (g: GenderFilter) => {
       genderFilterRef.current = g;
       setGenderFilterState(g);
+    },
+    [],
+  );
+
+  const setAge = useCallback(
+    (a: AgeRange | null) => {
+      ageFilterRef.current = a;
+      setAgeFilterState(a);
     },
     [],
   );
@@ -124,7 +135,7 @@ export function useMapViewModel() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radiusKm, active, genderFilter]);
+  }, [radiusKm, active, genderFilter, ageFilter]);
 
   return {
     me,
@@ -138,8 +149,10 @@ export function useMapViewModel() {
     maxRadiusKm,
     active,
     genderFilter,
+    ageFilter,
     setRadiusKm,
     setActive,
     setGender,
+    setAge,
   };
 }

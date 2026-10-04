@@ -1,13 +1,14 @@
-import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, GenderFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
+import type { Candidate, MapQuery, MapUsersResult, ActiveFilter, AgeRange, GenderFilter, PeerProfile, SwipeAction, MatchResult } from '@/domain/entities';
 
 export interface DiscoveryRepository {
-  getCandidates(gender?: GenderFilter): Promise<Candidate[]>;
+  getCandidates(gender?: GenderFilter, age?: AgeRange): Promise<Candidate[]>;
   getExplore(
     page?: number,
     limit?: number,
     tier?: number,
     active?: ActiveFilter,
     gender?: GenderFilter,
+    age?: AgeRange,
   ): Promise<Candidate[]>;
   getNearbyMapUsers(query?: MapQuery): Promise<MapUsersResult>;
   swipe(targetId: number, action: SwipeAction): Promise<MatchResult>;
