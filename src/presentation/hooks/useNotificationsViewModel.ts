@@ -70,7 +70,9 @@ export function useNotificationsViewModel() {
   }, [uc, loadingMore, hasMore]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   // با بازشدنِ صفحه همه «دیده» می‌شوند — نشانِ زنگوله فوراً صفر می‌شود.

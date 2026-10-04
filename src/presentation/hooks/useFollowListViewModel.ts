@@ -69,9 +69,11 @@ export function useFollowListViewModel(userId: number | undefined, initialTab: F
 
   // اولین ورود به هر تب، آن تب را بارگذاری می‌کند.
   useEffect(() => {
-    const state = tab === 'followers' ? followers : following;
-    if (!state.loaded) load(tab);
-    else setLoading(false);
+    void (async () => {
+      const state = tab === 'followers' ? followers : following;
+      if (!state.loaded) await load(tab);
+      else setLoading(false);
+    })();
   }, [tab, followers, following, load]);
 
   const refresh = useCallback(async () => {

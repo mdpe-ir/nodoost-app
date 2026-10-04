@@ -43,7 +43,9 @@ export function useMissionDetailViewModel(missionId: number) {
   }, [uc, missionId]);
 
   useEffect(() => {
-    void load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const start = useCallback(async () => {

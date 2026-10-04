@@ -14,33 +14,34 @@ export function useChatMediaUri(
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!messageId) {
-      setUri(null);
-      setLoading(false);
-      setError(false);
-      return;
-    }
     let alive = true;
-    setLoading(true);
-    setError(false);
-    setUri(null);
-    onProgress?.(0);
-    uc.chat
-      .resolveMediaUri(matchId, messageId, kind, mime, (r) => {
-        if (alive) onProgress?.(r);
-      })
-      .then((u) => {
+    void (async () => {
+      if (!messageId) {
+        if (!alive) return;
+        setUri(null);
+        setLoading(false);
+        setError(false);
+        return;
+      }
+      if (!alive) return;
+      setLoading(true);
+      setError(false);
+      setUri(null);
+      onProgress?.(0);
+      try {
+        const u = await uc.chat.resolveMediaUri(matchId, messageId, kind, mime, (r) => {
+          if (alive) onProgress?.(r);
+        });
         if (alive) {
           setUri(u);
           onProgress?.(1);
         }
-      })
-      .catch(() => {
+      } catch {
         if (alive) setError(true);
-      })
-      .finally(() => {
+      } finally {
         if (alive) setLoading(false);
-      });
+      }
+    })();
     return () => {
       alive = false;
     };

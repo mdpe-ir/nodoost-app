@@ -13,7 +13,6 @@ import {
   ageFromBirthdate,
   type JalaliDate,
 } from '@/core/utils/jalali';
-import { DEFAULT_JALALI_BIRTHDATE } from '@/presentation/components/JalaliDatePicker';
 import { validateUsername } from '@/core/utils/username';
 
 /**
@@ -59,13 +58,15 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
   const [savingPref, setSavingPref] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraftName(user?.name ?? '');
-    setDraftBio(user?.bio ?? '');
-    setDraftUsername(user?.username ?? '');
-    const jDate = isoToJalali(user?.birthdate);
-    setDraftJalaliDate(jDate);
-    setDraftBirthdate(formatJalali(jDate));
-    setDraftInterests(user?.interests ?? []);
+    void (async () => {
+      setDraftName(user?.name ?? '');
+      setDraftBio(user?.bio ?? '');
+      setDraftUsername(user?.username ?? '');
+      const jDate = isoToJalali(user?.birthdate);
+      setDraftJalaliDate(jDate);
+      setDraftBirthdate(formatJalali(jDate));
+      setDraftInterests(user?.interests ?? []);
+    })();
     // فقط وقتی هویتِ کاربر عوض می‌شود مقداردهی کن، نه وسطِ تایپ.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -227,7 +228,9 @@ export function useProfileViewModel({ skipMedia = false }: { skipMedia?: boolean
   }, [uc, skipMedia]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   /*

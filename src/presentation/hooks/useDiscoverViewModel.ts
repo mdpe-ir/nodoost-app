@@ -83,8 +83,8 @@ export function useDiscoverViewModel() {
 
   useEffect(() => {
     let alive = true;
-    load();
-    (async () => {
+    void (async () => {
+      await load();
       // اگر موقعیتِ کاربر قبلاً ست نشده، در پس‌زمینه تلاش کن؛ در غیرِ این صورت نکته را نشان بده.
       let hasLocation = false;
       try {
@@ -93,7 +93,7 @@ export function useDiscoverViewModel() {
       } catch {}
       if (!alive || hasLocation) return;
       const ok = await captureLocation(false);
-      if (alive && ok) load(true);
+      if (alive && ok) void load(true);
     })();
     return () => {
       alive = false;

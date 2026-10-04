@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import React, { useCallback, useEffect } from 'react';
 import { Modal, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';

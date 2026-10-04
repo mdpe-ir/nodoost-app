@@ -36,8 +36,6 @@ import { useProfileViewModel } from '@/presentation/hooks/useProfileViewModel';
 import { mediaUrl } from '@/core/http/mediaUrl';
 import { faNum } from '@/core/utils/faNum';
 import { faJalali, daysUntil } from '@/core/utils/time';
-import { ageFromBirthdate } from '@/core/utils/jalali';
-import { formatLocation } from '@/core/utils/location';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius, shadow, gradients } from '@/core/theme';
 
 /**
@@ -202,9 +200,6 @@ export function ProfileScreen() {
   }
 
   const user = vm.user;
-  const age = ageFromBirthdate(user?.birthdate);
-  const birthday = user?.birthdate ? faJalali(user.birthdate, false) : '';
-  const location = formatLocation(user?.city, user?.province);
   const primary = vm.photos.find((p) => p.isPrimary) ?? vm.photos[0];
   const heroUri = mediaUrl(primary?.url);
   const userTier = user?.tier ?? 1;

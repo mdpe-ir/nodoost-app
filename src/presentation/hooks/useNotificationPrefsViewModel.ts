@@ -35,7 +35,9 @@ export function useNotificationPrefsViewModel() {
   }, [uc]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const update = useCallback(

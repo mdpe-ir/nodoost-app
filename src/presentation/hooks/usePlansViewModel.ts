@@ -50,7 +50,9 @@ export function usePlansViewModel() {
   }, [uc]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
 

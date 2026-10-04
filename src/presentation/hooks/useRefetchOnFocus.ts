@@ -12,7 +12,9 @@ import { useFocusEffect } from 'expo-router';
  */
 export function useRefetchOnFocus(reload: () => void) {
   const reloadRef = useRef(reload);
-  reloadRef.current = reload;
+  useEffect(() => {
+    reloadRef.current = reload;
+  }, [reload]);
 
   // آیا صفحه هم‌اکنون فوکوس دارد؟ برای اینکه فقط تبِ فعال با بازگشتِ اپ تازه شود.
   const focusedRef = useRef(false);

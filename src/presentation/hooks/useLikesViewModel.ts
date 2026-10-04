@@ -95,7 +95,9 @@ export function useLikesViewModel() {
   }, [uc, loadingMore, sentHasMore]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   return {

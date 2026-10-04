@@ -97,7 +97,9 @@ export function useMissionsViewModel() {
   }, [fetchAll]);
 
   useEffect(() => {
-    void load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const refresh = useCallback(async () => {

@@ -90,8 +90,8 @@ export function useExploreViewModel() {
 
   useEffect(() => {
     let alive = true;
-    loadPage(1, 'initial');
-    (async () => {
+    void (async () => {
+      await loadPage(1, 'initial');
       let hasLocation = false;
       try {
         const me = await uc.profile.getMe();
@@ -99,7 +99,7 @@ export function useExploreViewModel() {
       } catch {}
       if (!alive || hasLocation) return;
       const ok = await captureLocation(false);
-      if (alive && ok) loadPage(1, 'refresh');
+      if (alive && ok) void loadPage(1, 'refresh');
     })();
     return () => {
       alive = false;

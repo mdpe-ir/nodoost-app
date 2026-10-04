@@ -62,7 +62,9 @@ export function BadgesProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!authed) return;
-    refresh();
+    void (async () => {
+      await refresh();
+    })();
     const timer = setInterval(refresh, POLL_MS);
     return () => clearInterval(timer);
   }, [authed, refresh]);

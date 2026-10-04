@@ -16,7 +16,7 @@ import { useOnboarding } from '@/presentation/hooks/useOnboarding';
 import { normalizeInviteCode } from '@/presentation/hooks/useInviteViewModel';
 import { useCases } from '@/core/di/DIProvider';
 import { useRemoteConfig } from '@/presentation/providers/RemoteConfigProvider';
-import { enNum, faNum } from '@/core/utils/faNum';
+import { faNum } from '@/core/utils/faNum';
 import { ageFromBirthdate, JALALI_MONTHS, jalaliToIso } from '@/core/utils/jalali';
 import { CURRENT_JALALI_YEAR, JalaliDatePicker } from '@/presentation/components/JalaliDatePicker';
 import { colors, fonts, fontSizes, lineHeights, spacing, radius } from '@/core/theme';

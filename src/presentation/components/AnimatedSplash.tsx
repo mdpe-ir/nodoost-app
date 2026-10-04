@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {
@@ -19,6 +19,11 @@ import { colors } from '@/core/theme';
  * تا انتقال بی‌درز باشد.
  */
 export function AnimatedSplash({ onDone }: { onDone: () => void }) {
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
+
   const container = useSharedValue(1);
   const markScale = useSharedValue(0.7);
   const markOpacity = useSharedValue(0);
@@ -45,7 +50,7 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
     container.value = withDelay(
       1650,
       withTiming(0, { duration: 420, easing: Easing.inOut(Easing.ease) }, (finished) => {
-        if (finished) runOnJS(onDone)();
+        if (finished) runOnJS(() => onDoneRef.current())();
       })
     );
   }, [container, glow, markOpacity, markScale, wordOpacity, wordY]);

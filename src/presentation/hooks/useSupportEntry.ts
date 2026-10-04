@@ -23,7 +23,9 @@ export function useSupportEntry() {
   }, [uc]);
 
   useEffect(() => {
-    void load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
   useRefetchOnFocus(load);
 

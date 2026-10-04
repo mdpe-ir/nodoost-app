@@ -97,7 +97,9 @@ export function AndroidAppGateProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!isWeb || !isAndroid) return;
-    setSessions(bumpSessions());
+    void (async () => {
+      setSessions(bumpSessions());
+    })();
     const t = setTimeout(() => setDelayPassed(true), FIRST_SESSION_DELAY_MS);
     return () => clearTimeout(t);
   }, [isAndroid]);

@@ -34,7 +34,9 @@ export function useBlockedViewModel() {
   );
 
   useEffect(() => {
-    void load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const refresh = useCallback(() => {

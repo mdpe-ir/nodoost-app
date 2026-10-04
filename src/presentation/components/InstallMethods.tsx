@@ -24,14 +24,12 @@ const METHOD_DEEP_LINK: Partial<Record<InstallMethodKey, string>> = {
   myket: `myket://details?id=${PKG}`,
 };
 
-/* eslint-disable @typescript-eslint/no-require-imports */
 /** آرمِ برندِ هر فروشگاه؛ برای «دانلودِ مستقیم» لوگوی خودِ نودوست. */
 const METHOD_LOGO: Record<InstallMethodKey, number> = {
   bazaar: require('../../../assets/logo/store-cafebazaar.png'),
   myket: require('../../../assets/logo/store-myket.png'),
   direct: require('../../../assets/logo/logo-mark-gold.png'),
 };
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 async function openMethod(m: InstallMethod) {
   // روی نیتیو اول دیپ‌لینکِ اپِ فروشگاه را امتحان کن؛ روی وب یا نبودِ اپ، آدرسِ عادی.

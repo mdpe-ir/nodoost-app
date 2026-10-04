@@ -67,11 +67,13 @@ export function QuotaProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!authed) {
-      setQuota(null);
-      return;
-    }
-    refresh();
+    void (async () => {
+      if (!authed) {
+        setQuota(null);
+        return;
+      }
+      await refresh();
+    })();
     // سطحِ کاربر که عوض شود (خرید/انقضا)، همه‌ی سقف‌ها عوض می‌شوند.
   }, [authed, user?.tier, refresh]);
 

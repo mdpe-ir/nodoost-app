@@ -34,7 +34,11 @@ export function usePeerProfileViewModel(userId: number) {
   }, [uc, userId]);
 
   useEffect(() => {
-    if (userId) load();
+    if (userId) {
+      void (async () => {
+        await load();
+      })();
+    }
   }, [load, userId]);
 
   const [openingChat, setOpeningChat] = useState(false);

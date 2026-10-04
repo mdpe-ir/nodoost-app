@@ -67,7 +67,9 @@ export function useChatViewModel() {
   }, [uc, loadingMore, hasMore]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   // با بازگشت به تب یا بازکردنِ دوباره‌ی اپ، فهرستِ گفتگوها را بی‌صدا تازه کن.

@@ -61,7 +61,9 @@ export function ViewersScreen() {
   );
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   if (loading) {
