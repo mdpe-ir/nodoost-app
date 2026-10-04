@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "255226639261",
+    "project_id": "pull-notif",
+    "storage_bucket": "pull-notif.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:255226639261:android:0fd3482182ac3d82b1f574",
+        "android_client_info": {
+          "package_name": "com.nodoost.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCS2NjgVEOBSZZNy7OqCs1fT7gxXnxGn-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -27,6 +27,7 @@
     "android": {
       "package": "com.nodoost.app",
       "versionCode": 25,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0B0910",
         "backgroundImage": "./assets/logo/adaptive-icon-background.png",
